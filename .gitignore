@@ -1,0 +1,35 @@
+.env
+.env.*
+!.env_example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+*.sqlite3
+*.db
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Keys / credentials
+keys/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.json
+
+# Local artifacts
+*.mp4
+*.mov
+*.mkv
+*.webm
+

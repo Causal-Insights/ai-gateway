@@ -1,0 +1,14 @@
+services:
+  litellm:
+    image: docker.litellm.ai/berriai/litellm:main-v1.83.7-stable.patch.1
+    container_name: litellm-proxy
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/litellm_config.yaml:ro
+      - ./custom_handler.py:/app/custom_handler.py:ro
+      - /Users/jason/dev/keys:/Users/jason/dev/keys:ro
+    command: ["--config", "/app/litellm_config.yaml", "--port", "4000"]
