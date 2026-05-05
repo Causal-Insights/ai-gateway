@@ -12,6 +12,9 @@ ENV PYTHONUNBUFFERED=1
 # Cloud Run sets PORT; default to 8080 for local use
 ENV PORT=8080
 
+# Base image ENTRYPOINT runs `litellm "$@"`; a shell-wrapped CMD becomes `litellm sh -c ...` and breaks.
+# Override ENTRYPOINT so we can expand $PORT and bind on all interfaces for Cloud Run.
+ENTRYPOINT ["/bin/sh", "-c"]
 # Cloud Run health checks hit 0.0.0.0:$PORT; bind explicitly (LiteLLM defaults host to 127.0.0.1).
-CMD ["sh", "-c", "exec litellm --config /app/litellm_config.yaml --host 0.0.0.0 --port ${PORT}"]
+CMD ["exec litellm --config /app/litellm_config.yaml --host 0.0.0.0 --port ${PORT:-8080}"]
 
