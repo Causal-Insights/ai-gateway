@@ -51,7 +51,9 @@ class GrokVideoLLM(CustomLLM):
         **kwargs: Any,
     ) -> ImageResponse:
         optional_params = dict(optional_params or {})
-        api_key = api_key or optional_params.pop("api_key", None) or os.environ.get("GROK_API_KEY")
+        # Always use the proxy's configured env var for upstream auth; do not
+        # accept api_key from client-supplied parameters.
+        api_key = os.environ.get("GROK_API_KEY")
         if not api_key:
             raise ValueError("GROK_API_KEY is required for grok-video")
 
@@ -192,7 +194,9 @@ class SeedanceLLM(CustomLLM):
         **kwargs: Any,
     ) -> ImageResponse:
         optional_params = dict(optional_params or {})
-        api_key = api_key or optional_params.pop("api_key", None) or os.environ.get("BYTEDANCE_API_KEY")
+        # Always use the proxy's configured env var for upstream auth; do not
+        # accept api_key from client-supplied parameters.
+        api_key = os.environ.get("BYTEDANCE_API_KEY")
         if not api_key:
             raise ValueError("BYTEDANCE_API_KEY is required for seedance")
 
