@@ -11,6 +11,20 @@ It can run locally via `docker-compose` and in production on **Google Cloud Run*
 
 ## Cloud Run deployment (GCP project ID `ai-gateway-495414`, region `us-central1`)
 
+### Quick redeploy (script)
+
+From the repo root:
+
+```bash
+./deploy_cloud_run.sh
+```
+
+Common overrides:
+
+```bash
+PROJECT_ID=ai-gateway-495414 REGION=us-central1 ./deploy_cloud_run.sh --memory 2Gi --cpu 2 --timeout 900
+```
+
 ### 1. Build and push the image
 
 Assuming:
