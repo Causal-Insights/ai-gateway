@@ -12,6 +12,11 @@ model_list:
       model: openai/gpt-5.5
       api_key: os.environ/OPENAI_API_KEY
 
+  - model_name: gpt-5.5
+    litellm_params:
+      model: openai/gpt-5.5
+      api_key: os.environ/OPENAI_API_KEY
+
   - model_name: gpt-5.4
     litellm_params:
       model: openai/gpt-5.4
@@ -113,10 +118,10 @@ model_list:
       model: grok-video/grok-2-video-generation
       api_key: os.environ/GROK_API_KEY
 
-  # ── Seedance 2.0 (ByteDance / VolcEngine) ────────────────────────────────
+  # ── Seedance 2.0 (BytePlus ARK) ───────────────────────────────────────────
   - model_name: seedance-2.0
     litellm_params:
-      model: seedance/seedance_video_2_0
+      model: seedance/dreamina-seedance-2-0-260128
       api_key: os.environ/BYTEDANCE_API_KEY
 
   # ── xAI ──────────────────────────────────────────────────────────────────

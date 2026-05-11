@@ -23,9 +23,10 @@ IMAGE_NAME="${IMAGE_NAME:-litellm-proxy}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 # Cloud Run defaults (tuned for LiteLLM startup; adjust as needed)
+# Request timeout must exceed Seedance poll ceiling (default 1200s) plus submit overhead.
 MEMORY="${MEMORY:-2Gi}"
 CPU="${CPU:-2}"
-TIMEOUT="${TIMEOUT:-900}"
+TIMEOUT="${TIMEOUT:-1800}"
 MIN_INSTANCES="${MIN_INSTANCES:-0}"
 MAX_INSTANCES="${MAX_INSTANCES:-10}"
 ALLOW_UNAUTHENTICATED="${ALLOW_UNAUTHENTICATED:-false}"

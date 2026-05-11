@@ -1,54 +1,86 @@
 #!/usr/bin/env python3
 """
-Test BytePlus Seedance 2.0 video generation directly.
+Seedance 2.0 reference-image test: recreate a cartoon scene from a local PNG.
 
-Uses the minimum-cost settings: 480p, 1:1, 4s, no audio.
+Reads ``jason_cartoon.png`` from this directory, sends it as a ``data:image/png;base64,...``
+URL (ARK accepts data URIs), with ``role: reference_image``.
 
-Async flow:
-  1. POST /api/v3/contents/generations/tasks -> {"id": "cgt-..."}
-  2. GET  /api/v3/contents/generations/tasks/{id} -> poll until status == "succeeded"
+Requires: BYTEDANCE_API_KEY or ARK_API_KEY
 
-Requires: ARK_API_KEY (or BYTEDANCE_API_KEY) env var.
-Usage:    python test_seedance_video.py
+Usage:
+    python test_seedance_cartoon_reference.py
+
+Optional env:
+    SEEDANCE_REFERENCE_IMAGE  absolute or relative path override (default: ./jason_cartoon.png)
 """
 
+from __future__ import annotations
+
+import base64
 import os
 import sys
 import time
+from pathlib import Path
 from dotenv import load_dotenv
 
 import httpx
 
 load_dotenv()
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_IMAGE = SCRIPT_DIR / "jason_cartoon.png"
+
 ARK_BASE = "https://ark.ap-southeast.bytepluses.com/api/v3"
 MODEL = "dreamina-seedance-2-0-260128"
+
 PROMPT = (
-    "A person walking through a forest at night. cinematic lighting.  Intense"
+    "Recreate this cartoon scene faithfully—same characters, composition, and style—with "
+    "gentle subtle motion and soft cinematic lighting. Keep it playful and readable."
 )
-DURATION = 4        # minimum for Seedance 2.0 — cheapest possible
-RESOLUTION = "480p" # lowest available
-RATIO = "1:1"       # 640×640 at 480p — smallest pixel count
-POLL_INTERVAL = 10  # seconds between status checks
-POLL_TIMEOUT = 1200  # align with proxy default; long 1080p jobs may need the headroom
-OUTPUT_FILE = "test_seedance_vampire_2.mp4"
+
+DURATION = 4
+RESOLUTION = "480p"
+RATIO = "1:1"
+POLL_INTERVAL = 10
+POLL_TIMEOUT = 1200
+OUTPUT_FILE = "test_seedance_cartoon_reference.mp4"
+
+
+def _png_to_data_uri(path: Path) -> str:
+    raw = path.read_bytes()
+    b64 = base64.standard_b64encode(raw).decode("ascii")
+    return f"data:image/png;base64,{b64}"
 
 
 def main() -> None:
-    api_key = os.environ.get("BYTEDANCE_API_KEY")
+    api_key = os.environ.get("BYTEDANCE_API_KEY") or os.environ.get("ARK_API_KEY")
     if not api_key:
-        sys.exit("ERROR: set ARK_API_KEY or BYTEDANCE_API_KEY")
+        sys.exit("ERROR: set BYTEDANCE_API_KEY or ARK_API_KEY")
+
+    img_path = Path(os.environ.get("SEEDANCE_REFERENCE_IMAGE", DEFAULT_IMAGE)).expanduser()
+    if not img_path.is_file():
+        sys.exit(
+            f"ERROR: reference image not found: {img_path}\n"
+            f"Place jason_cartoon.png next to this script or set SEEDANCE_REFERENCE_IMAGE."
+        )
+
+    data_uri = _png_to_data_uri(img_path)
+    print(f"[image]  {img_path}  ({len(data_uri) // 1024} KB base64 payload)")
 
     auth_headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
 
-    # ── 1. Submit generation task ───────────────────────────────────────────
     payload = {
         "model": MODEL,
         "content": [
             {"type": "text", "text": PROMPT},
+            {
+                "type": "image_url",
+                "image_url": {"url": data_uri},
+                "role": "reference_image",
+            },
         ],
         "resolution": RESOLUTION,
         "ratio": RATIO,
@@ -58,10 +90,10 @@ def main() -> None:
     }
 
     print(f"[submit] model={MODEL!r}")
-    print(f"         {RESOLUTION} {RATIO} {DURATION}s  audio=off")
+    print(f"         {RESOLUTION} {RATIO} {DURATION}s  reference_image  audio=off")
     print(f"         prompt={PROMPT!r}")
 
-    with httpx.Client(timeout=30) as client:
+    with httpx.Client(timeout=120) as client:
         resp = client.post(
             f"{ARK_BASE}/contents/generations/tasks",
             headers=auth_headers,
@@ -76,9 +108,10 @@ def main() -> None:
         sys.exit(f"No task id in response: {resp.json()}")
     print(f"[submit] task_id={task_id}")
 
-    # ── 2. Poll for completion ──────────────────────────────────────────────
     deadline = time.monotonic() + POLL_TIMEOUT
-    with httpx.Client(timeout=15) as client:
+    out_path = SCRIPT_DIR / OUTPUT_FILE
+
+    with httpx.Client(timeout=60) as client:
         while time.monotonic() < deadline:
             time.sleep(POLL_INTERVAL)
             poll = client.get(
@@ -108,13 +141,11 @@ def main() -> None:
                 print(f"\n[done]   duration={actual_duration}s  ratio={actual_ratio}")
                 print(f"[done]   url={video_url}")
 
-                # ── 3. Download and save ────────────────────────────────────
                 dl = client.get(video_url)
                 dl.raise_for_status()
-                with open(OUTPUT_FILE, "wb") as f:
-                    f.write(dl.content)
+                out_path.write_bytes(dl.content)
                 size_kb = len(dl.content) / 1024
-                print(f"[save]   {OUTPUT_FILE}  ({size_kb:.1f} KB)")
+                print(f"[save]   {out_path}  ({size_kb:.1f} KB)")
                 return
 
     sys.exit(f"Timed out after {POLL_TIMEOUT}s waiting for {task_id}")

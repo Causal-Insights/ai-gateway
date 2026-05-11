@@ -3,7 +3,7 @@
 This repo packages a LiteLLM Proxy plus custom handlers for:
 
 - **Grok video** (`grok-video` / `grok-imagine-video`)
-- **Seedance 2.0** (ByteDance / VolcEngine)
+- **Seedance 2.0** (BytePlus ARK)
 
 It can run locally via `docker-compose` and in production on **Google Cloud Run**.
 
@@ -22,7 +22,7 @@ From the repo root:
 Common overrides:
 
 ```bash
-PROJECT_ID=ai-gateway-495414 REGION=us-central1 ./deploy_cloud_run.sh --memory 2Gi --cpu 2 --timeout 900
+PROJECT_ID=ai-gateway-495414 REGION=us-central1 ./deploy_cloud_run.sh --memory 2Gi --cpu 2
 ```
 
 ### 1. Build and push the image
@@ -59,7 +59,8 @@ Then configure environment variables (via `gcloud run services update` or the co
 - `GEMINI_API_KEY`
 - `XAI_API_KEY`
 - `GROK_API_KEY`
-- `BYTEDANCE_API_KEY`
+- `BYTEDANCE_API_KEY` (Seedance 2.0 / BytePlus ARK)
+- Optional Seedance tuning: `SEEDANCE_ARK_BASE`, `SEEDANCE_ARK_MODEL`, `SEEDANCE_POLL_INTERVAL_S`, `SEEDANCE_POLL_TIMEOUT_S` (default **1200s** / 20 min server-side poll — see `.env_example`). Ensure HTTP timeouts (e.g. Cloud Run `--timeout`) stay above that plus overhead.
 - `ELEVENLABS_API_KEY`
 - Any optional `VERTEXAI_*` / `ELEVENLABS_*` vars you actually use
 
@@ -101,6 +102,6 @@ Replace `<cloud-run-url>` with the HTTPS URL shown by `gcloud run deploy`.
   - Initially, `<proxy_token>` can be the value of `LITELLM_MASTER_KEY`.
   - Later, you can move to per-client keys managed by LiteLLM.
 - **Models**: use the logical model names from `litellm_config.yaml`, e.g.:
-  - `gpt-latest`, `gpt-5.4-mini`, `gemini-latest`, `imagen-4.0`, `grok-video`, `seedance-2.0`, etc.
+  - `gpt-latest`, `gpt-5.5`, `gpt-5.4-mini`, `gemini-latest`, `imagen-4.0`, `grok-video`, `seedance-2.0`, etc.
 
 Clients **never** send provider API keys or upstream URLs; only the proxy holds those in its environment.
