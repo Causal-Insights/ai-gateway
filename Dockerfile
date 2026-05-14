@@ -1,10 +1,13 @@
-FROM docker.litellm.ai/berriai/litellm:main-v1.83.7-stable.patch.1
+FROM docker.litellm.ai/berriai/litellm:main-v1.83.14-stable
 
 WORKDIR /app
 
 # Copy configuration and custom handlers into the image
 COPY litellm_config.yaml /app/litellm_config.yaml
 COPY custom_handler.py /app/custom_handler.py
+COPY custom_handler_common.py /app/custom_handler_common.py
+COPY custom_handler_xai.py /app/custom_handler_xai.py
+COPY custom_handler_seedance.py /app/custom_handler_seedance.py
 
 # Ensure unbuffered logs
 ENV PYTHONUNBUFFERED=1

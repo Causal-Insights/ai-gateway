@@ -45,72 +45,91 @@ model_list:
   # ── Gemini text ──────────────────────────────────────────────────────────
   - model_name: gemini-latest
     litellm_params:
-      model: gemini/gemini-3.1-pro-preview
-      api_key: os.environ/GEMINI_API_KEY
+      model: vertex_ai/gemini-3.1-pro-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   - model_name: gemini-3.1-pro
     litellm_params:
-      model: gemini/gemini-3.1-pro-preview
-      api_key: os.environ/GEMINI_API_KEY
+      model: vertex_ai/gemini-3.1-pro-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
-  - model_name: gemini-3.1-flash-lite
+  - model_name: gemini-3.1-pro-customtools
     litellm_params:
-      model: gemini/gemini-3.1-flash-lite-preview
-      api_key: os.environ/GEMINI_API_KEY
+      model: vertex_ai/gemini-3.1-pro-preview-customtools
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
-  # ── Nano Banana ──────────────────────────────────────────────────────────
+  - model_name: gemini-3-flash-preview
+    litellm_params:
+      model: vertex_ai/gemini-3-flash-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+
+  # Optional: keep only if you explicitly want the older preview endpoint
+  - model_name: gemini-3.1-flash-lite-preview
+    litellm_params:
+      model: vertex_ai/gemini-3.1-flash-lite-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+
+  # ── Nano Banana / Gemini image ───────────────────────────────────────────
   - model_name: nano-banana
     litellm_params:
-      model: gemini/gemini-2.5-flash-image
-      api_key: os.environ/GEMINI_API_KEY
+      model: vertex_ai/gemini-3.1-flash-image-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   - model_name: nano-banana-2
     litellm_params:
-      model: gemini/gemini-3.1-flash-image-preview
-      api_key: os.environ/GEMINI_API_KEY
+      model: vertex_ai/gemini-3.1-flash-image-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   - model_name: nano-banana-pro
     litellm_params:
-      model: gemini/gemini-3-pro-image-preview
-      api_key: os.environ/GEMINI_API_KEY
+      model: vertex_ai/gemini-3-pro-image-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   # ── Veo ──────────────────────────────────────────────────────────────────
   - model_name: veo-3.1
     litellm_params:
       model: vertex_ai/veo-3.1-generate-001
-      vertex_project: os.environ/VERTEXAI_PROJECT
-      vertex_location: os.environ/VERTEXAI_LOCATION
-      vertex_credentials: os.environ/VERTEXAI_CREDENTIALS
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   - model_name: veo-3.1-fast
     litellm_params:
       model: vertex_ai/veo-3.1-fast-generate-001
-      vertex_project: os.environ/VERTEXAI_PROJECT
-      vertex_location: os.environ/VERTEXAI_LOCATION
-      vertex_credentials: os.environ/VERTEXAI_CREDENTIALS
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   - model_name: veo-3.1-lite
     litellm_params:
       model: vertex_ai/veo-3.1-lite-generate-001
-      vertex_project: os.environ/VERTEXAI_PROJECT
-      vertex_location: os.environ/VERTEXAI_LOCATION
-      vertex_credentials: os.environ/VERTEXAI_CREDENTIALS
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   # ── Imagen 4 ─────────────────────────────────────────────────────────────
   - model_name: imagen-4.0
     litellm_params:
-      model: gemini/imagen-4.0-generate-001
-      api_key: os.environ/GEMINI_API_KEY
+      model: vertex_ai/imagen-4.0-generate-001
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   - model_name: imagen-4.0-fast
     litellm_params:
-      model: gemini/imagen-4.0-fast-generate-001
-      api_key: os.environ/GEMINI_API_KEY
+      model: vertex_ai/imagen-4.0-fast-generate-001
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   - model_name: imagen-4.0-ultra
     litellm_params:
-      model: gemini/imagen-4.0-ultra-generate-001
-      api_key: os.environ/GEMINI_API_KEY
+      model: vertex_ai/imagen-4.0-ultra-generate-001
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   # ── xAI (custom: video) ─────────────────────────────────────────────────
   - model_name: grok-video
@@ -118,10 +137,31 @@ model_list:
       model: grok-video/grok-2-video-generation
       api_key: os.environ/GROK_API_KEY
 
+  # ── xAI (custom: image) ─────────────────────────────────────────────────
+  - model_name: grok-image
+    litellm_params:
+      model: grok-image/grok-imagine-image-quality
+      api_key: os.environ/GROK_API_KEY
+
+  - model_name: grok-imagine-image-quality
+    litellm_params:
+      model: grok-image/grok-imagine-image-quality
+      api_key: os.environ/GROK_API_KEY
+
   # ── Seedance 2.0 (BytePlus ARK) ───────────────────────────────────────────
   - model_name: seedance-2.0
     litellm_params:
       model: seedance/dreamina-seedance-2-0-260128
+      api_key: os.environ/BYTEDANCE_API_KEY
+
+  - model_name: seedance-2.0-fast
+    litellm_params:
+      model: seedance/dreamina-seedance-2-0-fast-260128
+      api_key: os.environ/BYTEDANCE_API_KEY
+
+  - model_name: dreamina-seedance-2-0-fast-260128
+    litellm_params:
+      model: seedance/dreamina-seedance-2-0-fast-260128
       api_key: os.environ/BYTEDANCE_API_KEY
 
   # ── xAI ──────────────────────────────────────────────────────────────────
@@ -158,12 +198,15 @@ model_list:
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
-  disable_health_check: true
+  database_url: os.environ/DATABASE_URL
+  # disable_health_check: true
 
 litellm_settings:
   drop_params: true
   custom_provider_map:
     - provider: grok-video
       custom_handler: custom_handler.grok_video
+    - provider: grok-image
+      custom_handler: custom_handler.grok_image
     - provider: seedance
       custom_handler: custom_handler.seedance

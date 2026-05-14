@@ -98,7 +98,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
 
         client_instance = self._mock_async_client(submit_resp, [poll_ok])
 
-        with patch("custom_handler.httpx.AsyncClient", return_value=client_instance):
+        with patch("custom_handler_seedance.httpx.AsyncClient", return_value=client_instance):
             llm = SeedanceLLM()
             await llm.aimage_generation(
                 model="dreamina-seedance-2-0-260128",
@@ -142,7 +142,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
 
         client_instance = self._mock_async_client(submit_resp, [poll_ok])
 
-        with patch("custom_handler.httpx.AsyncClient", return_value=client_instance):
+        with patch("custom_handler_seedance.httpx.AsyncClient", return_value=client_instance):
             llm = SeedanceLLM()
             await llm.aimage_generation(
                 model="dreamina-seedance-2-0-260128",
@@ -188,7 +188,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
 
         client_instance = self._mock_async_client(submit_resp, [poll_ok])
 
-        with patch("custom_handler.httpx.AsyncClient", return_value=client_instance):
+        with patch("custom_handler_seedance.httpx.AsyncClient", return_value=client_instance):
             llm = SeedanceLLM()
             await llm.aimage_generation(
                 model="dreamina-seedance-2-0-260128",
@@ -217,7 +217,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
 
         client_instance = self._mock_async_client(submit_resp, [poll_ok])
 
-        with patch("custom_handler.httpx.AsyncClient", return_value=client_instance):
+        with patch("custom_handler_seedance.httpx.AsyncClient", return_value=client_instance):
             llm = SeedanceLLM()
             await llm.aimage_generation(
                 model="dreamina-seedance-2-0-260128",
@@ -258,7 +258,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
 
         client_instance = self._mock_async_client(submit_resp, [running, running, succeeded])
 
-        with patch("custom_handler.httpx.AsyncClient", return_value=client_instance):
+        with patch("custom_handler_seedance.httpx.AsyncClient", return_value=client_instance):
             llm = SeedanceLLM()
             out = await llm.aimage_generation(
                 model="dreamina-seedance-2-0-260128",
@@ -289,7 +289,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
 
         client_instance = self._mock_async_client(submit_resp, [failed])
 
-        with patch("custom_handler.httpx.AsyncClient", return_value=client_instance):
+        with patch("custom_handler_seedance.httpx.AsyncClient", return_value=client_instance):
             llm = SeedanceLLM()
             with self.assertRaises(SeedanceException) as ctx:
                 await llm.aimage_generation(
