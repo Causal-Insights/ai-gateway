@@ -33,3 +33,4 @@ keys/
 *.mkv
 *.webm
 
+test_outputs/
