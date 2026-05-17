@@ -184,7 +184,18 @@ class SeedanceLLM(CustomLLM):
             "Content-Type": "application/json",
         }
 
-        client_timeout = timeout or (poll_timeout + 30)
+        # LiteLLM Router injects kwargs["timeout"] from REQUEST_TIMEOUT, key/team
+        # request_timeout, x-litellm-timeout, etc. That value is meant for the overall
+        # proxy request, but using it verbatim here capped httpx below SEEDANCE_POLL_TIMEOUT_S
+        # (e.g. 300s → failures at exactly 5 minutes while ARK was still processing).
+        min_http_timeout = poll_timeout + 30.0
+        if isinstance(timeout, (int, float)) and not isinstance(timeout, bool):
+            client_timeout = max(min_http_timeout, float(timeout))
+        elif timeout is None:
+            client_timeout = min_http_timeout
+        else:
+            # httpx.Timeout or other exotic types: keep poll floor so reads can outlive short defaults
+            client_timeout = min_http_timeout
 
         async with httpx.AsyncClient(timeout=client_timeout) as http:
             submit_resp = await http.post(

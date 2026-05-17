@@ -153,16 +153,21 @@ model_list:
     litellm_params:
       model: seedance/dreamina-seedance-2-0-260128
       api_key: os.environ/BYTEDANCE_API_KEY
+    model_info:
+      mode: image_generation
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      input_cost_per_second: 0.50
 
   - model_name: seedance-2.0-fast
     litellm_params:
       model: seedance/dreamina-seedance-2-0-fast-260128
       api_key: os.environ/BYTEDANCE_API_KEY
-
-  - model_name: dreamina-seedance-2-0-fast-260128
-    litellm_params:
-      model: seedance/dreamina-seedance-2-0-fast-260128
-      api_key: os.environ/BYTEDANCE_API_KEY
+    model_info:
+      mode: image_generation
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      input_cost_per_second: 0.50
 
   # ── xAI ──────────────────────────────────────────────────────────────────
   - model_name: grok-latest
