@@ -103,6 +103,6 @@ Replace `<cloud-run-url>` with the HTTPS URL shown by `gcloud run deploy`.
   - Initially, `<proxy_token>` can be the value of `LITELLM_MASTER_KEY`.
   - Later, you can move to per-client keys managed by LiteLLM.
 - **Models**: use the logical model names from `litellm_config.yaml`, e.g.:
-  - `gpt-latest`, `gpt-5.5`, `gpt-5.4-mini`, `gemini-latest`, `imagen-4.0`, `grok-video`, `seedance-2.0`, etc.
+  - `gpt-latest`, `gpt-5.5`, `gpt-5.4-mini`, `gemini-latest`, `gemini-3.5-flash`, `imagen-4.0`, `grok-video`, `seedance-2.0`, etc.
 
 Clients **never** send provider API keys or upstream URLs; only the proxy holds those in its environment.

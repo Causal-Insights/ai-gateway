@@ -36,7 +36,7 @@ Use for **text and multimodal chat**: JSON body with a `messages` array; optiona
 |-------|-----------------------------------|------------------------------------------|
 | Local MLX | `gemma-4-large` | OpenAI-compatible server at `MLX_VLM_API_BASE` with `MLX_VLM_API_KEY` on the proxy |
 | OpenAI | `gpt-latest`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano` | OpenAI Chat Completions; `OPENAI_API_KEY` on the proxy |
-| Vertex Gemini (text) | `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview` | Vertex AI Gemini; `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and GCP credentials on the proxy |
+| Vertex Gemini (text) | `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3.5-flash`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview` | Vertex AI Gemini; `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and GCP credentials on the proxy |
 | xAI Grok (text) | `grok-latest`, `grok-4.20-reasoning`, `grok-4.20` | xAI API; `XAI_API_KEY` on the proxy |
 
 Example:
@@ -197,7 +197,7 @@ Provider-specific options (for example `voice_settings`) are often passed under 
 
 | HTTP surface | Aliases |
 |--------------|---------|
-| `POST /v1/chat/completions` | `gemma-4-large`, `gpt-latest`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview`, `grok-latest`, `grok-4.20-reasoning`, `grok-4.20` |
+| `POST /v1/chat/completions` | `gemma-4-large`, `gpt-latest`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3.5-flash`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview`, `grok-latest`, `grok-4.20-reasoning`, `grok-4.20` |
 | `POST /v1/images/generations` | `gpt-image-1.5`, `gpt-image-2`, `nano-banana`, `nano-banana-2`, `nano-banana-pro`, `imagen-4.0`, `imagen-4.0-fast`, `imagen-4.0-ultra`, `grok-image`, `grok-imagine-image-quality`, `grok-video`, `seedance-2.0`, `seedance-2.0-fast`, `dreamina-seedance-2-0-fast-260128` |
 | `POST /v1/images/edits` (multipart) | `grok-image`, `grok-imagine-image-quality` (edits only) |
 | Veo: `POST /videos`, then `GET /v1/videos/{id}`, `GET /v1/videos/{id}/content` | `veo-3.1`, `veo-3.1-fast`, `veo-3.1-lite` |
