@@ -35,11 +35,14 @@ class GrokImageException(Exception):
 class GrokVideoLLM(CustomLLM):
     """
     Wraps xAI's video generation and edit endpoints.
-    API docs: https://docs.x.ai/docs
+    API docs: https://docs.x.ai/developers/model-capabilities/video
     Endpoints:
       - https://api.x.ai/v1/videos/generations
       - https://api.x.ai/v1/videos/edits
     Auth: GROK_API_KEY
+
+    Billing: prefers ``usage.cost_in_usd_ticks`` from xAI poll responses; falls back to
+    duration × per-second rate by resolution (see ``litellm_config.yaml`` / env overrides).
     """
 
     XAI_BASE = "https://api.x.ai/v1"
@@ -48,6 +51,13 @@ class GrokVideoLLM(CustomLLM):
     MAX_REFERENCE_IMAGES = 7
     MAX_REFERENCE_DURATION = 10
     DEFAULT_XAI_MODEL = "grok-imagine-video"
+
+    # xAI: 1 USD = 10_000_000_000 ticks (see GET /v1/videos/{request_id} usage)
+    USD_TICKS_PER_DOLLAR = 10_000_000_000
+    DEFAULT_PRICE_PER_SECOND_480P = 0.05
+    DEFAULT_PRICE_PER_SECOND_720P = 0.07
+    DEFAULT_PRICE_PER_SECOND_1080P = 0.07
+    DEFAULT_PRICE_PER_REFERENCE_IMAGE = 0.002
 
     @staticmethod
     def _coerce_int(name: str, value: Any) -> int:
@@ -96,6 +106,96 @@ class GrokVideoLLM(CustomLLM):
             except ValueError as e:
                 raise ValueError(str(e)) from e
         return normalized
+
+    @staticmethod
+    def _env_float(name: str, default: float) -> float:
+        raw = os.environ.get(name)
+        if raw is None:
+            return default
+        try:
+            return float(raw)
+        except ValueError:
+            return default
+
+    @classmethod
+    def _cost_from_usd_ticks(cls, usage: Any) -> Optional[float]:
+        if not isinstance(usage, dict):
+            return None
+        ticks = usage.get("cost_in_usd_ticks")
+        if ticks is None:
+            return None
+        try:
+            return int(ticks) / cls.USD_TICKS_PER_DOLLAR
+        except (TypeError, ValueError):
+            return None
+
+    def _price_per_second(self, resolution: Optional[str]) -> float:
+        res = (resolution or "480p").strip().lower()
+        if res == "720p":
+            return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_720P", self.DEFAULT_PRICE_PER_SECOND_720P)
+        if res == "1080p":
+            return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_1080P", self.DEFAULT_PRICE_PER_SECOND_1080P)
+        return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_480P", self.DEFAULT_PRICE_PER_SECOND_480P)
+
+    def _estimate_cost(
+        self,
+        *,
+        duration_seconds: int,
+        resolution: Optional[str],
+        reference_image_count: int,
+        has_image_input: bool,
+    ) -> float:
+        """Fallback when xAI does not return usage.cost_in_usd_ticks."""
+        seconds = max(0, int(duration_seconds))
+        cost = seconds * self._price_per_second(resolution)
+        ref_price = self._env_float(
+            "GROK_VIDEO_PRICE_PER_REFERENCE_IMAGE", self.DEFAULT_PRICE_PER_REFERENCE_IMAGE
+        )
+        if reference_image_count > 0:
+            cost += reference_image_count * ref_price
+        elif has_image_input:
+            cost += ref_price
+        return cost
+
+    @staticmethod
+    def _video_response(video_url: str, *, response_cost: Optional[float] = None) -> ImageResponse:
+        resp = ImageResponse(created=int(time.time()), data=[ImageObject(url=video_url)])
+        if response_cost is not None:
+            hidden = getattr(resp, "_hidden_params", None)
+            if not isinstance(hidden, dict):
+                hidden = {}
+                resp._hidden_params = hidden
+            hidden["response_cost"] = float(response_cost)
+        return resp
+
+    def _resolve_response_cost(
+        self,
+        *,
+        status_data: dict,
+        requested_duration: Optional[int],
+        resolution: Optional[str],
+        reference_image_count: int,
+        has_image_input: bool,
+    ) -> Optional[float]:
+        usage_cost = self._cost_from_usd_ticks(status_data.get("usage"))
+        if usage_cost is not None:
+            return usage_cost
+
+        video_meta = status_data.get("video") or {}
+        billed_seconds = video_meta.get("duration")
+        if billed_seconds is None:
+            billed_seconds = requested_duration if requested_duration is not None else 8
+        try:
+            billed_seconds = int(billed_seconds)
+        except (TypeError, ValueError):
+            billed_seconds = requested_duration or 8
+
+        return self._estimate_cost(
+            duration_seconds=billed_seconds,
+            resolution=resolution,
+            reference_image_count=reference_image_count,
+            has_image_input=has_image_input,
+        )
 
     async def aimage_generation(
         self,
@@ -161,6 +261,9 @@ class GrokVideoLLM(CustomLLM):
 
         prompt_text = (prompt or "").strip()
         endpoint = "/videos/edits" if video_input is not None else "/videos/generations"
+        resolution = optional_params.get("resolution")
+        reference_image_count = len(reference_images)
+        has_image_input = image_input is not None
 
         if endpoint == "/videos/edits":
             if not prompt_text:
@@ -228,9 +331,16 @@ class GrokVideoLLM(CustomLLM):
             data = response.json()
             request_id = data.get("request_id")
 
-            direct_video_url = data.get("video", {}).get("url")
+            direct_video_url = (data.get("video") or {}).get("url")
             if direct_video_url:
-                return ImageResponse(created=int(time.time()), data=[ImageObject(url=direct_video_url)])
+                cost = self._resolve_response_cost(
+                    status_data=data,
+                    requested_duration=duration,
+                    resolution=resolution,
+                    reference_image_count=reference_image_count,
+                    has_image_input=has_image_input,
+                )
+                return self._video_response(direct_video_url, response_cost=cost)
 
             if not request_id:
                 raise GrokVideoException(normalize_error(data.get("error", {}).get("message", data)))
@@ -255,13 +365,17 @@ class GrokVideoLLM(CustomLLM):
                 status = status_data.get("status")
 
                 if status == "done":
-                    video_url = status_data.get("video", {}).get("url")
+                    video_url = (status_data.get("video") or {}).get("url")
                     if not video_url:
                         raise GrokVideoException("missing video url in completed Grok request")
-                    return ImageResponse(
-                        created=int(time.time()),
-                        data=[ImageObject(url=video_url)],
+                    cost = self._resolve_response_cost(
+                        status_data=status_data,
+                        requested_duration=duration,
+                        resolution=resolution,
+                        reference_image_count=reference_image_count,
+                        has_image_input=has_image_input,
                     )
+                    return self._video_response(video_url, response_cost=cost)
                 if status in {"failed", "expired"}:
                     err = status_data.get("error") or {}
                     err_code = err.get("code")

@@ -5,6 +5,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # Append-only audit log of ARK task ids (enable in .env). Mount a host file below.
+      SEEDANCE_TASK_LEDGER_PATH: ${SEEDANCE_TASK_LEDGER_PATH:-/app/seedance_task_ledger.jsonl}
     ports:
       - "127.0.0.1:4000:4000"
     volumes:
@@ -13,5 +16,6 @@ services:
       - ./custom_handler_common.py:/app/custom_handler_common.py:ro
       - ./custom_handler_xai.py:/app/custom_handler_xai.py:ro
       - ./custom_handler_seedance.py:/app/custom_handler_seedance.py:ro
+      - ./seedance_task_ledger.jsonl:/app/seedance_task_ledger.jsonl
       - /Users/jason/dev/keys:/Users/jason/dev/keys:ro
     command: ["--config", "/app/litellm_config.yaml", "--port", "4000"]

@@ -1,213 +1,471 @@
 ---
 name: litellm
 description: >-
-  Call models on the shared LiteLLM proxy: pick the HTTP endpoint, logical model
-  alias, auth header, and optional request fields. Self-contained; uses
-  LITELLM_BASE_URL for the proxy host.
+  Call any model on the shared LiteLLM proxy: choose endpoint, logical alias,
+  auth, and request fields. Covers chat, images, video (Grok, Seedance, Veo),
+  and TTS. Use when invoking LITELLM_BASE_URL, LiteLLM, seedance, grok-video,
+  grok-image, Veo, Gemini, OpenAI, or model aliases from this gateway.
 ---
 
-# LiteLLM proxy — client guide
+# LiteLLM proxy — integration skill
 
-Clients call **only the LiteLLM proxy** over OpenAI-compatible HTTP routes. Provider API keys and upstream base URLs are configured on the proxy server, not in your application.
+Agents and apps call **only this proxy** using OpenAI-compatible HTTP routes. Provider API keys live on the server (`litellm_config.yaml`); clients send a proxy bearer token and a **logical `model` alias**.
 
-## Base URL and authentication
+## Prerequisites
 
-- **Base URL**: read from the environment variable **`LITELLM_BASE_URL`**. Use it without a trailing slash when appending paths (for example `"${LITELLM_BASE_URL}/v1/chat/completions"`).
-- **Auth**: `Authorization: Bearer <token>`. The token is normally the proxy master key (or a LiteLLM virtual key if your operator issued one).
-- **`model` field**: send the **logical alias** from the catalog below (for example `gpt-5.4-mini`, `grok-video`, `veo-3.1`). Do not send raw provider-internal model strings unless your operator confirms the proxy accepts them.
+| Variable | Purpose |
+|----------|---------|
+| `LITELLM_BASE_URL` | Proxy host, no trailing slash (e.g. `http://localhost:4000` or Cloud Run URL) |
+| `LITELLM_MASTER_KEY` | Bearer token for `Authorization: Bearer …` (or a LiteLLM virtual key) |
 
-## Custom integrations (Grok video, Grok image, Seedance)
+Optional response headers (useful for billing/debug):
 
-These aliases are routed through **custom LiteLLM handlers** on the proxy (not plain passthrough to a single vendor URL). The proxy still uses the same HTTP paths documented below; behavior and extra JSON fields are defined here.
+- `x-litellm-response-cost` — USD cost for the call when computed
+- `x-litellm-call-id` — request id for logs
 
-| Aliases | Role | Credentials on the proxy (not sent by clients) |
-|---------|------|--------------------------------------------------|
-| `grok-video` | xAI Grok **video** (submit + poll server-side; response looks like images API) | `GROK_API_KEY` |
-| `grok-image`, `grok-imagine-image-quality` | xAI Grok **image** generation and edits | `GROK_API_KEY` |
-| `seedance-2.0`, `seedance-2.0-fast`, `dreamina-seedance-2-0-fast-260128` | BytePlus ARK **Seedance 2.0** video (async task + poll server-side) | `BYTEDANCE_API_KEY` |
+Discover live models: `GET ${LITELLM_BASE_URL}/v1/models` with the same auth. If that list disagrees with the tables below, trust the live response.
 
 ---
 
-## 1. `POST /v1/chat/completions`
+## Agent workflow: pick endpoint and handle async video
 
-Use for **text and multimodal chat**: JSON body with a `messages` array; optional tools; images inside message content when the upstream model supports vision.
+```text
+Need text / tools / vision chat?     → POST /v1/chat/completions
+Need a still image?                  → POST /v1/images/generations
+Need Grok image edit (file in)?      → POST /v1/images/edits (multipart)
+Need video?
+  ├─ Grok (xAI)                      → POST /v1/images/generations  model=grok-video
+  ├─ Seedance (BytePlus ARK)         → POST /v1/images/generations  model=seedance-2.0*
+  └─ Vertex Veo                      → POST /videos + poll GET /v1/videos/{id}
+Need speech?                         → POST /v1/audio/speech
+```
 
-| Group | Model aliases (`model` in JSON) | Upstream routing (for troubleshooting) |
-|-------|-----------------------------------|------------------------------------------|
-| Local MLX | `gemma-4-large` | OpenAI-compatible server at `MLX_VLM_API_BASE` with `MLX_VLM_API_KEY` on the proxy |
-| OpenAI | `gpt-latest`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano` | OpenAI Chat Completions; `OPENAI_API_KEY` on the proxy |
-| Vertex Gemini (text) | `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3.5-flash`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview` | Vertex AI Gemini; `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and GCP credentials on the proxy |
-| xAI Grok (text) | `grok-latest`, `grok-4.20-reasoning`, `grok-4.20` | xAI API; `XAI_API_KEY` on the proxy |
+**Video models differ:**
 
-Example:
+| Model | Route | Blocking behavior | Client must poll? |
+|-------|-------|-------------------|-------------------|
+| `grok-video` | `/v1/images/generations` | Proxy polls xAI up to **~600s** inside one request | No — wait for `data[0].url` MP4 |
+| `seedance-2.0`, `seedance-2.0-fast` | `/v1/images/generations` | Proxy waits up to **240s** (`SEEDANCE_SYNC_WAIT_S`), then may return a task handle | **Yes**, if `data[0].url` starts with `seedance-task://` |
+| `veo-3.1*` | `/videos` + GET | Async job API | Yes — poll video id |
+
+**Rule for Seedance:** After submit, if `data[0].url` is `seedance-task://<id>`, poll with another POST (see [Seedance 2.0](#byteplus-seedance-20-custom-handler)). Do not download a `seedance-task://` URL.
+
+**HTTP client timeouts:** Use **≥ 300s** for `grok-video` and blocking Seedance (`async_submit: false`). For Seedance polling calls, **60s** per request is enough (`wait_seconds: 0`).
+
+---
+
+## Full model catalog
+
+Logical alias → endpoint → upstream (for debugging). Credentials are on the proxy only.
+
+### Chat — `POST /v1/chat/completions`
+
+| Alias | Upstream | Proxy env |
+|-------|----------|-----------|
+| `gemma-4-large` | `openai/mlx-community/gemma-4-31b-it-8bit` | `MLX_VLM_API_BASE`, `MLX_VLM_API_KEY` |
+| `gpt-latest` | `openai/gpt-5.5` | `OPENAI_API_KEY` |
+| `gpt-5.5` | `openai/gpt-5.5` | `OPENAI_API_KEY` |
+| `gpt-5.5-thinking` | `openai/gpt-5.5` + `reasoning_effort: high` | `OPENAI_API_KEY` |
+| `gpt-5.4` | `openai/gpt-5.4` | `OPENAI_API_KEY` |
+| `gpt-5.4-mini` | `openai/gpt-5.4-mini` | `OPENAI_API_KEY` |
+| `gpt-5.4-nano` | `openai/gpt-5.4-nano` | `OPENAI_API_KEY` |
+| `gemini-latest` | `vertex_ai/gemini-3.1-pro-preview` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, GCP creds |
+| `gemini-3.1-pro` | `vertex_ai/gemini-3.1-pro-preview` | same |
+| `gemini-3.1-pro-customtools` | `vertex_ai/gemini-3.1-pro-preview-customtools` | same |
+| `gemini-3.5-flash` | `vertex_ai/gemini-3.5-flash` | same |
+| `gemini-3-flash-preview` | `vertex_ai/gemini-3-flash-preview` | same |
+| `gemini-3.1-flash-lite-preview` | `vertex_ai/gemini-3.1-flash-lite-preview` | same |
+| `grok-latest` | `xai/grok-4.20-non-reasoning-latest` | `GROK_API_KEY` |
+| `grok-4.20-reasoning` | `xai/grok-4.20-reasoning-latest` | `GROK_API_KEY` |
+| `grok-4.20` | `xai/grok-4.20-non-reasoning-latest` | `GROK_API_KEY` |
+
+**Example**
 
 ```bash
 curl -sS "${LITELLM_BASE_URL}/v1/chat/completions" \
-  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
   -H "Content-Type: application/json" \
   -d '{"model":"gpt-5.4-mini","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-OpenAI-compatible SDKs: set `base_url` to `LITELLM_BASE_URL` and `api_key` to your proxy token; use `chat.completions.create` with the aliases above.
+OpenAI SDKs: `base_url=LITELLM_BASE_URL`, `api_key=LITELLM_MASTER_KEY`, standard `chat.completions.create`.
 
 ---
 
-## 2. `POST /v1/images/generations`
+### Images & proxy-hosted video — `POST /v1/images/generations`
 
-Use for **image generation** and for **Grok video** and **Seedance video**, which return a **finished asset URL** in the same response shape as image generation (`data[0].url`).
+| Alias | Type | Upstream / handler | Proxy env |
+|-------|------|-------------------|-----------|
+| `gpt-image-1.5` | Image | OpenAI | `OPENAI_API_KEY` |
+| `gpt-image-2` | Image | OpenAI | `OPENAI_API_KEY` |
+| `nano-banana`, `nano-banana-2` | Image | `vertex_ai/gemini-3.1-flash-image-preview` | GCP + Vertex |
+| `nano-banana-pro` | Image | `vertex_ai/gemini-3-pro-image-preview` | GCP + Vertex |
+| `imagen-4.0` | Image | `vertex_ai/imagen-4.0-generate-001` | GCP + Vertex |
+| `imagen-4.0-fast` | Image | `vertex_ai/imagen-4.0-fast-generate-001` | GCP + Vertex |
+| `imagen-4.0-ultra` | Image | `vertex_ai/imagen-4.0-ultra-generate-001` | GCP + Vertex |
+| `grok-image` | Image | custom → `grok-imagine-image-quality` | `GROK_API_KEY` |
+| `grok-imagine-image-quality` | Image | same as `grok-image` | `GROK_API_KEY` |
+| `grok-video` | **Video (MP4)** | custom → xAI `/v1/videos/*` | `GROK_API_KEY` |
+| `seedance-2.0` | **Video (MP4)** | custom → ARK `dreamina-seedance-2-0-260128` | `BYTEDANCE_API_KEY` |
+| `seedance-2.0-fast` | **Video (MP4)** | custom → ARK `dreamina-seedance-2-0-fast-260128` | `BYTEDANCE_API_KEY` |
 
-### OpenAI image models
+Standard image body: `prompt`, optional `n`, `size`, `quality`, etc. (provider-dependent).
 
-| Model aliases | Notes |
-|---------------|--------|
-| `gpt-image-1.5`, `gpt-image-2` | Standard OpenAI Images parameters (`prompt`, `n`, `size`, etc.). `OPENAI_API_KEY` on the proxy. |
-
-### Vertex / Gemini image (“Nano Banana”)
-
-| Model aliases | Vertex model id (on the proxy) |
-|---------------|--------------------------------|
-| `nano-banana`, `nano-banana-2` | `gemini-3.1-flash-image-preview` |
-| `nano-banana-pro` | `gemini-3-pro-image-preview` |
-
-Requires `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and Vertex-capable GCP credentials on the proxy.
-
-### Vertex Imagen 4
-
-| Model aliases | Vertex model id |
-|---------------|-----------------|
-| `imagen-4.0` | `imagen-4.0-generate-001` |
-| `imagen-4.0-fast` | `imagen-4.0-fast-generate-001` |
-| `imagen-4.0-ultra` | `imagen-4.0-ultra-generate-001` |
-
-### xAI Grok image (custom handler)
-
-| Model aliases | Notes |
-|---------------|--------|
-| `grok-image`, `grok-imagine-image-quality` | Same behavior; send `prompt` for generation. Uses `GROK_API_KEY` on the proxy. |
-
-### xAI Grok video (custom handler)
-
-| Model aliases | Notes |
-|---------------|--------|
-| `grok-video` | Call **`/v1/images/generations`** with JSON. Successful response includes **`data[0].url`** pointing at an **MP4**. The proxy polls xAI until the job completes. |
-
-**Common JSON fields for `grok-video`**
-
-- `prompt` (string): scene description.
-- `duration` or `seconds` (integer): clip length in seconds.
-- `xai_model` or `upstream_model` (string, optional): override the upstream xAI model name (default is operator-configurable, often a `grok-imagine-video`-style id).
-- `reference_images` (optional): non-empty list of objects or URL strings for image-conditioned video; each object may use `url` or `file_id` (not both). When references are used, `prompt` is required; duration with references is capped (commonly **≤ 10** seconds). Up to **7** reference images.
-- **Video edit path** (optional): supply `image` / `image_url` and `video` / `video_url` (or `file_id` variants) for edit-style calls; reference images are not combined with that path.
-
-**Example (text-to-video)**
+**Imagen example**
 
 ```bash
 curl -sS "${LITELLM_BASE_URL}/v1/images/generations" \
-  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
   -H "Content-Type: application/json" \
-  -d '{"model":"grok-video","prompt":"A red ball bouncing once","duration":3}'
+  -d '{"model":"imagen-4.0","prompt":"A red bicycle on white","n":1,"size":"1024x1024"}'
 ```
-
-Use a long HTTP client timeout (many minutes) if your stack defaults short.
-
-### BytePlus Seedance 2.0 (custom handler)
-
-| Model aliases | Notes |
-|---------------|--------|
-| `seedance-2.0`, `seedance-2.0-fast`, `dreamina-seedance-2-0-fast-260128` | Same route: **`POST /v1/images/generations`**. Response **`data[0].url`** is the **MP4**. The proxy submits an ARK task and polls until completion. |
-
-**Common JSON fields for Seedance**
-
-- `prompt` (string).
-- `duration` (integer): length in seconds.
-- `resolution` (string, e.g. `480p`), `ratio` (string, e.g. `1:1`).
-- `generate_audio` or `generateAudio` (boolean).
-- `watermark` (boolean).
-- **Image / reference inputs** (optional): `image` or `image_url` (single URL string), or `images` (list of `https://` or `data:image/...` URLs). For **reference-only** batches, use `reference_image_urls` as a non-empty list of the same URL forms; do **not** combine `reference_image_urls` with `image` / `image_url` / `video_url` style fields. Up to **7** reference images.
-
-**Example (text-to-video)**
-
-```bash
-curl -sS "${LITELLM_BASE_URL}/v1/images/generations" \
-  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"seedance-2.0","prompt":"A person walking through a forest at night","resolution":"480p","ratio":"1:1","duration":4,"generate_audio":false,"watermark":false}'
-```
-
-Server-side polling can run up to roughly **20 minutes**; ensure your HTTP client and any edge timeouts exceed that if you generate long clips.
-
-### Generic image example (Vertex Imagen)
-
-```bash
-curl -sS "${LITELLM_BASE_URL}/v1/images/generations" \
-  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"imagen-4.0","prompt":"A red bicycle on a white background","n":1,"size":"1024x1024"}'
-```
-
-### `POST /v1/images/edits` (Grok image)
-
-For **image edits** (input image + prompt), use the **OpenAI Images Edits** pattern: **multipart/form-data** with an `image` file part, `model` set to `grok-image` or `grok-imagine-image-quality`, and a `prompt`. Generation without an input image stays on **`/v1/images/generations`** with JSON.
 
 ---
 
-## 3. Vertex Veo video (OpenAI-style video API)
+### Grok image edits — `POST /v1/images/edits`
 
-Use for **Vertex Veo** models. LiteLLM uses a **create job → poll status → download content** flow. Official parameter mapping is described in the [LiteLLM Vertex Veo documentation](https://docs.litellm.ai/docs/providers/vertex_ai/videos).
+Multipart form: `model` = `grok-image` or `grok-imagine-image-quality`, `prompt`, `image` file part. Text-only Grok images use `/v1/images/generations` (JSON).
 
-| Model aliases | Vertex model id |
-|---------------|-----------------|
+---
+
+### Vertex Veo — async video API
+
+| Alias | Vertex model id |
+|-------|-----------------|
 | `veo-3.1` | `veo-3.1-generate-001` |
 | `veo-3.1-fast` | `veo-3.1-fast-generate-001` |
 | `veo-3.1-lite` | `veo-3.1-lite-generate-001` |
 
-**Typical flow**
+1. `POST ${LITELLM_BASE_URL}/videos` — body: `model`, `prompt`, optional `seconds`, `size`, …
+2. `GET ${LITELLM_BASE_URL}/v1/videos/{video_id}` — poll until completed
+3. `GET ${LITELLM_BASE_URL}/v1/videos/{video_id}/content` — download bytes
 
-1. **`POST ${LITELLM_BASE_URL}/videos`** — JSON body includes `"model": "<alias>"`, `"prompt"`, optional `"seconds"`, `"size"`, etc.
-2. **`GET ${LITELLM_BASE_URL}/v1/videos/{video_id}`** — poll until status is completed (or failed).
-3. **`GET ${LITELLM_BASE_URL}/v1/videos/{video_id}/content`** — download video bytes.
-
-Use the same `Authorization: Bearer` scheme as other routes (unless your operator documents a different proxy key header). The proxy needs `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and Vertex-capable GCP credentials.
+See [LiteLLM Vertex Veo docs](https://docs.litellm.ai/docs/providers/vertex_ai/videos).
 
 ---
 
-## 4. `POST /v1/audio/speech` (ElevenLabs TTS)
+### Speech — `POST /v1/audio/speech`
 
-| Model aliases | ElevenLabs model id (on the proxy) |
-|---------------|-------------------------------------|
+| Alias | ElevenLabs model |
+|-------|------------------|
+| `elevenlabs-v3-tts` | `eleven_v3` |
 | `tts-quality` | `eleven_multilingual_v2` |
 | `tts-fast` | `eleven_flash_v2_5` |
 | `tts-turbo` | `eleven_turbo_v2_5` |
 
-Request body (OpenAI-compatible): **`model`**, **`input`** (text to speak), **`voice`** (OpenAI-style names such as `alloy` map to ElevenLabs voices in LiteLLM; you may also pass a raw ElevenLabs voice id), optional **`response_format`** (`mp3`, `pcm`, `opus`). The proxy holds **`ELEVENLABS_API_KEY`**.
+Body: `model`, `input` (text), `voice` (OpenAI-style name like `alloy` or raw ElevenLabs voice id), optional `response_format` (`mp3`, `pcm`, `opus`). Proxy: `ELEVENLABS_API_KEY`.
 
 ```bash
 curl -sS "${LITELLM_BASE_URL}/v1/audio/speech" \
-  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
   -H "Content-Type: application/json" \
-  -d '{"model":"tts-quality","input":"Hello from the proxy.","voice":"alloy","response_format":"mp3"}' \
-  --output speech.mp3
+  -d '{"model":"tts-quality","input":"Hello.","voice":"alloy","response_format":"mp3"}' \
+  -o speech.mp3
 ```
 
-Provider-specific options (for example `voice_settings`) are often passed under **`extra_body`** when using OpenAI SDKs against the proxy; see [LiteLLM ElevenLabs documentation](https://docs.litellm.ai/docs/providers/elevenlabs).
+Provider extras (e.g. `voice_settings`) often go in `extra_body` with OpenAI SDKs.
 
 ---
 
-## Quick reference: alias → endpoint
+## Custom handlers (Grok & Seedance)
+
+These use the same OpenAI **Images** path but implement vendor-specific async video (and Grok image) logic in `custom_handler_*.py`.
+
+### xAI Grok video (`grok-video`)
+
+- **Endpoint:** `POST /v1/images/generations`
+- **Success:** `data[0].url` = HTTPS link to **MP4**
+- **Behavior:** Submits to xAI (`/v1/videos/generations` or `/v1/videos/edits`), then **polls inside the proxy** (up to ~600s, 3s interval). One client request can block for the full generation.
+- **Default upstream model:** `grok-imagine-video` (override with `xai_model` or `upstream_model`, or env `GROK_VIDEO_MODEL`)
+
+**Modes**
+
+| Mode | JSON fields | Notes |
+|------|-------------|-------|
+| Text-to-video | `prompt` | Prompt required unless `image` provided |
+| Image-to-video | `prompt` + `image` or `image_url` | `image` = URL string or `{url}` / `{file_id}` |
+| Reference images | `prompt` + `reference_images` | List of URL strings or `{url}` / `{file_id}` objects; max **7**; `prompt` required |
+| Video edit | `prompt` + `video` or `video_url` | Uses xAI edits API; **no** `reference_images` or `image` |
+
+**Duration:** `duration` or `seconds`, integer **1–15**. With `reference_images`, duration must be **≤ 10**.
+
+**Optional:** `aspect_ratio`, `resolution`, `output`, `storage_options`, `user` (passed through to xAI).
+
+**Example**
+
+```bash
+curl -sS "${LITELLM_BASE_URL}/v1/images/generations" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"grok-video","prompt":"A red ball bouncing once","duration":5}'
+```
+
+**Pricing (Grok Imagine Video / `grok-imagine-video`)**
+
+The handler bills using xAI’s **`usage.cost_in_usd_ticks`** from `GET /v1/videos/{request_id}` when the job completes (1 USD = 10,000,000,000 ticks). That value is exposed as `x-litellm-response-cost`. If ticks are missing, cost is estimated from **`video.duration`** × per-second rate by **`resolution`**:
+
+| Resolution | USD / generated second (output) | Notes |
+|------------|----------------------------------|--------|
+| `480p` (default) | $0.05 | xAI model page baseline |
+| `720p` | $0.07 | HD tier |
+| `1080p` | $0.07 | Use 720p rate as conservative fallback |
+
+Additional list prices (usually included in ticks; used in fallback estimates):
+
+| Input | USD |
+|-------|-----|
+| Reference / input image (each) | $0.002 |
+| Input video (edit path) | $0.01 / second of source video |
+
+Override on proxy: `GROK_VIDEO_PRICE_PER_SECOND_480P`, `GROK_VIDEO_PRICE_PER_SECOND_720P`, `GROK_VIDEO_PRICE_PER_SECOND_1080P`, `GROK_VIDEO_PRICE_PER_REFERENCE_IMAGE`.
+
+**Client timeout:** Prefer **≥ 660s** HTTP timeout (generation + poll ceiling ~600s).
+
+---
+
+### xAI Grok image (`grok-image`, `grok-imagine-image-quality`)
+
+- **Generate:** `POST /v1/images/generations` with `prompt`
+- **Edit:** `POST /v1/images/edits` multipart with `image` + `prompt`
+- **Proxy env:** `GROK_API_KEY`
+- **Cost metadata:** `input_cost_per_image: 0.06` (approx combined 1K quality path)
+
+---
+
+### BytePlus Seedance 2.0 (custom handler)
+
+#### Implementation checklist (read before using Seedance)
+
+**You are not done until all of these are true.**
+
+| # | Action | Why |
+|---|--------|-----|
+| 1 | **Redeploy** the LiteLLM proxy image (`./deploy_cloud_run.sh` or your CI) so Cloud Run runs `custom_handler_seedance.py` with handler version **`2026-05-24-poll-default-0`** (grep the file in the built image if unsure). | Fixes live in the handler file, not config alone. |
+| 2 | Confirm Cloud Run env: `SEEDANCE_SYNC_WAIT_S=240`, `SEEDANCE_POLL_TIMEOUT_S=1200`, request timeout **1800s**. | Submit waits up to 4m; poll cap for blocking opt-in. |
+| 3 | **Run the smoke test** below (submit + one poll). Poll must return in **&lt; 5 seconds** while status is `running`. | Proves poll-default fix is deployed. |
+| 4 | **Calling code / agents:** implement the two-step flow (submit → poll). **Never** re-POST the original prompt on timeout — that starts a **new paid ARK job**. | Main cause of surprise credit burn. |
+| 5 | On **poll**, always send `seedance_task_id` (or `prompt: "seedance-task://<id>"`). Do **not** send `duration`, `resolution`, or reference images again. | Avoid duplicate submits; cheaper polls. |
+| 6 | Set `resolution` explicitly if you need 720p/1080p (`480p` is the handler default). | Omitted resolution previously fell through to slower ARK tiers. |
+| 7 | Optional: use **`"async_submit": false`** on submit only if you want one HTTP call blocking up to 20m (old style). | No client poll loop required. |
+
+**Smoke test (after deploy)**
+
+```bash
+# 1) Submit — may return MP4 or seedance-task://...
+RESP=$(curl -sS -m 300 "${LITELLM_BASE_URL}/v1/images/generations" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"seedance-2.0-fast","prompt":"A red ball on white","duration":4,"resolution":"480p"}')
+echo "$RESP"
+URL=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['url'])")
+
+# 2) If pending, poll once — must finish in a few seconds, not minutes
+if [[ "$URL" == seedance-task://* ]]; then
+  TID="${URL#seedance-task://}"
+  time curl -sS -m 60 "${LITELLM_BASE_URL}/v1/images/generations" \
+    -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "{\"model\":\"seedance-2.0-fast\",\"prompt\":\"seedance-task://${TID}\",\"seedance_task_id\":\"${TID}\"}"
+fi
+```
+
+If step 2’s `time curl` shows **~240s**, the old handler is still running — redeploy.
+
+---
+
+| Alias | ARK model id | Notes |
+|-------|--------------|-------|
+| `seedance-2.0` | `dreamina-seedance-2-0-260128` | 480p / 720p / **1080p**; best quality |
+| `seedance-2.0-fast` | `dreamina-seedance-2-0-fast-260128` | Same features, max **720p**, lower cost |
+
+**Endpoint:** `POST /v1/images/generations`
+
+**Response shapes**
+
+```jsonc
+// Done — download this URL
+{ "data": [{ "url": "https://....mp4" }] }
+
+// Still running — poll (do not treat url as downloadable)
+{ "data": [{ "url": "seedance-task://cgt-...", "revised_prompt": "running" }] }
+```
+
+Status strings in `revised_prompt` include `submitted`, `running`, etc.
+
+#### Submit (new job)
+
+Required: `prompt` (non-empty), `model`, usually `duration` (4–15 seconds).
+
+| Field | Description |
+|-------|-------------|
+| `duration` | Integer seconds, **4–15** |
+| `resolution` | `480p`, `720p`, `1080p` (1080p: Pro only) |
+| `ratio` | `21:9`, `16:9`, `4:3`, `1:1`, `3:4`, `9:16`, or `adaptive` (with refs) |
+| `generate_audio` | Boolean |
+| `watermark` | Boolean |
+| `wait_seconds` | How long this HTTP call blocks polling ARK (default **240**). `0` = return task URL immediately |
+| `async_submit` | `true` → `wait_seconds=0`; `false` → block up to `SEEDANCE_POLL_TIMEOUT_S` (1200s) |
+
+**Poll calls** (`seedance_task_id` set): default `wait_seconds` is **0** (one ARK GET, ~1s). Do not omit `seedance_task_id` on poll — only the submit body should create a new task. Optional `wait_seconds` &gt; 0 makes the proxy block and poll ARK until that cap.
+
+**Image inputs**
+
+- `image` / `image_url` — one URL (`https://` or `data:image/...`)
+- `images` — list of image URLs
+- `reference_image_urls` — list (max **7**) for reference-only / multimodal; **do not** combine with `image` / `video_url`
+
+Roles sent to ARK: 1 image → `first_frame`; 2 → `first_frame` + `last_frame`; 3+ or reference batch → `reference_image`.
+
+**Video inputs (edit / extend)**
+
+- `video_url` or `videos` — up to **3** HTTPS URLs, role `reference_video`
+
+#### Poll (existing job)
+
+LiteLLM’s router requires a **`prompt`** field on every images request. Use any non-empty string; the task URL works:
+
+```bash
+curl -sS "${LITELLM_BASE_URL}/v1/images/generations" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "seedance-2.0",
+    "prompt": "seedance-task://cgt-xyz",
+    "seedance_task_id": "cgt-xyz",
+    "wait_seconds": 0
+  }'
+```
+
+Also accepts `poll_task_id` or `task_id` instead of `seedance_task_id`.
+
+#### Recovery (you already paid — don’t lose the video)
+
+ARK assigns a **task id** (`cgt-…`) at submit time. That id can be polled until the job is **succeeded**, **failed**, or **expired**. Completed outputs are kept for roughly **48 hours** (`execution_expires_after` on the ARK task).
+
+**Polling an existing id does not start a new generation** (no new completion charge for the generation itself).
+
+| Handle | Where it appears |
+|--------|------------------|
+| `seedance-task://cgt-…` | `data[0].url` while running |
+| `cgt-…` | `data[0].revised_prompt` on **success** (added for recovery) |
+| JSONL row | `SEEDANCE_TASK_LEDGER_PATH` on the proxy (written immediately after ARK accepts the task) |
+
+**Fool-proof setup (recommended)**
+
+1. In `.env` for local Docker:
+   ```bash
+   SEEDANCE_TASK_LEDGER_PATH=/app/seedance_task_ledger.jsonl
+   ```
+   (`run_gateway.sh` creates the host file; compose bind-mounts it.)
+
+2. On every submit, your app **persists the task id** before waiting for the MP4:
+   - From `data[0].url` if it starts with `seedance-task://`
+   - From `data[0].revised_prompt` when status is `succeeded`
+   - Or grep the ledger: `tail seedance_task_ledger.jsonl`
+
+3. If LiteLLM or your app times out, **recover** (do not re-submit the prompt):
+   ```bash
+   python recover_seedance_task.py cgt-XXXXXXXX   # polls ARK directly
+   python recover_seedance_task.py cgt-XXXXXXXX --via proxy --model seedance-2.0-fast
+   python recover_seedance_task.py --list-recent
+   python recover_seedance_task.py --recover-pending
+   ```
+
+4. Optional faster handoff: `"async_submit": true` on submit returns `seedance-task://…` in **&lt;1s** so you can save the id before any long wait.
+
+**Never** re-POST the original prompt after a timeout unless you intend to pay for a **new** job.
+
+#### Agent polling loop (pseudocode)
+
+```python
+TASK_PREFIX = "seedance-task://"
+
+def is_pending(url: str) -> bool:
+    return url and url.startswith(TASK_PREFIX)
+
+def task_id_from_url(url: str) -> str:
+    return url[len(TASK_PREFIX):]
+
+# 1) submit
+resp = post_images_generations(model="seedance-2.0", prompt="...", duration=8, ratio="16:9")
+url = resp["data"][0]["url"]
+if not is_pending(url):
+    return url  # MP4 ready
+
+tid = task_id_from_url(url)
+# 2) poll every 10s
+while True:
+    resp = post_images_generations(
+        model="seedance-2.0",
+        prompt=f"{TASK_PREFIX}{tid}",
+        seedance_task_id=tid,
+        wait_seconds=0,
+    )
+    url = resp["data"][0]["url"]
+    if not is_pending(url):
+        return url
+    sleep(10)
+```
+
+#### Why bounded wait?
+
+Many clients and load balancers cut idle connections at **~300s**. The handler defaults to **240s** synchronous wait (`SEEDANCE_SYNC_WAIT_S`), then returns a task handle so polling uses short requests.
+
+#### Pricing
+
+Cost is computed from ARK `usage.completion_tokens` × rate (in `x-litellm-response-cost`). Re-polling a **completed** task does not double-charge.
+
+| Alias | USD / 1M output tokens (no input video) | With input video |
+|-------|----------------------------------------|------------------|
+| `seedance-2.0` | $7.00 | $4.30 |
+| `seedance-2.0-fast` | $5.60 | $3.30 |
+
+Override on proxy: `SEEDANCE_PRICE_PER_MTOK`, `SEEDANCE_PRICE_PER_MTOK_VIDEO`, `SEEDANCE_PRICE_PER_MTOK_FAST`, `SEEDANCE_PRICE_PER_MTOK_FAST_VIDEO`.
+
+---
+
+## Quick reference: alias → HTTP surface
 
 | HTTP surface | Aliases |
 |--------------|---------|
-| `POST /v1/chat/completions` | `gemma-4-large`, `gpt-latest`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3.5-flash`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview`, `grok-latest`, `grok-4.20-reasoning`, `grok-4.20` |
-| `POST /v1/images/generations` | `gpt-image-1.5`, `gpt-image-2`, `nano-banana`, `nano-banana-2`, `nano-banana-pro`, `imagen-4.0`, `imagen-4.0-fast`, `imagen-4.0-ultra`, `grok-image`, `grok-imagine-image-quality`, `grok-video`, `seedance-2.0`, `seedance-2.0-fast`, `dreamina-seedance-2-0-fast-260128` |
-| `POST /v1/images/edits` (multipart) | `grok-image`, `grok-imagine-image-quality` (edits only) |
-| Veo: `POST /videos`, then `GET /v1/videos/{id}`, `GET /v1/videos/{id}/content` | `veo-3.1`, `veo-3.1-fast`, `veo-3.1-lite` |
-| `POST /v1/audio/speech` | `tts-quality`, `tts-fast`, `tts-turbo` |
+| `POST /v1/chat/completions` | `gemma-4-large`, `gpt-latest`, `gpt-5.5`, `gpt-5.5-thinking`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3.5-flash`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview`, `grok-latest`, `grok-4.20-reasoning`, `grok-4.20` |
+| `POST /v1/images/generations` | `gpt-image-1.5`, `gpt-image-2`, `nano-banana`, `nano-banana-2`, `nano-banana-pro`, `imagen-4.0`, `imagen-4.0-fast`, `imagen-4.0-ultra`, `grok-image`, `grok-imagine-image-quality`, `grok-video`, `seedance-2.0`, `seedance-2.0-fast` |
+| `POST /v1/images/edits` | `grok-image`, `grok-imagine-image-quality` |
+| `POST /videos` + `GET /v1/videos/{id}` + `GET …/content` | `veo-3.1`, `veo-3.1-fast`, `veo-3.1-lite` |
+| `POST /v1/audio/speech` | `elevenlabs-v3-tts`, `tts-quality`, `tts-fast`, `tts-turbo` |
 
 ---
 
-## Discovery and drift
+## Proxy configuration notes (operators)
 
-- **`GET ${LITELLM_BASE_URL}/v1/models`** (with the same proxy auth) usually returns the models the proxy currently exposes. If that list disagrees with the tables above, treat the **live response** as authoritative for your environment.
-- If an alias returns **404 / unknown model**, the name may have been retired or renamed on the proxy; ask the operator or refresh from `GET /v1/models`.
+| Setting | Value | Effect |
+|---------|-------|--------|
+| `litellm_settings.request_timeout` | `1800` | Upper bound per proxy request |
+| `seedance-*` `timeout` in model_list | `1800` | Per-model router timeout |
+| `grok-video` `timeout` | `1260` | Per-model router timeout |
+| `SEEDANCE_SYNC_WAIT_S` (env) | default `240` | Max blocking wait before task URL |
+| `SEEDANCE_POLL_TIMEOUT_S` (env) | default `1200` | Max wait when `async_submit: false` |
 
-The **tables in this document** are the intended catalog for this deployment; copy this page into another repository when you need an offline contract.
+Custom handler modules: `custom_handler.grok_video`, `custom_handler.grok_image`, `custom_handler.seedance`.
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause | Action |
+|---------|--------------|--------|
+| Empty `data` on Seedance | Old handler bug (fixed) | Redeploy proxy; expect `seedance-task://` or MP4 URL |
+| 504 / disconnect ~5 min on video | Long blocking request | Seedance: use default bounded wait + poll; Grok: increase client timeout to ≥660s |
+| `missing prompt` on Seedance poll | LiteLLM router | Include `prompt` (e.g. task URL string) on poll requests |
+| 404 unknown model | Alias typo or stale deploy | `GET /v1/models` |
+| Seedance 401/403 | ARK key or prepaid pack | Check `BYTEDANCE_API_KEY` and BytePlus model activation |
+
+---
+
+## Source of truth
+
+- **Model list:** `litellm_config.yaml` in this repo
+- **Handler behavior:** `custom_handler_seedance.py`, `custom_handler_xai.py`
+- **This file:** client/skill contract for agents calling `LITELLM_BASE_URL`
+
+When adding models, update `litellm_config.yaml` and this document together.

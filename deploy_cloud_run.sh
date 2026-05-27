@@ -23,13 +23,18 @@ IMAGE_NAME="${IMAGE_NAME:-litellm-proxy}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 # Cloud Run defaults (tuned for LiteLLM startup; adjust as needed)
-# Request timeout must exceed Seedance poll ceiling (default 1200s) plus submit overhead.
+# Cloud Run --timeout caps any single request. The Seedance handler does a
+# bounded-wait long-poll (default 240s) and then returns a task-id placeholder;
+# clients resume with cheap GET-style polls. SEEDANCE_POLL_TIMEOUT_S is the
+# upper bound for the explicit blocking opt-in (`async_submit=false`).
 MEMORY="${MEMORY:-2Gi}"
 CPU="${CPU:-2}"
 TIMEOUT="${TIMEOUT:-1800}"
 MIN_INSTANCES="${MIN_INSTANCES:-0}"
 MAX_INSTANCES="${MAX_INSTANCES:-10}"
 ALLOW_UNAUTHENTICATED="${ALLOW_UNAUTHENTICATED:-false}"
+SEEDANCE_SYNC_WAIT_S="${SEEDANCE_SYNC_WAIT_S:-240}"
+SEEDANCE_POLL_TIMEOUT_S="${SEEDANCE_POLL_TIMEOUT_S:-1200}"
 
 RUNTIME_SA="${RUNTIME_SA:-}"
 
@@ -65,6 +70,8 @@ echo "==> Service:       ${SERVICE_NAME}"
 echo "==> Image:         ${IMAGE_URI}"
 echo "==> Memory/CPU:    ${MEMORY} / ${CPU}"
 echo "==> Timeout:       ${TIMEOUT}s"
+echo "==> Seedance sync wait: ${SEEDANCE_SYNC_WAIT_S}s"
+echo "==> Seedance poll cap:  ${SEEDANCE_POLL_TIMEOUT_S}s"
 echo "==> Unauthenticated access: ${ALLOW_UNAUTHENTICATED}"
 
 gcloud config set project "${PROJECT_ID}" >/dev/null
@@ -99,6 +106,7 @@ DEPLOY_ARGS=(
   --timeout "${TIMEOUT}"
   --min-instances "${MIN_INSTANCES}"
   --max-instances "${MAX_INSTANCES}"
+  --update-env-vars "SEEDANCE_SYNC_WAIT_S=${SEEDANCE_SYNC_WAIT_S},SEEDANCE_POLL_TIMEOUT_S=${SEEDANCE_POLL_TIMEOUT_S}"
 )
 
 if [[ -n "${RUNTIME_SA}" ]]; then
@@ -119,7 +127,7 @@ echo
 echo "Deployed: ${SERVICE_URL}"
 echo
 echo "Smoke test (public service + LiteLLM key as Bearer):"
-echo "  curl -sS -H \"Authorization: Bearer \\$LITELLM_MASTER_KEY\" \\"
+echo "  curl -sS -H \"Authorization: Bearer \$LITELLM_MASTER_KEY\" \\"
 echo "    -H \"Content-Type: application/json\" \\"
 echo "    -X POST \"${SERVICE_URL}/v1/chat/completions\" \\"
 echo "    -d '{\"model\":\"gpt-5.4-mini\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}'"

@@ -28,6 +28,7 @@ keys/
 *.json
 
 # Local artifacts
+seedance_task_ledger.jsonl
 *.mp4
 *.mov
 *.mkv

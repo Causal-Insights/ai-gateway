@@ -144,17 +144,26 @@ model_list:
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   # ── xAI (custom: video) ─────────────────────────────────────────────────
+  # grok-imagine-video: output billed per generated second (480p $0.05/s, 720p $0.07/s).
+  # Handler prefers xAI usage.cost_in_usd_ticks from poll responses; rates below are fallback.
   - model_name: grok-video
     litellm_params:
-      model: grok-video/grok-2-video-generation
+      model: grok-video/grok-imagine-video
       api_key: os.environ/GROK_API_KEY
+      timeout: 1260
     model_info:
       mode: image_generation
       input_cost_per_token: 0
       output_cost_per_token: 0
-      # Approx xAI Grok Imagine Video 720p output rate.
-      # Image input is $0.002/image; video input is $0.01/s for edit/extension calls.
-      input_cost_per_second: 0.07
+      output_cost_per_second: 0.05
+      output_cost_per_second_720p: 0.07
+      output_cost_per_second_1080p: 0.07
+      metadata:
+        grok_imagine_video_upstream: grok-imagine-video
+        grok_video_price_per_second_480p: 0.05
+        grok_video_price_per_second_720p: 0.07
+        grok_video_reference_image_usd: 0.002
+        grok_video_input_video_per_second_usd: 0.01
 
   # ── xAI (custom: image) ─────────────────────────────────────────────────
   - model_name: grok-image
@@ -184,29 +193,75 @@ model_list:
       input_cost_per_image: 0.06
 
   # ── Seedance 2.0 (BytePlus ARK) ───────────────────────────────────────────
+  # The custom handler submits an ARK task, then waits up to SEEDANCE_SYNC_WAIT_S
+  # (default 240s) before falling back to an async-polling response. Clients can
+  # poll a returned task ID by re-posting with `seedance_task_id=<id>`.
+  # Per-request `wait_seconds` (0..SEEDANCE_POLL_TIMEOUT_S) overrides the default.
+  # Cost is computed in-handler from ARK's `usage.completion_tokens` and the
+  # rate below; LiteLLM's `_hidden_params["response_cost"]` is used directly.
   - model_name: seedance-2.0
     litellm_params:
       model: seedance/dreamina-seedance-2-0-260128
       api_key: os.environ/BYTEDANCE_API_KEY
+      timeout: 1800
     model_info:
       mode: image_generation
+      # Pass through on /v1/images/generations (drop_params must not strip these).
+      supported_openai_params:
+        - seedance_task_id
+        - poll_task_id
+        - task_id
+        - wait_seconds
+        - async_submit
+        - reference_image_urls
+        - referenceImageUrls
+        - image_url
+        - video_url
+        - videos
+        - generate_audio
+        - watermark
+        - resolution
+        - ratio
+        - duration
       input_cost_per_token: 0
       output_cost_per_token: 0
-      # Approx BytePlus 720p generated-second cost for text/image input:
-      # 1280 * 720 * 24 / 1024 = 21600 tokens/s at $0.007/K tokens.
-      input_cost_per_second: 0.1512
+      # BytePlus ARK rate for Seedance 2.0 (480p/720p, no input video):
+      # $7.00 per 1M output tokens. tokens ≈ width × height × fps × seconds / 1024.
+      # The handler computes the actual response cost from the upstream usage block.
+      metadata:
+        seedance_price_per_mtok: 7.00
+        seedance_price_per_mtok_with_input_video: 4.30
 
   - model_name: seedance-2.0-fast
     litellm_params:
       model: seedance/dreamina-seedance-2-0-fast-260128
       api_key: os.environ/BYTEDANCE_API_KEY
+      timeout: 1800
     model_info:
       mode: image_generation
+      supported_openai_params:
+        - seedance_task_id
+        - poll_task_id
+        - task_id
+        - wait_seconds
+        - async_submit
+        - reference_image_urls
+        - referenceImageUrls
+        - image_url
+        - video_url
+        - videos
+        - generate_audio
+        - watermark
+        - resolution
+        - ratio
+        - duration
       input_cost_per_token: 0
       output_cost_per_token: 0
-      # Approx BytePlus 720p generated-second cost for text/image input:
-      # 1280 * 720 * 24 / 1024 = 21600 tokens/s at $0.0056/K tokens.
-      input_cost_per_second: 0.12096
+      # BytePlus ARK rate for Seedance 2.0 Fast (480p/720p, no input video):
+      # $5.60 per 1M output tokens. Handler computes per-response cost.
+      metadata:
+        seedance_price_per_mtok: 5.60
+        seedance_price_per_mtok_with_input_video: 3.30
 
   # ── xAI ──────────────────────────────────────────────────────────────────
   - model_name: grok-latest
@@ -225,6 +280,13 @@ model_list:
       api_key: os.environ/GROK_API_KEY
 
   # ── ElevenLabs TTS ───────────────────────────────────────────────────────
+  
+  - model_name: elevenlabs-v3-tts
+    litellm_params:
+      model: elevenlabs/eleven_v3
+      api_key: os.environ/ELEVENLABS_API_KEY
+  
+  
   - model_name: tts-quality
     litellm_params:
       model: elevenlabs/eleven_multilingual_v2
@@ -247,6 +309,10 @@ general_settings:
 
 litellm_settings:
   drop_params: true
+  # Upper bound on a single proxy request; Seedance submit+poll is bounded by
+  # SEEDANCE_SYNC_WAIT_S in the handler (default 240s) to avoid hitting 300s
+  # edge timeouts. 1800s remains the absolute cap for the explicit blocking opt-in.
+  request_timeout: 1800
   custom_provider_map:
     - provider: grok-video
       custom_handler: custom_handler.grok_video
