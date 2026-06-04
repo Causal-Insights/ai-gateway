@@ -170,6 +170,71 @@ class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
 
         self.assertAlmostEqual(out._hidden_params["response_cost"], 0.28, places=6)
 
+    async def test_upstream_model_from_litellm_model_string(self):
+        submit_resp = MagicMock()
+        submit_resp.raise_for_status = MagicMock()
+        submit_resp.json = MagicMock(return_value={"request_id": "req-upstream"})
+
+        done_resp = MagicMock()
+        done_resp.raise_for_status = MagicMock()
+        done_resp.json = MagicMock(
+            return_value={
+                "status": "done",
+                "video": {"url": "https://cdn.example/grok-15.mp4"},
+            }
+        )
+
+        client_instance = self._mock_async_client(submit_resp, [done_resp])
+
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance), patch(
+            "custom_handler_xai.asyncio.sleep", new=AsyncMock(return_value=None)
+        ):
+            llm = GrokVideoLLM()
+            await llm.aimage_generation(
+                model="grok-video/grok-imagine-video-1.5-preview",
+                prompt="hello",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"duration": 1},
+                logging_obj=None,
+            )
+
+        submit_body = client_instance.post.call_args.kwargs["json"]
+        self.assertEqual(submit_body["model"], "grok-imagine-video-1.5-preview")
+
+    async def test_video_15_estimates_720p_cost_when_ticks_missing(self):
+        submit_resp = MagicMock()
+        submit_resp.raise_for_status = MagicMock()
+        submit_resp.json = MagicMock(return_value={"request_id": "req-15-cost"})
+
+        done_resp = MagicMock()
+        done_resp.raise_for_status = MagicMock()
+        done_resp.json = MagicMock(
+            return_value={
+                "status": "done",
+                "video": {"url": "https://cdn.example/grok-15.mp4", "duration": 4},
+            }
+        )
+
+        client_instance = self._mock_async_client(submit_resp, [done_resp])
+
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance), patch(
+            "custom_handler_xai.asyncio.sleep", new=AsyncMock(return_value=None)
+        ):
+            llm = GrokVideoLLM()
+            out = await llm.aimage_generation(
+                model="grok-video/grok-imagine-video-1.5-preview",
+                prompt="hello",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"resolution": "720p"},
+                logging_obj=None,
+            )
+
+        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.56, places=6)
+
     async def test_failed_internal_error_raises_grok_exception(self):
         submit_resp = MagicMock()
         submit_resp.raise_for_status = MagicMock()

@@ -165,6 +165,43 @@ model_list:
         grok_video_reference_image_usd: 0.002
         grok_video_input_video_per_second_usd: 0.01
 
+  # grok-imagine-video-1.5-preview (alias grok-imagine-video-1.5-2026-05-30): 480p $0.08/s, 720p $0.14/s; input image $0.01.
+  - model_name: grok-video-1.5
+    litellm_params:
+      model: grok-video/grok-imagine-video-1.5-preview
+      api_key: os.environ/GROK_API_KEY
+      timeout: 1260
+    model_info:
+      mode: image_generation
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      output_cost_per_second: 0.08
+      output_cost_per_second_720p: 0.14
+      metadata:
+        grok_imagine_video_upstream: grok-imagine-video-1.5-preview
+        grok_video_price_per_second_480p: 0.08
+        grok_video_price_per_second_720p: 0.14
+        grok_video_reference_image_usd: 0.01
+        grok_video_input_video_per_second_usd: 0.01
+
+  - model_name: grok-imagine-video-1.5-2026-05-30
+    litellm_params:
+      model: grok-video/grok-imagine-video-1.5-2026-05-30
+      api_key: os.environ/GROK_API_KEY
+      timeout: 1260
+    model_info:
+      mode: image_generation
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      output_cost_per_second: 0.08
+      output_cost_per_second_720p: 0.14
+      metadata:
+        grok_imagine_video_upstream: grok-imagine-video-1.5-2026-05-30
+        grok_video_price_per_second_480p: 0.08
+        grok_video_price_per_second_720p: 0.14
+        grok_video_reference_image_usd: 0.01
+        grok_video_input_video_per_second_usd: 0.01
+
   # ── xAI (custom: image) ─────────────────────────────────────────────────
   - model_name: grok-image
     litellm_params:

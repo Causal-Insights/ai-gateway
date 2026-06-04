@@ -2,8 +2,9 @@
 
 This repo packages a LiteLLM Proxy plus custom handlers for:
 
-- **Grok video** (`grok-video` / `grok-imagine-video`)
-- **Seedance 2.0** (BytePlus ARK)
+- **Grok video** (`grok-video` / `grok-imagine-video`; **1.5** via `grok-video-1.5` → `grok-imagine-video-1.5-preview`)
+- **Seedance 2.0** (BytePlus ModelArk video)
+- **Seedream 5** (BytePlus ModelArk image)
 
 It can run locally via `docker-compose` and in production on **Google Cloud Run**.
 
@@ -59,7 +60,7 @@ Then configure environment variables (via `gcloud run services update` or the co
 - `GEMINI_API_KEY`
 - `XAI_API_KEY`
 - `GROK_API_KEY`
-- `BYTEDANCE_API_KEY` (Seedance 2.0 / BytePlus ARK)
+- `BYTEDANCE_API_KEY` (Seedance 2.0 / Seedream 5 / BytePlus ModelArk)
 - Optional Seedance tuning: `SEEDANCE_ARK_BASE`, `SEEDANCE_ARK_MODEL`, `SEEDANCE_POLL_INTERVAL_S`, `SEEDANCE_POLL_TIMEOUT_S` (default **1200s** / 20 min server-side poll — see `.env_example`). Ensure HTTP timeouts (e.g. Cloud Run `--timeout`) stay above that plus overhead.
 - `ELEVENLABS_API_KEY`
 - **Vertex (`vertex_ai/*` models in `litellm_config.yaml`)**: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` (e.g. `us-central1`). On Cloud Run, attach a service account with Vertex permissions; local Docker may need `GOOGLE_APPLICATION_CREDENTIALS` (or `VERTEXAI_CREDENTIALS`) pointing at a key file.
@@ -103,6 +104,6 @@ Replace `<cloud-run-url>` with the HTTPS URL shown by `gcloud run deploy`.
   - Initially, `<proxy_token>` can be the value of `LITELLM_MASTER_KEY`.
   - Later, you can move to per-client keys managed by LiteLLM.
 - **Models**: use the logical model names from `litellm_config.yaml`, e.g.:
-  - `gpt-latest`, `gpt-5.5`, `gpt-5.4-mini`, `gemini-latest`, `gemini-3.5-flash`, `imagen-4.0`, `grok-video`, `seedance-2.0`, etc.
+  - `gpt-latest`, `gpt-5.5`, `gpt-5.4-mini`, `gemini-latest`, `gemini-3.5-flash`, `imagen-4.0`, `grok-video`, `grok-video-1.5`, `seedance-2.0`, `seedream-5.0`, `seedream-5.0-lite`, etc.
 
 Clients **never** send provider API keys or upstream URLs; only the proxy holds those in its environment.

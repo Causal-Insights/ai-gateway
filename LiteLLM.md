@@ -4,7 +4,7 @@ description: >-
   Call any model on the shared LiteLLM proxy: choose endpoint, logical alias,
   auth, and request fields. Covers chat, images, video (Grok, Seedance, Veo),
   and TTS. Use when invoking LITELLM_BASE_URL, LiteLLM, seedance, grok-video,
-  grok-image, Veo, Gemini, OpenAI, or model aliases from this gateway.
+  grok-video-1.5, grok-image, Veo, Gemini, OpenAI, or model aliases from this gateway.
 ---
 
 # LiteLLM proxy — integration skill
@@ -17,6 +17,9 @@ Agents and apps call **only this proxy** using OpenAI-compatible HTTP routes. Pr
 |----------|---------|
 | `LITELLM_BASE_URL` | Proxy host, no trailing slash (e.g. `http://localhost:4000` or Cloud Run URL) |
 | `LITELLM_MASTER_KEY` | Bearer token for `Authorization: Bearer …` (or a LiteLLM virtual key) |
+| `GROK_API_KEY` | xAI key — required on the **proxy**; also needed in **your shell** when uploading local images to `https://api.x.ai/v1/files` before `grok-video-1.5` requests |
+
+Local setup: `cp .env_example .env` and fill in keys. Prefix `curl` examples with `set -a; source .env; set +a` so variables load in the same command.
 
 Optional response headers (useful for billing/debug):
 
@@ -34,7 +37,8 @@ Need text / tools / vision chat?     → POST /v1/chat/completions
 Need a still image?                  → POST /v1/images/generations
 Need Grok image edit (file in)?      → POST /v1/images/edits (multipart)
 Need video?
-  ├─ Grok (xAI)                      → POST /v1/images/generations  model=grok-video
+  ├─ Grok 1.0 (xAI)                  → POST /v1/images/generations  model=grok-video
+  ├─ Grok 1.5 (xAI, image required)  → POST /v1/images/generations  model=grok-video-1.5
   ├─ Seedance (BytePlus ARK)         → POST /v1/images/generations  model=seedance-2.0*
   └─ Vertex Veo                      → POST /videos + poll GET /v1/videos/{id}
 Need speech?                         → POST /v1/audio/speech
@@ -45,12 +49,13 @@ Need speech?                         → POST /v1/audio/speech
 | Model | Route | Blocking behavior | Client must poll? |
 |-------|-------|-------------------|-------------------|
 | `grok-video` | `/v1/images/generations` | Proxy polls xAI up to **~600s** inside one request | No — wait for `data[0].url` MP4 |
+| `grok-video-1.5`, `grok-imagine-video-1.5-2026-05-30` | `/v1/images/generations` | Same blocking poll as `grok-video`; **requires** `image` (image-to-video) | No |
 | `seedance-2.0`, `seedance-2.0-fast` | `/v1/images/generations` | Proxy waits up to **240s** (`SEEDANCE_SYNC_WAIT_S`), then may return a task handle | **Yes**, if `data[0].url` starts with `seedance-task://` |
 | `veo-3.1*` | `/videos` + GET | Async job API | Yes — poll video id |
 
 **Rule for Seedance:** After submit, if `data[0].url` is `seedance-task://<id>`, poll with another POST (see [Seedance 2.0](#byteplus-seedance-20-custom-handler)). Do not download a `seedance-task://` URL.
 
-**HTTP client timeouts:** Use **≥ 300s** for `grok-video` and blocking Seedance (`async_submit: false`). For Seedance polling calls, **60s** per request is enough (`wait_seconds: 0`).
+**HTTP client timeouts:** Use **≥ 660s** for `grok-video` / `grok-video-1.5` (poll ceiling ~600s). Use **≥ 300s** for blocking Seedance (`async_submit: false`). For Seedance polling calls, **60s** per request is enough (`wait_seconds: 0`).
 
 ---
 
@@ -105,9 +110,15 @@ OpenAI SDKs: `base_url=LITELLM_BASE_URL`, `api_key=LITELLM_MASTER_KEY`, standard
 | `imagen-4.0-ultra` | Image | `vertex_ai/imagen-4.0-ultra-generate-001` | GCP + Vertex |
 | `grok-image` | Image | custom → `grok-imagine-image-quality` | `GROK_API_KEY` |
 | `grok-imagine-image-quality` | Image | same as `grok-image` | `GROK_API_KEY` |
-| `grok-video` | **Video (MP4)** | custom → xAI `/v1/videos/*` | `GROK_API_KEY` |
+| `grok-video` | **Video (MP4)** | custom → `grok-imagine-video`; text-to-video or image-to-video | `GROK_API_KEY` (proxy) |
+| `grok-video-1.5` | **Video (MP4)** | custom → `grok-imagine-video-1.5-preview`; **image-to-video only** | `GROK_API_KEY` (proxy + client file upload) |
+| `grok-imagine-video-1.5-2026-05-30` | **Video (MP4)** | same handler/pricing as `grok-video-1.5` (dated xAI model id) | same |
+
+See [xAI Grok video](#xai-grok-video) for modes, file upload, and pricing.
 | `seedance-2.0` | **Video (MP4)** | custom → ARK `dreamina-seedance-2-0-260128` | `BYTEDANCE_API_KEY` |
 | `seedance-2.0-fast` | **Video (MP4)** | custom → ARK `dreamina-seedance-2-0-fast-260128` | `BYTEDANCE_API_KEY` |
+| `seedream-5.0` | Image | custom → ModelArk `seedream-5-0-260128` | `BYTEDANCE_API_KEY` |
+| `seedream-5.0-lite` | Image | custom → ModelArk `seedream-5-0-lite-260128` | `BYTEDANCE_API_KEY` |
 
 Standard image body: `prompt`, optional `n`, `size`, `quality`, etc. (provider-dependent).
 
@@ -171,53 +182,130 @@ Provider extras (e.g. `voice_settings`) often go in `extra_body` with OpenAI SDK
 
 These use the same OpenAI **Images** path but implement vendor-specific async video (and Grok image) logic in `custom_handler_*.py`.
 
-### xAI Grok video (`grok-video`)
+### xAI Grok video
 
 - **Endpoint:** `POST /v1/images/generations`
 - **Success:** `data[0].url` = HTTPS link to **MP4**
 - **Behavior:** Submits to xAI (`/v1/videos/generations` or `/v1/videos/edits`), then **polls inside the proxy** (up to ~600s, 3s interval). One client request can block for the full generation.
-- **Default upstream model:** `grok-imagine-video` (override with `xai_model` or `upstream_model`, or env `GROK_VIDEO_MODEL`)
+- **Handler:** `custom_handler.grok_video` (same code path for all aliases below)
+- **Override upstream:** `xai_model` or `upstream_model` in the JSON body, or env `GROK_VIDEO_MODEL` on the proxy
 
-**Modes**
+**Proxy aliases**
 
-| Mode | JSON fields | Notes |
-|------|-------------|-------|
-| Text-to-video | `prompt` | Prompt required unless `image` provided |
-| Image-to-video | `prompt` + `image` or `image_url` | `image` = URL string or `{url}` / `{file_id}` |
-| Reference images | `prompt` + `reference_images` | List of URL strings or `{url}` / `{file_id}` objects; max **7**; `prompt` required |
-| Video edit | `prompt` + `video` or `video_url` | Uses xAI edits API; **no** `reference_images` or `image` |
+| Client `model` | xAI upstream | Input |
+|----------------|--------------|--------|
+| `grok-video` | `grok-imagine-video` | Text-to-video and/or `image` |
+| `grok-video-1.5` | `grok-imagine-video-1.5-preview` | **Image-to-video only** — `image` required |
+| `grok-imagine-video-1.5-2026-05-30` | `grok-imagine-video-1.5-2026-05-30` | Same as `grok-video-1.5` (dated xAI alias) |
 
-**Duration:** `duration` or `seconds`, integer **1–15**. With `reference_images`, duration must be **≤ 10**.
+**1.0 vs 1.5**
 
-**Optional:** `aspect_ratio`, `resolution`, `output`, `storage_options`, `user` (passed through to xAI).
+| | `grok-video` (1.0) | `grok-video-1.5` (1.5) |
+|--|---------------------|-------------------------|
+| Text-only generation | Supported | **Not supported** — xAI returns an error if `image` is omitted |
+| Starting frame | Optional `image` | **Required** `image` (or `image_url` / `image_file_id`) |
+| Storyboard | `reference_images` (optional) | `reference_images` (optional); use with `image` for base frame + storyboard |
+| Video edit | `video` / `video_url` → `/v1/videos/edits` | Same |
+| Typical resolutions | `480p`, `720p` | `480p`, `720p` (per xAI pricing tiers) |
+| xAI list pricing (fallback) | $0.05/s @ 480p, $0.07/s @ 720p | $0.08/s @ 480p, $0.14/s @ 720p; input image $0.01 |
 
-**Example**
+**Request fields (all Grok video aliases)**
+
+| Field | Aliases | Notes |
+|-------|---------|-------|
+| `prompt` | — | Required for video edit; required with `reference_images`; for 1.5 required whenever you send images |
+| `image`, `image_url`, `image_file_id` | — | Starting frame; **required for `grok-video-1.5`** |
+| `reference_images`, `reference_image_urls` | — | Storyboard / style refs; max **7**; `prompt` required |
+| `video`, `video_url`, `video_file_id` | — | Video edit path only |
+| `duration`, `seconds` | — | Integer **1–15**; with `reference_images`, **≤ 10** |
+| `resolution`, `aspect_ratio`, `output`, `storage_options`, `user` | — | Passed through to xAI |
+
+**Local images → xAI `file_id`**
+
+The proxy accepts `image: {"file_id": "…"}` and `reference_images: [{"file_id": "…"}]`. Upload bytes with your **`GROK_API_KEY`** (not the LiteLLM master key):
 
 ```bash
-curl -sS "${LITELLM_BASE_URL}/v1/images/generations" \
-  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"grok-video","prompt":"A red ball bouncing once","duration":5}'
+curl -sS "https://api.x.ai/v1/files" \
+  -H "Authorization: Bearer ${GROK_API_KEY}" \
+  -F "file=@path/to/frame.jpg;type=image/jpeg"
 ```
 
-**Pricing (Grok Imagine Video / `grok-imagine-video`)**
+Use the returned `id` in the generation JSON. MIME types: `image/jpeg`, `image/png`, `image/webp`, etc.
 
-The handler bills using xAI’s **`usage.cost_in_usd_ticks`** from `GET /v1/videos/{request_id}` when the job completes (1 USD = 10,000,000,000 ticks). That value is exposed as `x-litellm-response-cost`. If ticks are missing, cost is estimated from **`video.duration`** × per-second rate by **`resolution`**:
+#### `grok-video-1.5` example (base frame + storyboard)
 
-| Resolution | USD / generated second (output) | Notes |
-|------------|----------------------------------|--------|
-| `480p` (default) | $0.05 | xAI model page baseline |
-| `720p` | $0.07 | HD tier |
-| `1080p` | $0.07 | Use 720p rate as conservative fallback |
+From repo root; `cp .env_example .env`; HTTP `--max-time 660` or higher. Uses test assets `tests/toy_base_image.jpeg` (starting frame) and `tests/toy_screenplay.webp` (storyboard).
 
-Additional list prices (usually included in ticks; used in fallback estimates):
+```bash
+set -a; source .env; set +a
+: "${GROK_API_KEY:?set GROK_API_KEY in .env}"
+
+BASE_FILE_ID=$(curl -sS "https://api.x.ai/v1/files" \
+  -H "Authorization: Bearer ${GROK_API_KEY}" \
+  -F "file=@tests/toy_base_image.jpeg;type=image/jpeg" \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+
+STORYBOARD_FILE_ID=$(curl -sS "https://api.x.ai/v1/files" \
+  -H "Authorization: Bearer ${GROK_API_KEY}" \
+  -F "file=@tests/toy_screenplay.webp;type=image/webp" \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+
+curl -sS --max-time 660 "${LITELLM_BASE_URL}/v1/images/generations" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "$(BASE_FILE_ID="${BASE_FILE_ID}" STORYBOARD_FILE_ID="${STORYBOARD_FILE_ID}" python3 -c 'import json, os; print(json.dumps({
+    "model": "grok-video-1.5",
+    "prompt": "tests/toy_base_image.jpeg is the starting frame: match its composition, lighting, and toy layout at t=0. tests/toy_screenplay.webp is the storyboard: follow its panels for motion, acting beats, and camera moves over 8 seconds. Animate from the base photo through the storyboard with warm tungsten stage light and playful stop-motion energy",
+    "duration": 8,
+    "resolution": "720p",
+    "image": {"file_id": os.environ["BASE_FILE_ID"]},
+    "reference_images": [{"file_id": os.environ["STORYBOARD_FILE_ID"]}],
+  }))')"
+```
+
+#### `grok-video` (1.0) text-to-video example
+
+```bash
+set -a; source .env; set +a
+curl -sS --max-time 660 "${LITELLM_BASE_URL}/v1/images/generations" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"grok-video","prompt":"A red ball bouncing once on white","duration":5}'
+```
+
+#### Pricing
+
+The handler bills using xAI’s **`usage.cost_in_usd_ticks`** from `GET /v1/videos/{request_id}` when the job completes (1 USD = 10,000,000,000 ticks). That value is exposed as `x-litellm-response-cost`. If ticks are missing, cost is estimated from **`video.duration`** × per-second rate by **`resolution`** (rates depend on upstream model).
+
+**`grok-imagine-video`** (`grok-video`):
+
+| Resolution | USD / generated second (output) |
+|------------|----------------------------------|
+| `480p` (default) | $0.05 |
+| `720p` | $0.07 |
+| `1080p` | $0.07 (720p fallback) |
 
 | Input | USD |
 |-------|-----|
 | Reference / input image (each) | $0.002 |
-| Input video (edit path) | $0.01 / second of source video |
+| Input video (edit path) | $0.01 / second |
 
-Override on proxy: `GROK_VIDEO_PRICE_PER_SECOND_480P`, `GROK_VIDEO_PRICE_PER_SECOND_720P`, `GROK_VIDEO_PRICE_PER_SECOND_1080P`, `GROK_VIDEO_PRICE_PER_REFERENCE_IMAGE`.
+Env: `GROK_VIDEO_PRICE_PER_SECOND_480P`, `GROK_VIDEO_PRICE_PER_SECOND_720P`, `GROK_VIDEO_PRICE_PER_SECOND_1080P`, `GROK_VIDEO_PRICE_PER_REFERENCE_IMAGE`.
+
+**`grok-imagine-video-1.5-preview`** (`grok-video-1.5`, alias `grok-imagine-video-1.5-2026-05-30`):
+
+| Resolution | USD / generated second (output) |
+|------------|----------------------------------|
+| `480p` (default) | $0.08 |
+| `720p` | $0.14 |
+| `1080p` | $0.14 (720p fallback) |
+
+| Input | USD |
+|-------|-----|
+| Image (reference / input) | $0.01 |
+| Input video (edit path) | $0.01 / second |
+
+Env: `GROK_VIDEO_15_PRICE_PER_SECOND_480P`, `GROK_VIDEO_15_PRICE_PER_SECOND_720P`, `GROK_VIDEO_15_PRICE_PER_SECOND_1080P`, `GROK_VIDEO_15_PRICE_PER_REFERENCE_IMAGE`.
 
 **Client timeout:** Prefer **≥ 660s** HTTP timeout (generation + poll ceiling ~600s).
 
@@ -424,12 +512,85 @@ Override on proxy: `SEEDANCE_PRICE_PER_MTOK`, `SEEDANCE_PRICE_PER_MTOK_VIDEO`, `
 
 ---
 
+### BytePlus Seedream 5 (ModelArk custom handler)
+
+| Gateway alias | ModelArk model id | Notes |
+|---------------|-------------------|-------|
+| `seedream-5.0` | `seedream-5-0-260128` | Seedream 5.0 (2K / 3K) |
+| `seedream-5.0-lite` | `seedream-5-0-lite-260128` | Seedream 5.0 Lite (2K / 3K, web search) |
+
+**Endpoint:** `POST /v1/images/generations` — **synchronous** (one request returns image URL(s); no task polling).
+
+**ModelArk upstream:** `POST {ARK_BASE}/images/generations` (default `https://ark.ap-southeast.bytepluses.com/api/v3`).
+
+**Proxy env:** `BYTEDANCE_API_KEY` (same ModelArk key as Seedance).
+
+| Field | Description |
+|-------|-------------|
+| `prompt` | Required text prompt |
+| `size` | `2K`, `3K`, or explicit `WxH` (see [ModelArk image API](https://docs.byteplus.com/en/docs/ModelArk/1541523)) |
+| `image` / `images` / `image_urls` | Reference image(s) for edit / fusion (up to **14** URLs or base64) |
+| `reference_image_urls` | Alias for multi-image input |
+| `n` | Number of images (default 1) |
+| `response_format` | `url` (default) or `b64_json` |
+| `output_format` | `png` or `jpeg` (5.0 supports both) |
+| `watermark` | Boolean (default upstream `true`; set `false` for clean output) |
+| `sequential_image_generation` | `disabled` (default) or `auto` for related multi-image sets |
+| `sequential_image_generation_options` | e.g. `{ "max_images": 4 }` when sequential mode is `auto` |
+| `tools` | `[{ "type": "web_search" }]` — **5.0 Lite** real-time search (adds latency + surcharge) |
+| `optimize_prompt_options` | e.g. `{ "mode": "standard" }` |
+| `stream` | Stream partial results when supported |
+
+**Example (text-to-image)**
+
+```bash
+curl -sS "${LITELLM_BASE_URL}/v1/images/generations" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "seedream-5.0-lite",
+    "prompt": "A red bicycle on white, studio product photo",
+    "size": "2K",
+    "watermark": false
+  }'
+```
+
+**Example (web search — Lite)**
+
+```bash
+curl -sS "${LITELLM_BASE_URL}/v1/images/generations" \
+  -H "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "seedream-5.0-lite",
+    "prompt": "Shanghai 5-day weather forecast infographic, flat illustration",
+    "size": "2K",
+    "tools": [{"type": "web_search"}],
+    "watermark": false
+  }'
+```
+
+#### Pricing (BytePlus ModelArk, Seedream 5.0 family)
+
+Handler sets `x-litellm-response-cost` from output image count × per-image rate (+ web search when `tools` includes `web_search`). See [ModelArk pricing](https://docs.byteplus.com/en/docs/ModelArk/1544106).
+
+| Gateway alias | USD / generated image (2K & 3K) | Web search (per request) |
+|---------------|----------------------------------|---------------------------|
+| `seedream-5.0` | $0.035 | + $0.0006 when `tools: [{ "type": "web_search" }]` |
+| `seedream-5.0-lite` | $0.035 | + $0.0006 when `tools: [{ "type": "web_search" }]` |
+
+Override on proxy: `SEEDREAM_5_0_PRICE_PER_IMAGE`, `SEEDREAM_5_0_LITE_PRICE_PER_IMAGE`, `SEEDREAM_WEB_SEARCH_PRICE_PER_REQUEST`, `SEEDREAM_ARK_BASE`.
+
+**Client timeout:** **≥ 120s** for complex prompts / web search; default handler HTTP timeout is **300s**.
+
+---
+
 ## Quick reference: alias → HTTP surface
 
 | HTTP surface | Aliases |
 |--------------|---------|
 | `POST /v1/chat/completions` | `gemma-4-large`, `gpt-latest`, `gpt-5.5`, `gpt-5.5-thinking`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3.5-flash`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview`, `grok-latest`, `grok-4.20-reasoning`, `grok-4.20` |
-| `POST /v1/images/generations` | `gpt-image-1.5`, `gpt-image-2`, `nano-banana`, `nano-banana-2`, `nano-banana-pro`, `imagen-4.0`, `imagen-4.0-fast`, `imagen-4.0-ultra`, `grok-image`, `grok-imagine-image-quality`, `grok-video`, `seedance-2.0`, `seedance-2.0-fast` |
+| `POST /v1/images/generations` | `gpt-image-1.5`, `gpt-image-2`, `nano-banana`, `nano-banana-2`, `nano-banana-pro`, `imagen-4.0`, `imagen-4.0-fast`, `imagen-4.0-ultra`, `grok-image`, `grok-imagine-image-quality`, `grok-video`, `grok-video-1.5`, `grok-imagine-video-1.5-2026-05-30`, `seedance-2.0`, `seedance-2.0-fast`, `seedream-5.0`, `seedream-5.0-lite` |
 | `POST /v1/images/edits` | `grok-image`, `grok-imagine-image-quality` |
 | `POST /videos` + `GET /v1/videos/{id}` + `GET …/content` | `veo-3.1`, `veo-3.1-fast`, `veo-3.1-lite` |
 | `POST /v1/audio/speech` | `elevenlabs-v3-tts`, `tts-quality`, `tts-fast`, `tts-turbo` |
@@ -442,11 +603,11 @@ Override on proxy: `SEEDANCE_PRICE_PER_MTOK`, `SEEDANCE_PRICE_PER_MTOK_VIDEO`, `
 |---------|-------|--------|
 | `litellm_settings.request_timeout` | `1800` | Upper bound per proxy request |
 | `seedance-*` `timeout` in model_list | `1800` | Per-model router timeout |
-| `grok-video` `timeout` | `1260` | Per-model router timeout |
+| `grok-video` / `grok-video-1.5` `timeout` | `1260` | Per-model router timeout |
 | `SEEDANCE_SYNC_WAIT_S` (env) | default `240` | Max blocking wait before task URL |
 | `SEEDANCE_POLL_TIMEOUT_S` (env) | default `1200` | Max wait when `async_submit: false` |
 
-Custom handler modules: `custom_handler.grok_video`, `custom_handler.grok_image`, `custom_handler.seedance`.
+Custom handler modules: `custom_handler.grok_video`, `custom_handler.grok_image`, `custom_handler.seedance`, `custom_handler.seedream`.
 
 ---
 
@@ -458,6 +619,8 @@ Custom handler modules: `custom_handler.grok_video`, `custom_handler.grok_image`
 | 504 / disconnect ~5 min on video | Long blocking request | Seedance: use default bounded wait + poll; Grok: increase client timeout to ≥660s |
 | `missing prompt` on Seedance poll | LiteLLM router | Include `prompt` (e.g. task URL string) on poll requests |
 | 404 unknown model | Alias typo or stale deploy | `GET /v1/models` |
+| Grok 1.5 “text to image/video not supported” | `grok-video-1.5` without `image` | Use `grok-video-1.5` with `image` (+ optional `reference_images`); use `grok-video` for text-only |
+| Grok missing `file_id` | Upload step skipped or wrong key | Upload with `GROK_API_KEY` to `https://api.x.ai/v1/files`, then pass `image` / `reference_images` |
 | Seedance 401/403 | ARK key or prepaid pack | Check `BYTEDANCE_API_KEY` and BytePlus model activation |
 
 ---
@@ -465,7 +628,7 @@ Custom handler modules: `custom_handler.grok_video`, `custom_handler.grok_image`
 ## Source of truth
 
 - **Model list:** `litellm_config.yaml` in this repo
-- **Handler behavior:** `custom_handler_seedance.py`, `custom_handler_xai.py`
+- **Handler behavior:** `custom_handler_seedance.py`, `custom_handler_seedream.py`, `custom_handler_xai.py`
 - **This file:** client/skill contract for agents calling `LITELLM_BASE_URL`
 
 When adding models, update `litellm_config.yaml` and this document together.

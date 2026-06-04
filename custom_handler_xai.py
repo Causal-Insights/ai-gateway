@@ -58,6 +58,27 @@ class GrokVideoLLM(CustomLLM):
     DEFAULT_PRICE_PER_SECOND_720P = 0.07
     DEFAULT_PRICE_PER_SECOND_1080P = 0.07
     DEFAULT_PRICE_PER_REFERENCE_IMAGE = 0.002
+    DEFAULT_PRICE_PER_SECOND_480P_15 = 0.08
+    DEFAULT_PRICE_PER_SECOND_720P_15 = 0.14
+    DEFAULT_PRICE_PER_SECOND_1080P_15 = 0.14
+    DEFAULT_PRICE_PER_REFERENCE_IMAGE_15 = 0.01
+
+    @staticmethod
+    def _strip_provider_prefix(model: str) -> str:
+        m = (model or "").strip()
+        if m.startswith("grok-video/"):
+            return m[len("grok-video/") :].strip()
+        return m
+
+    def _resolve_upstream_model(self, model: str) -> str:
+        stripped = self._strip_provider_prefix(model)
+        if stripped and stripped != "grok-video":
+            return stripped
+        return os.environ.get("GROK_VIDEO_MODEL") or self.DEFAULT_XAI_MODEL
+
+    @staticmethod
+    def _is_video_15_model(upstream_model: str) -> bool:
+        return "1.5" in (upstream_model or "").lower()
 
     @staticmethod
     def _coerce_int(name: str, value: Any) -> int:
@@ -129,13 +150,34 @@ class GrokVideoLLM(CustomLLM):
         except (TypeError, ValueError):
             return None
 
-    def _price_per_second(self, resolution: Optional[str]) -> float:
+    def _price_per_second(self, resolution: Optional[str], upstream_model: str) -> float:
         res = (resolution or "480p").strip().lower()
+        if self._is_video_15_model(upstream_model):
+            if res == "720p":
+                return self._env_float(
+                    "GROK_VIDEO_15_PRICE_PER_SECOND_720P", self.DEFAULT_PRICE_PER_SECOND_720P_15
+                )
+            if res == "1080p":
+                return self._env_float(
+                    "GROK_VIDEO_15_PRICE_PER_SECOND_1080P", self.DEFAULT_PRICE_PER_SECOND_1080P_15
+                )
+            return self._env_float(
+                "GROK_VIDEO_15_PRICE_PER_SECOND_480P", self.DEFAULT_PRICE_PER_SECOND_480P_15
+            )
         if res == "720p":
             return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_720P", self.DEFAULT_PRICE_PER_SECOND_720P)
         if res == "1080p":
             return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_1080P", self.DEFAULT_PRICE_PER_SECOND_1080P)
         return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_480P", self.DEFAULT_PRICE_PER_SECOND_480P)
+
+    def _reference_image_price(self, upstream_model: str) -> float:
+        if self._is_video_15_model(upstream_model):
+            return self._env_float(
+                "GROK_VIDEO_15_PRICE_PER_REFERENCE_IMAGE", self.DEFAULT_PRICE_PER_REFERENCE_IMAGE_15
+            )
+        return self._env_float(
+            "GROK_VIDEO_PRICE_PER_REFERENCE_IMAGE", self.DEFAULT_PRICE_PER_REFERENCE_IMAGE
+        )
 
     def _estimate_cost(
         self,
@@ -144,13 +186,12 @@ class GrokVideoLLM(CustomLLM):
         resolution: Optional[str],
         reference_image_count: int,
         has_image_input: bool,
+        upstream_model: str,
     ) -> float:
         """Fallback when xAI does not return usage.cost_in_usd_ticks."""
         seconds = max(0, int(duration_seconds))
-        cost = seconds * self._price_per_second(resolution)
-        ref_price = self._env_float(
-            "GROK_VIDEO_PRICE_PER_REFERENCE_IMAGE", self.DEFAULT_PRICE_PER_REFERENCE_IMAGE
-        )
+        cost = seconds * self._price_per_second(resolution, upstream_model)
+        ref_price = self._reference_image_price(upstream_model)
         if reference_image_count > 0:
             cost += reference_image_count * ref_price
         elif has_image_input:
@@ -176,6 +217,7 @@ class GrokVideoLLM(CustomLLM):
         resolution: Optional[str],
         reference_image_count: int,
         has_image_input: bool,
+        upstream_model: str,
     ) -> Optional[float]:
         usage_cost = self._cost_from_usd_ticks(status_data.get("usage"))
         if usage_cost is not None:
@@ -195,6 +237,7 @@ class GrokVideoLLM(CustomLLM):
             resolution=resolution,
             reference_image_count=reference_image_count,
             has_image_input=has_image_input,
+            upstream_model=upstream_model,
         )
 
     async def aimage_generation(
@@ -218,8 +261,7 @@ class GrokVideoLLM(CustomLLM):
         upstream_model = (
             optional_params.pop("xai_model", None)
             or optional_params.pop("upstream_model", None)
-            or os.environ.get("GROK_VIDEO_MODEL")
-            or self.DEFAULT_XAI_MODEL
+            or self._resolve_upstream_model(model)
         )
 
         if "referenceImageUrls" in optional_params and "reference_image_urls" not in optional_params:
@@ -339,6 +381,7 @@ class GrokVideoLLM(CustomLLM):
                     resolution=resolution,
                     reference_image_count=reference_image_count,
                     has_image_input=has_image_input,
+                    upstream_model=upstream_model,
                 )
                 return self._video_response(direct_video_url, response_cost=cost)
 
@@ -374,6 +417,7 @@ class GrokVideoLLM(CustomLLM):
                         resolution=resolution,
                         reference_image_count=reference_image_count,
                         has_image_input=has_image_input,
+                        upstream_model=upstream_model,
                     )
                     return self._video_response(video_url, response_cost=cost)
                 if status in {"failed", "expired"}:
