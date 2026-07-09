@@ -137,7 +137,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
                     "resolution": "480p",
                     "ratio": "16:9",
                     "duration": 4,
-                    "generate_audio": False,
+                    "generate_audio": True,
                     "watermark": True,
                 },
                 logging_obj=None,
@@ -152,11 +152,54 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["resolution"], "480p")
         self.assertEqual(body["ratio"], "16:9")
         self.assertEqual(body["duration"], 4)
-        self.assertIs(body["generate_audio"], False)
+        self.assertIs(body["generate_audio"], True)
         self.assertIs(body["watermark"], True)
 
         self.assertEqual(out.data[0].url, "https://cdn.example/out.mp4")
         self.assertAlmostEqual(out._hidden_params["response_cost"], 100_000 * 7.00 / 1_000_000)
+
+    async def test_submit_fast_model_url_body_and_cost(self):
+        submit = self._resp({"id": "task-fast"})
+        succeeded = self._resp(
+            {
+                "status": "succeeded",
+                "model": "dreamina-seedance-2-0-fast-260128",
+                "usage": {"completion_tokens": 100_000, "total_tokens": 100_000},
+                "content": {"video_url": "https://cdn.example/fast.mp4"},
+            }
+        )
+        client_instance = self._mock_async_client(submit, [succeeded])
+
+        with patch("custom_handler_seedance.httpx.AsyncClient", return_value=client_instance):
+            llm = SeedanceLLM()
+            out = await llm.aimage_generation(
+                model="dreamina-seedance-2-0-fast-260128",
+                prompt="fast seedance check",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={
+                    "resolution": "480p",
+                    "ratio": "16:9",
+                    "duration": 4,
+                    "generate_audio": True,
+                    "watermark": False,
+                },
+                logging_obj=None,
+            )
+
+        client_instance.post.assert_called_once()
+        body = client_instance.post.call_args.kwargs["json"]
+        self.assertEqual(body["model"], "dreamina-seedance-2-0-fast-260128")
+        self.assertEqual(body["content"][0], {"type": "text", "text": "fast seedance check"})
+        self.assertEqual(body["resolution"], "480p")
+        self.assertEqual(body["ratio"], "16:9")
+        self.assertEqual(body["duration"], 4)
+        self.assertIs(body["generate_audio"], True)
+        self.assertIs(body["watermark"], False)
+
+        self.assertEqual(out.data[0].url, "https://cdn.example/fast.mp4")
+        self.assertAlmostEqual(out._hidden_params["response_cost"], 100_000 * 5.60 / 1_000_000)
 
     async def test_submit_appends_image_content_parts(self):
         submit = self._resp({"id": "task-img"})

@@ -22,6 +22,13 @@ AR_REPO="${AR_REPO:-ai-gateway}"
 IMAGE_NAME="${IMAGE_NAME:-litellm-proxy}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 
+DATABASE_URL_SECRET="${DATABASE_URL_SECRET:-DATABASE_URL}"
+LITELLM_MASTER_KEY_SECRET="${LITELLM_MASTER_KEY_SECRET:-LITELLM_MASTER_KEY}"
+OPENAI_API_KEY_SECRET="${OPENAI_API_KEY_SECRET:-OPENAI_API_KEY}"
+GROK_API_KEY_SECRET="${GROK_API_KEY_SECRET:-GROK_API_KEY}"
+BYTEDANCE_API_KEY_SECRET="${BYTEDANCE_API_KEY_SECRET:-BYTEDANCE_API_KEY}"
+ELEVENLABS_API_KEY_SECRET="${ELEVENLABS_API_KEY_SECRET:-ELEVENLABS_API_KEY}"
+
 # Cloud Run defaults (tuned for LiteLLM startup; adjust as needed)
 # Cloud Run --timeout caps any single request. The Seedance handler does a
 # bounded-wait long-poll (default 240s) and then returns a task-id placeholder;
@@ -37,6 +44,62 @@ SEEDANCE_SYNC_WAIT_S="${SEEDANCE_SYNC_WAIT_S:-240}"
 SEEDANCE_POLL_TIMEOUT_S="${SEEDANCE_POLL_TIMEOUT_S:-1200}"
 
 RUNTIME_SA="${RUNTIME_SA:-}"
+
+read_env_value() {
+  local key="$1"
+  local file="${2:-.env}"
+
+  [[ -f "${file}" ]] || return 0
+
+  sed -n "s/^${key}=//p" "${file}" \
+    | tail -n 1 \
+    | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
+}
+
+hash_value() {
+  printf "%s" "$1" | shasum -a 256 | awk '{print $1}'
+}
+
+check_database_separation() {
+  local cloud_database_url
+  local legacy_local_database_url
+  local effective_local_database_url
+  local cloud_hash
+  local legacy_hash
+  local local_hash
+
+  echo "==> Checking local/prod database separation..."
+  if ! cloud_database_url="$(gcloud secrets versions access latest --secret="${DATABASE_URL_SECRET}" --project="${PROJECT_ID}" 2>/dev/null)"; then
+    echo "ERROR: Unable to access Secret Manager secret '${DATABASE_URL_SECRET}' in project '${PROJECT_ID}'." >&2
+    echo "       Create it or set DATABASE_URL_SECRET to the production database secret name." >&2
+    exit 1
+  fi
+
+  cloud_hash="$(hash_value "${cloud_database_url}")"
+  legacy_local_database_url="$(read_env_value DATABASE_URL)"
+  effective_local_database_url="${LOCAL_DATABASE_URL:-$(read_env_value LOCAL_DATABASE_URL)}"
+  effective_local_database_url="${effective_local_database_url:-postgresql://litellm:litellm_local@postgres:5432/litellm_local}"
+  local_hash="$(hash_value "${effective_local_database_url}")"
+
+  if [[ -n "${legacy_local_database_url}" ]]; then
+    legacy_hash="$(hash_value "${legacy_local_database_url}")"
+    if [[ "${legacy_local_database_url}" == "${cloud_database_url}" ]]; then
+      echo "ERROR: .env DATABASE_URL matches the Cloud Run '${DATABASE_URL_SECRET}' secret." >&2
+      echo "       Remove production DATABASE_URL from .env and use LOCAL_DATABASE_URL for local docker-compose." >&2
+      echo "       matching_hash=${legacy_hash:0:12}" >&2
+      exit 1
+    fi
+  fi
+
+  if [[ "${effective_local_database_url}" == "${cloud_database_url}" ]]; then
+    echo "ERROR: LOCAL_DATABASE_URL matches the Cloud Run '${DATABASE_URL_SECRET}' secret." >&2
+    echo "       Local and deployed LiteLLM must use different databases." >&2
+    echo "       matching_hash=${local_hash:0:12}" >&2
+    exit 1
+  fi
+
+  echo "==> DB separation OK (local=${local_hash:0:12}, prod=${cloud_hash:0:12})"
+}
 
 usage() {
   sed -n '1,120p' "$0" | sed -n '2,/^set -e/p' | tail -n +2
@@ -72,9 +135,12 @@ echo "==> Memory/CPU:    ${MEMORY} / ${CPU}"
 echo "==> Timeout:       ${TIMEOUT}s"
 echo "==> Seedance sync wait: ${SEEDANCE_SYNC_WAIT_S}s"
 echo "==> Seedance poll cap:  ${SEEDANCE_POLL_TIMEOUT_S}s"
+echo "==> Database secret: ${DATABASE_URL_SECRET}"
 echo "==> Unauthenticated access: ${ALLOW_UNAUTHENTICATED}"
 
 gcloud config set project "${PROJECT_ID}" >/dev/null
+
+check_database_separation
 
 echo "==> Ensuring APIs are enabled..."
 gcloud services enable \
@@ -107,6 +173,7 @@ DEPLOY_ARGS=(
   --min-instances "${MIN_INSTANCES}"
   --max-instances "${MAX_INSTANCES}"
   --update-env-vars "SEEDANCE_SYNC_WAIT_S=${SEEDANCE_SYNC_WAIT_S},SEEDANCE_POLL_TIMEOUT_S=${SEEDANCE_POLL_TIMEOUT_S}"
+  --set-secrets "DATABASE_URL=${DATABASE_URL_SECRET}:latest,LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY_SECRET}:latest,OPENAI_API_KEY=${OPENAI_API_KEY_SECRET}:latest,GROK_API_KEY=${GROK_API_KEY_SECRET}:latest,BYTEDANCE_API_KEY=${BYTEDANCE_API_KEY_SECRET}:latest,ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY_SECRET}:latest"
 )
 
 if [[ -n "${RUNTIME_SA}" ]]; then

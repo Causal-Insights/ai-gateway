@@ -10,6 +10,27 @@ It can run locally via `docker-compose` and in production on **Google Cloud Run*
 
 ---
 
+## Local development
+
+Local LiteLLM uses the `postgres` service in `docker-compose.yml`.
+
+```bash
+cp .env_example .env
+./run_gateway.sh
+```
+
+Do not put the production database URL in `.env`. If you need to override the
+local database, set `LOCAL_DATABASE_URL`; `docker-compose` intentionally ignores
+`DATABASE_URL` for the LiteLLM container.
+
+Reset local DB state without touching production:
+
+```bash
+docker compose down -v
+```
+
+---
+
 ## Cloud Run deployment (GCP project ID `ai-gateway-495414`, region `us-central1`)
 
 ### Quick redeploy (script)
@@ -55,10 +76,9 @@ gcloud run deploy ai-gateway-proxy \
 
 Then configure environment variables (via `gcloud run services update` or the console):
 
+- `DATABASE_URL` (Secret Manager; production only)
 - `LITELLM_MASTER_KEY`
 - `OPENAI_API_KEY`
-- `GEMINI_API_KEY`
-- `XAI_API_KEY`
 - `GROK_API_KEY`
 - `BYTEDANCE_API_KEY` (Seedance 2.0 / Seedream 5 / BytePlus ModelArk)
 - Optional Seedance tuning: `SEEDANCE_ARK_BASE`, `SEEDANCE_ARK_MODEL`, `SEEDANCE_POLL_INTERVAL_S`, `SEEDANCE_POLL_TIMEOUT_S` (default **1200s** / 20 min server-side poll — see `.env_example`). Ensure HTTP timeouts (e.g. Cloud Run `--timeout`) stay above that plus overhead.
@@ -66,7 +86,9 @@ Then configure environment variables (via `gcloud run services update` or the co
 - **Vertex (`vertex_ai/*` models in `litellm_config.yaml`)**: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` (e.g. `us-central1`). On Cloud Run, attach a service account with Vertex permissions; local Docker may need `GOOGLE_APPLICATION_CREDENTIALS` (or `VERTEXAI_CREDENTIALS`) pointing at a key file.
 - Any optional `VERTEXAI_*` / `ELEVENLABS_*` vars you still use elsewhere
 
-Do **not** set `MLX_VLM_API_BASE` in Cloud Run if you are not running MLX in GCP.
+`./deploy_cloud_run.sh` binds required secrets explicitly with `--set-secrets`
+and fails before build/deploy if `.env` contains the same database URL as the
+production `DATABASE_URL` secret.
 
 If deploy fails with “failed to start and listen on PORT”, first check logs:
 

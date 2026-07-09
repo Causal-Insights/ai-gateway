@@ -5,9 +5,11 @@ WORKDIR /app
 # Copy configuration and custom handlers into the image
 COPY litellm_config.yaml /app/litellm_config.yaml
 COPY custom_handler.py /app/custom_handler.py
+COPY custom_handler_audio.py /app/custom_handler_audio.py
 COPY custom_handler_common.py /app/custom_handler_common.py
 COPY custom_handler_xai.py /app/custom_handler_xai.py
 COPY custom_handler_seedance.py /app/custom_handler_seedance.py
+COPY custom_handler_seedream.py /app/custom_handler_seedream.py
 
 # Ensure unbuffered logs
 ENV PYTHONUNBUFFERED=1
@@ -20,4 +22,3 @@ ENV PORT=8080
 ENTRYPOINT ["/bin/sh", "-c"]
 # Cloud Run health checks hit 0.0.0.0:$PORT; bind explicitly (LiteLLM defaults host to 127.0.0.1).
 CMD ["exec litellm --config /app/litellm_config.yaml --host 0.0.0.0 --port ${PORT:-8080}"]
-

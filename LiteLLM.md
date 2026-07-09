@@ -67,7 +67,6 @@ Logical alias → endpoint → upstream (for debugging). Credentials are on the 
 
 | Alias | Upstream | Proxy env |
 |-------|----------|-----------|
-| `gemma-4-large` | `openai/mlx-community/gemma-4-31b-it-8bit` | `MLX_VLM_API_BASE`, `MLX_VLM_API_KEY` |
 | `gpt-latest` | `openai/gpt-5.5` | `OPENAI_API_KEY` |
 | `gpt-5.5` | `openai/gpt-5.5` | `OPENAI_API_KEY` |
 | `gpt-5.5-thinking` | `openai/gpt-5.5` + `reasoning_effort: high` | `OPENAI_API_KEY` |
@@ -234,7 +233,7 @@ Use the returned `id` in the generation JSON. MIME types: `image/jpeg`, `image/p
 
 #### `grok-video-1.5` example (base frame + storyboard)
 
-From repo root; `cp .env_example .env`; HTTP `--max-time 660` or higher. Uses test assets `tests/toy_base_image.jpeg` (starting frame) and `tests/toy_screenplay.webp` (storyboard).
+From repo root; `cp .env_example .env`; HTTP `--max-time 660` or higher. Manual smoke assets belong under ignored `local-tests/`.
 
 ```bash
 set -a; source .env; set +a
@@ -242,12 +241,12 @@ set -a; source .env; set +a
 
 BASE_FILE_ID=$(curl -sS "https://api.x.ai/v1/files" \
   -H "Authorization: Bearer ${GROK_API_KEY}" \
-  -F "file=@tests/toy_base_image.jpeg;type=image/jpeg" \
+  -F "file=@local-tests/toy_base_image.jpeg;type=image/jpeg" \
   | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
 
 STORYBOARD_FILE_ID=$(curl -sS "https://api.x.ai/v1/files" \
   -H "Authorization: Bearer ${GROK_API_KEY}" \
-  -F "file=@tests/toy_screenplay.webp;type=image/webp" \
+  -F "file=@local-tests/toy_screenplay.webp;type=image/webp" \
   | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
 
 curl -sS --max-time 660 "${LITELLM_BASE_URL}/v1/images/generations" \
@@ -255,7 +254,7 @@ curl -sS --max-time 660 "${LITELLM_BASE_URL}/v1/images/generations" \
   -H "Content-Type: application/json" \
   -d "$(BASE_FILE_ID="${BASE_FILE_ID}" STORYBOARD_FILE_ID="${STORYBOARD_FILE_ID}" python3 -c 'import json, os; print(json.dumps({
     "model": "grok-video-1.5",
-    "prompt": "tests/toy_base_image.jpeg is the starting frame: match its composition, lighting, and toy layout at t=0. tests/toy_screenplay.webp is the storyboard: follow its panels for motion, acting beats, and camera moves over 8 seconds. Animate from the base photo through the storyboard with warm tungsten stage light and playful stop-motion energy",
+    "prompt": "local-tests/toy_base_image.jpeg is the starting frame: match its composition, lighting, and toy layout at t=0. local-tests/toy_screenplay.webp is the storyboard: follow its panels for motion, acting beats, and camera moves over 8 seconds. Animate from the base photo through the storyboard with warm tungsten stage light and playful stop-motion energy",
     "duration": 8,
     "resolution": "720p",
     "image": {"file_id": os.environ["BASE_FILE_ID"]},
@@ -589,7 +588,7 @@ Override on proxy: `SEEDREAM_5_0_PRICE_PER_IMAGE`, `SEEDREAM_5_0_LITE_PRICE_PER_
 
 | HTTP surface | Aliases |
 |--------------|---------|
-| `POST /v1/chat/completions` | `gemma-4-large`, `gpt-latest`, `gpt-5.5`, `gpt-5.5-thinking`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3.5-flash`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview`, `grok-latest`, `grok-4.20-reasoning`, `grok-4.20` |
+| `POST /v1/chat/completions` | `gpt-latest`, `gpt-5.5`, `gpt-5.5-thinking`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gemini-latest`, `gemini-3.1-pro`, `gemini-3.1-pro-customtools`, `gemini-3.5-flash`, `gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview`, `grok-latest`, `grok-4.20-reasoning`, `grok-4.20` |
 | `POST /v1/images/generations` | `gpt-image-1.5`, `gpt-image-2`, `nano-banana`, `nano-banana-2`, `nano-banana-pro`, `imagen-4.0`, `imagen-4.0-fast`, `imagen-4.0-ultra`, `grok-image`, `grok-imagine-image-quality`, `grok-video`, `grok-video-1.5`, `grok-imagine-video-1.5-2026-05-30`, `seedance-2.0`, `seedance-2.0-fast`, `seedream-5.0`, `seedream-5.0-lite` |
 | `POST /v1/images/edits` | `grok-image`, `grok-imagine-image-quality` |
 | `POST /videos` + `GET /v1/videos/{id}` + `GET …/content` | `veo-3.1`, `veo-3.1-fast`, `veo-3.1-lite` |

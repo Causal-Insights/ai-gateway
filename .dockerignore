@@ -11,6 +11,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+local-tests/
 *.mp4
 *.mov
 *.mkv
@@ -23,4 +24,3 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
-

@@ -1,11 +1,4 @@
 model_list:
-  # ── Local ────────────────────────────────────────────────────────────────
-  - model_name: gemma-4-large
-    litellm_params:
-      model: openai/mlx-community/gemma-4-31b-it-8bit
-      api_base: os.environ/MLX_VLM_API_BASE
-      api_key: os.environ/MLX_VLM_API_KEY
-
   # ── OpenAI ───────────────────────────────────────────────────────────────
   - model_name: gpt-latest
     litellm_params:
@@ -168,7 +161,7 @@ model_list:
   # grok-imagine-video-1.5-preview (alias grok-imagine-video-1.5-2026-05-30): 480p $0.08/s, 720p $0.14/s; input image $0.01.
   - model_name: grok-video-1.5
     litellm_params:
-      model: grok-video/grok-imagine-video-1.5-preview
+      model: grok-video/grok-imagine-video-1.5
       api_key: os.environ/GROK_API_KEY
       timeout: 1260
     model_info:
@@ -178,7 +171,7 @@ model_list:
       output_cost_per_second: 0.08
       output_cost_per_second_720p: 0.14
       metadata:
-        grok_imagine_video_upstream: grok-imagine-video-1.5-preview
+        grok_imagine_video_upstream: grok-imagine-video-1.5
         grok_video_price_per_second_480p: 0.08
         grok_video_price_per_second_720p: 0.14
         grok_video_reference_image_usd: 0.01
@@ -300,6 +293,72 @@ model_list:
         seedance_price_per_mtok: 5.60
         seedance_price_per_mtok_with_input_video: 3.30
 
+  # ── Seedream 5 (BytePlus ModelArk) ───────────────────────────────────────
+  # Sync POST /images/generations — handler sets x-litellm-response-cost from
+  # output image count × per-image rate (+ optional web_search surcharge).
+  # ModelArk: https://docs.byteplus.com/en/docs/ModelArk/1541523
+  - model_name: seedream-5.0
+    litellm_params:
+      model: seedream/seedream-5-0-260128
+      api_key: os.environ/BYTEDANCE_API_KEY
+      timeout: 300
+    model_info:
+      mode: image_generation
+      supported_openai_params:
+        - image
+        - images
+        - image_urls
+        - reference_image_urls
+        - referenceImageUrls
+        - size
+        - n
+        - response_format
+        - output_format
+        - watermark
+        - stream
+        - seed
+        - sequential_image_generation
+        - sequential_image_generation_options
+        - tools
+        - optimize_prompt_options
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      input_cost_per_image: 0.035
+      metadata:
+        seedream_price_per_image: 0.035
+        seedream_web_search_price_per_request: 0.0006
+
+  - model_name: seedream-5.0-lite
+    litellm_params:
+      model: seedream/seedream-5-0-lite-260128
+      api_key: os.environ/BYTEDANCE_API_KEY
+      timeout: 300
+    model_info:
+      mode: image_generation
+      supported_openai_params:
+        - image
+        - images
+        - image_urls
+        - reference_image_urls
+        - referenceImageUrls
+        - size
+        - n
+        - response_format
+        - output_format
+        - watermark
+        - stream
+        - seed
+        - sequential_image_generation
+        - sequential_image_generation_options
+        - tools
+        - optimize_prompt_options
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+      input_cost_per_image: 0.035
+      metadata:
+        seedream_price_per_image: 0.035
+        seedream_web_search_price_per_request: 0.0006
+
   # ── xAI ──────────────────────────────────────────────────────────────────
   - model_name: grok-latest
     litellm_params:
@@ -323,21 +382,36 @@ model_list:
       model: elevenlabs/eleven_v3
       api_key: os.environ/ELEVENLABS_API_KEY
   
-  
-  - model_name: tts-quality
+  - model_name: elevenlabs-multilingual-v2
     litellm_params:
       model: elevenlabs/eleven_multilingual_v2
       api_key: os.environ/ELEVENLABS_API_KEY
 
-  - model_name: tts-fast
+  # ── Audio Studio provider-native generation ───────────────────────────────
+  # Routed through authenticated /images/generations because LiteLLM's
+  # standard /audio/speech surface does not cover ElevenLabs SFX or Music.
+  - model_name: elevenlabs-sfx
     litellm_params:
-      model: elevenlabs/eleven_flash_v2_5
-      api_key: os.environ/ELEVENLABS_API_KEY
+      model: audio-studio/elevenlabs-sfx
+      timeout: 300
+    model_info:
+      mode: image_generation
+      supported_openai_params:
+        - prompt
+        - duration_seconds
+        - prompt_influence
+        - loop
 
-  - model_name: tts-turbo
+  - model_name: elevenlabs-music
     litellm_params:
-      model: elevenlabs/eleven_turbo_v2_5
-      api_key: os.environ/ELEVENLABS_API_KEY
+      model: audio-studio/elevenlabs-music
+      timeout: 300
+    model_info:
+      mode: image_generation
+      supported_openai_params:
+        - prompt
+        - music_length_ms
+        - force_instrumental
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
@@ -351,9 +425,13 @@ litellm_settings:
   # edge timeouts. 1800s remains the absolute cap for the explicit blocking opt-in.
   request_timeout: 1800
   custom_provider_map:
+    - provider: audio-studio
+      custom_handler: custom_handler.audio_studio
     - provider: grok-video
       custom_handler: custom_handler.grok_video
     - provider: grok-image
       custom_handler: custom_handler.grok_image
     - provider: seedance
       custom_handler: custom_handler.seedance
+    - provider: seedream
+      custom_handler: custom_handler.seedream

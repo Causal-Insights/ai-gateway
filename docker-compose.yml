@@ -1,11 +1,31 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: litellm-local-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm_local
+      POSTGRES_DB: litellm_local
+    volumes:
+      - litellm-local-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   litellm:
     image: docker.litellm.ai/berriai/litellm:main-v1.83.14-stable
     container_name: litellm-proxy
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     environment:
+      DATABASE_URL: ${LOCAL_DATABASE_URL:-postgresql://litellm:litellm_local@postgres:5432/litellm_local}
       # Append-only audit log of ARK task ids (enable in .env). Mount a host file below.
       SEEDANCE_TASK_LEDGER_PATH: ${SEEDANCE_TASK_LEDGER_PATH:-/app/seedance_task_ledger.jsonl}
     ports:
@@ -13,9 +33,14 @@ services:
     volumes:
       - ./litellm_config.yaml:/app/litellm_config.yaml:ro
       - ./custom_handler.py:/app/custom_handler.py:ro
+      - ./custom_handler_audio.py:/app/custom_handler_audio.py:ro
       - ./custom_handler_common.py:/app/custom_handler_common.py:ro
       - ./custom_handler_xai.py:/app/custom_handler_xai.py:ro
       - ./custom_handler_seedance.py:/app/custom_handler_seedance.py:ro
+      - ./custom_handler_seedream.py:/app/custom_handler_seedream.py:ro
       - ./seedance_task_ledger.jsonl:/app/seedance_task_ledger.jsonl
       - /Users/jason/dev/keys:/Users/jason/dev/keys:ro
     command: ["--config", "/app/litellm_config.yaml", "--port", "4000"]
+
+volumes:
+  litellm-local-db:
