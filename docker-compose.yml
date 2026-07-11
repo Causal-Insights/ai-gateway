@@ -16,7 +16,7 @@ services:
       retries: 20
 
   litellm:
-    image: docker.litellm.ai/berriai/litellm:main-v1.83.14-stable
+    build: .
     container_name: litellm-proxy
     restart: unless-stopped
     depends_on:
@@ -26,6 +26,8 @@ services:
       - .env
     environment:
       DATABASE_URL: ${LOCAL_DATABASE_URL:-postgresql://litellm:litellm_local@postgres:5432/litellm_local}
+      PORT: 4000
+      CONFIG_FILE_PATH: /app/litellm_config.yaml
       # Append-only audit log of ARK task ids (enable in .env). Mount a host file below.
       SEEDANCE_TASK_LEDGER_PATH: ${SEEDANCE_TASK_LEDGER_PATH:-/app/seedance_task_ledger.jsonl}
     ports:
@@ -38,9 +40,16 @@ services:
       - ./custom_handler_xai.py:/app/custom_handler_xai.py:ro
       - ./custom_handler_seedance.py:/app/custom_handler_seedance.py:ro
       - ./custom_handler_seedream.py:/app/custom_handler_seedream.py:ro
+      - ./generation_job_models.py:/app/generation_job_models.py:ro
+      - ./generation_job_repository.py:/app/generation_job_repository.py:ro
+      - ./generation_job_adapters.py:/app/generation_job_adapters.py:ro
+      - ./generation_job_scheduler.py:/app/generation_job_scheduler.py:ro
+      - ./generation_job_routes.py:/app/generation_job_routes.py:ro
+      - ./gateway_server.py:/app/gateway_server.py:ro
+      - ./callback_server.py:/app/callback_server.py:ro
+      - ./migrations:/app/migrations:ro
       - ./seedance_task_ledger.jsonl:/app/seedance_task_ledger.jsonl
       - /Users/jason/dev/keys:/Users/jason/dev/keys:ro
-    command: ["--config", "/app/litellm_config.yaml", "--port", "4000"]
 
 volumes:
   litellm-local-db:

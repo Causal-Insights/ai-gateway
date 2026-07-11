@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from litellm.llms.custom_httpx.http_handler import AsyncHTTPHandler, HTTPHandler
 
 from custom_handler_common import normalize_error
+from legacy_usage import log_legacy_video_usage
 
 
 class GrokVideoException(Exception):
@@ -254,6 +255,7 @@ class GrokVideoLLM(CustomLLM):
         **kwargs: Any,
     ) -> ImageResponse:
         optional_params = dict(optional_params or {})
+        log_legacy_video_usage(provider="xai", model=model, operation="submit_and_poll")
         api_key = os.environ.get("GROK_API_KEY")
         if not api_key:
             raise ValueError("GROK_API_KEY is required for grok-video")

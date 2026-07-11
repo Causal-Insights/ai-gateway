@@ -82,19 +82,25 @@ model_list:
   # ── Nano Banana / Gemini image ───────────────────────────────────────────
   - model_name: nano-banana
     litellm_params:
-      model: vertex_ai/gemini-3.1-flash-image-preview
+      model: vertex_ai/gemini-3.1-flash-image
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   - model_name: nano-banana-2
     litellm_params:
-      model: vertex_ai/gemini-3.1-flash-image-preview
+      model: vertex_ai/gemini-3.1-flash-image
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   - model_name: nano-banana-pro
     litellm_params:
-      model: vertex_ai/gemini-3-pro-image-preview
+      model: vertex_ai/gemini-3-pro-image
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+
+  - model_name: nano-banana-2-lite
+    litellm_params:
+      model: vertex_ai/gemini-3.1-flash-lite-image
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
@@ -114,6 +120,12 @@ model_list:
   - model_name: veo-3.1-lite
     litellm_params:
       model: vertex_ai/veo-3.1-lite-generate-001
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+
+  - model_name: gemini-omni-flash
+    litellm_params:
+      model: vertex_ai/gemini-omni-flash-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 

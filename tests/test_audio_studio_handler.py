@@ -11,6 +11,11 @@ import httpx
 def _ensure_litellm_stubs():
     if "litellm" in sys.modules:
         return
+    try:
+        __import__("litellm")
+        return
+    except ImportError:
+        pass
 
     class CustomLLM:
         pass

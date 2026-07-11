@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 touch seedance_task_ledger.jsonl
 
 docker compose down
-docker compose up -d --force-recreate
+docker compose up -d --build --force-recreate
 
 echo
 

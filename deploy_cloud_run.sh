@@ -18,6 +18,7 @@ cd "$SCRIPT_DIR"
 PROJECT_ID="${PROJECT_ID:-ai-gateway-495414}"
 REGION="${REGION:-us-central1}"
 SERVICE_NAME="${SERVICE_NAME:-ai-gateway-proxy}"
+CALLBACK_SERVICE_NAME="${CALLBACK_SERVICE_NAME:-ai-gateway-callbacks}"
 AR_REPO="${AR_REPO:-ai-gateway}"
 IMAGE_NAME="${IMAGE_NAME:-litellm-proxy}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
@@ -37,13 +38,17 @@ ELEVENLABS_API_KEY_SECRET="${ELEVENLABS_API_KEY_SECRET:-ELEVENLABS_API_KEY}"
 MEMORY="${MEMORY:-2Gi}"
 CPU="${CPU:-2}"
 TIMEOUT="${TIMEOUT:-1800}"
-MIN_INSTANCES="${MIN_INSTANCES:-0}"
+MIN_INSTANCES="${MIN_INSTANCES:-1}"
 MAX_INSTANCES="${MAX_INSTANCES:-10}"
 ALLOW_UNAUTHENTICATED="${ALLOW_UNAUTHENTICATED:-false}"
 SEEDANCE_SYNC_WAIT_S="${SEEDANCE_SYNC_WAIT_S:-240}"
 SEEDANCE_POLL_TIMEOUT_S="${SEEDANCE_POLL_TIMEOUT_S:-1200}"
 
 RUNTIME_SA="${RUNTIME_SA:-}"
+TASKS_SA_NAME="${TASKS_SA_NAME:-ai-gateway-tasks}"
+POLL_QUEUE_NAME="${POLL_QUEUE_NAME:-ai-generation-polls}"
+RECONCILE_JOB_NAME="${RECONCILE_JOB_NAME:-ai-generation-reconcile}"
+CLEANUP_JOB_NAME="${CLEANUP_JOB_NAME:-ai-generation-cleanup}"
 
 read_env_value() {
   local key="$1"
@@ -147,7 +152,38 @@ gcloud services enable \
   run.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
+  cloudtasks.googleapis.com \
+  cloudscheduler.googleapis.com \
+  iamcredentials.googleapis.com \
   --quiet
+
+TASKS_SA_EMAIL="${TASKS_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+if ! gcloud iam service-accounts describe "${TASKS_SA_EMAIL}" >/dev/null 2>&1; then
+  echo "==> Creating Cloud Tasks delivery service account '${TASKS_SA_NAME}'..."
+  gcloud iam service-accounts create "${TASKS_SA_NAME}" \
+    --display-name="AI generation poll delivery" --quiet
+fi
+
+if ! gcloud tasks queues describe "${POLL_QUEUE_NAME}" --location="${REGION}" >/dev/null 2>&1; then
+  echo "==> Creating rate-limited generation poll queue..."
+  gcloud tasks queues create "${POLL_QUEUE_NAME}" \
+    --location="${REGION}" \
+    --max-dispatches-per-second=20 \
+    --max-concurrent-dispatches=20 \
+    --max-attempts=5 \
+    --min-backoff=5s \
+    --max-backoff=60s \
+    --quiet
+else
+  gcloud tasks queues update "${POLL_QUEUE_NAME}" \
+    --location="${REGION}" \
+    --max-dispatches-per-second=20 \
+    --max-concurrent-dispatches=20 \
+    --max-attempts=5 \
+    --min-backoff=5s \
+    --max-backoff=60s \
+    --quiet
+fi
 
 if ! gcloud artifacts repositories describe "${AR_REPO}" --location="${REGION}" >/dev/null 2>&1; then
   echo "==> Creating Artifact Registry repo '${AR_REPO}'..."
@@ -190,8 +226,78 @@ echo "==> Deploying to Cloud Run..."
 gcloud "${DEPLOY_ARGS[@]}"
 
 SERVICE_URL="$(gcloud run services describe "${SERVICE_NAME}" --region "${REGION}" --format='value(status.url)')"
+
+echo "==> Granting poll delivery access to the private gateway..."
+gcloud run services add-iam-policy-binding "${SERVICE_NAME}" \
+  --region "${REGION}" \
+  --member="serviceAccount:${TASKS_SA_EMAIL}" \
+  --role="roles/run.invoker" \
+  --quiet >/dev/null
+
+CALLBACK_DEPLOY_ARGS=(
+  run deploy "${CALLBACK_SERVICE_NAME}"
+  --image "${IMAGE_URI}"
+  --region "${REGION}"
+  --platform managed
+  --port 8080
+  --memory 512Mi
+  --cpu 1
+  --timeout 30
+  --min-instances 1
+  --max-instances 10
+  --allow-unauthenticated
+  --command uvicorn
+  --args "callback_server:app,--host,0.0.0.0,--port,8080"
+  --update-env-vars "GENERATION_POLL_QUEUE_PROJECT=${PROJECT_ID},GENERATION_POLL_QUEUE_LOCATION=${REGION},GENERATION_POLL_QUEUE_NAME=${POLL_QUEUE_NAME},GENERATION_POLL_TARGET_URL=${SERVICE_URL},GENERATION_POLL_AUDIENCE=${SERVICE_URL},GENERATION_POLL_SERVICE_ACCOUNT_EMAIL=${TASKS_SA_EMAIL}"
+  --set-secrets "DATABASE_URL=${DATABASE_URL_SECRET}:latest"
+)
+if [[ -n "${RUNTIME_SA}" ]]; then
+  CALLBACK_DEPLOY_ARGS+=(--service-account "${RUNTIME_SA}")
+fi
+echo "==> Deploying callback-only service..."
+gcloud "${CALLBACK_DEPLOY_ARGS[@]}"
+CALLBACK_URL="$(gcloud run services describe "${CALLBACK_SERVICE_NAME}" --region "${REGION}" --format='value(status.url)')"
+
+echo "==> Configuring durable job dispatch on the gateway..."
+gcloud run services update "${SERVICE_NAME}" \
+  --region "${REGION}" \
+  --update-env-vars "GATEWAY_PUBLIC_BASE_URL=${SERVICE_URL},GENERATION_CALLBACK_BASE_URL=${CALLBACK_URL},GENERATION_POLL_QUEUE_PROJECT=${PROJECT_ID},GENERATION_POLL_QUEUE_LOCATION=${REGION},GENERATION_POLL_QUEUE_NAME=${POLL_QUEUE_NAME},GENERATION_POLL_TARGET_URL=${SERVICE_URL},GENERATION_POLL_AUDIENCE=${SERVICE_URL},GENERATION_POLL_SERVICE_ACCOUNT_EMAIL=${TASKS_SA_EMAIL}" \
+  --quiet
+
+PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
+DEFAULT_RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+DEPLOYED_RUNTIME_SA="$(gcloud run services describe "${SERVICE_NAME}" --region "${REGION}" --format='value(spec.template.spec.serviceAccountName)')"
+EFFECTIVE_RUNTIME_SA="${RUNTIME_SA:-${DEPLOYED_RUNTIME_SA:-${DEFAULT_RUNTIME_SA}}}"
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${EFFECTIVE_RUNTIME_SA}" \
+  --role="roles/cloudtasks.enqueuer" \
+  --condition=None --quiet >/dev/null
+gcloud iam service-accounts add-iam-policy-binding "${TASKS_SA_EMAIL}" \
+  --member="serviceAccount:${EFFECTIVE_RUNTIME_SA}" \
+  --role="roles/iam.serviceAccountUser" \
+  --quiet >/dev/null
+
+upsert_scheduler_job() {
+  local name="$1"
+  local schedule="$2"
+  local path="$3"
+  if gcloud scheduler jobs describe "${name}" --location="${REGION}" >/dev/null 2>&1; then
+    gcloud scheduler jobs update http "${name}" --location="${REGION}" \
+      --schedule="${schedule}" --uri="${SERVICE_URL}${path}" --http-method=POST \
+      --oidc-service-account-email="${TASKS_SA_EMAIL}" --oidc-token-audience="${SERVICE_URL}" --quiet
+  else
+    gcloud scheduler jobs create http "${name}" --location="${REGION}" \
+      --schedule="${schedule}" --uri="${SERVICE_URL}${path}" --http-method=POST \
+      --oidc-service-account-email="${TASKS_SA_EMAIL}" --oidc-token-audience="${SERVICE_URL}" --quiet
+  fi
+}
+
+echo "==> Configuring reconciliation and retention schedules..."
+upsert_scheduler_job "${RECONCILE_JOB_NAME}" "* * * * *" "/internal/generation-jobs/reconcile"
+upsert_scheduler_job "${CLEANUP_JOB_NAME}" "17 3 * * *" "/internal/generation-jobs/cleanup"
 echo
 echo "Deployed: ${SERVICE_URL}"
+echo "Callbacks: ${CALLBACK_URL}"
 echo
 echo "Smoke test (public service + LiteLLM key as Bearer):"
 echo "  curl -sS -H \"Authorization: Bearer \$LITELLM_MASTER_KEY\" \\"

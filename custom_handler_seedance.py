@@ -52,6 +52,7 @@ from litellm.llms.custom_httpx.http_handler import AsyncHTTPHandler
 from litellm.types.utils import ImageObject, ImageResponse
 
 from custom_handler_common import normalize_error
+from legacy_usage import log_legacy_video_usage
 
 
 DEFAULT_ARK_MODEL = "dreamina-seedance-2-0-260128"
@@ -493,6 +494,11 @@ class SeedanceLLM(CustomLLM):
         }
 
         poll_task_id = self._extract_poll_task_id(optional_params, prompt)
+        log_legacy_video_usage(
+            provider="byteplus",
+            model=model,
+            operation="retrieve" if poll_task_id else "submit_and_poll",
+        )
 
         legacy_blocking_default = self._legacy_blocking_default()
         default_sync_wait = poll_timeout if legacy_blocking_default else self._sync_wait_s()

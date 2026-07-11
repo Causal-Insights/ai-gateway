@@ -8,6 +8,12 @@ This repo packages a LiteLLM Proxy plus custom handlers for:
 
 It can run locally via `docker-compose` and in production on **Google Cloud Run**.
 
+Long-running video models also expose the durable job API: submit once with
+`POST /v1/generation-jobs`, check `GET /v1/generation-jobs/{id}`, and stream the completed
+asset from `/content`. See [docs/durable-generation-jobs.md](docs/durable-generation-jobs.md)
+and [ADR-001](docs/ADR-001-durable-async-generation-jobs.md). The older blocking video calls
+remain available during migration but are deprecated and emit structured usage events.
+
 ---
 
 ## Local development
@@ -81,7 +87,7 @@ Then configure environment variables (via `gcloud run services update` or the co
 - `OPENAI_API_KEY`
 - `GROK_API_KEY`
 - `BYTEDANCE_API_KEY` (Seedance 2.0 / Seedream 5 / BytePlus ModelArk)
-- Optional Seedance tuning: `SEEDANCE_ARK_BASE`, `SEEDANCE_ARK_MODEL`, `SEEDANCE_POLL_INTERVAL_S`, `SEEDANCE_POLL_TIMEOUT_S` (default **1200s** / 20 min server-side poll — see `.env_example`). Ensure HTTP timeouts (e.g. Cloud Run `--timeout`) stay above that plus overhead.
+- Optional Seedance legacy tuning: `SEEDANCE_ARK_BASE`, `SEEDANCE_ARK_MODEL`, `SEEDANCE_POLL_INTERVAL_S`, `SEEDANCE_POLL_TIMEOUT_S`. These settings only support deprecated blocking calls; new consumers should use durable jobs.
 - `ELEVENLABS_API_KEY`
 - **Vertex (`vertex_ai/*` models in `litellm_config.yaml`)**: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` (e.g. `us-central1`). On Cloud Run, attach a service account with Vertex permissions; local Docker may need `GOOGLE_APPLICATION_CREDENTIALS` (or `VERTEXAI_CREDENTIALS`) pointing at a key file.
 - Any optional `VERTEXAI_*` / `ELEVENLABS_*` vars you still use elsewhere
@@ -89,6 +95,11 @@ Then configure environment variables (via `gcloud run services update` or the co
 `./deploy_cloud_run.sh` binds required secrets explicitly with `--set-secrets`
 and fails before build/deploy if `.env` contains the same database URL as the
 production `DATABASE_URL` secret.
+
+The deployment script also provisions the rate-limited `ai-generation-polls` Cloud Tasks
+queue, one-minute reconciliation and daily cleanup Scheduler jobs, a warm main instance, and
+the warm public `ai-gateway-callbacks` receiver. Task and Scheduler delivery use a dedicated
+OIDC service account; the main gateway remains private.
 
 If deploy fails with “failed to start and listen on PORT”, first check logs:
 
