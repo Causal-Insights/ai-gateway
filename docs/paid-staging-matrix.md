@@ -22,6 +22,15 @@ is marked `BLOCKED` with its documented replacement.
 | Callback service | PASS | Revision `ai-gateway-callbacks-00005-dum` is Ready and serves 100%; the application callback route returned the expected JSON and live BytePlus callbacks returned HTTP 202. |
 | Staged production rollout | PASS | Candidate passed 1%, 10%, 50%, and 100% gates with all synthetic health requests returning 200 and no candidate error logs. |
 | Final production state | PASS | Proxy revision `ai-gateway-proxy-00050-zap` serves 100%; 20/20 post-cutover health checks passed, required aliases were present, and the Cloud Tasks poll queue was empty. |
+| Live spend parity | PASS | A transient Prisma `P2028` timeout missed the `$0.000789` virtual-key aggregate for the Studio Gemini test while preserving its immutable spend-log row. The exact aggregate was reconciled once from request `q0d6arC_NqXXqMgPo_2P-QY`. A fresh budget-capped production-key probe then recorded `$0.0001665` in both the detailed ledger and key aggregate on the second scheduler poll. The temporary probe key was deleted. |
+
+The previous production revision recorded the same `P2028` transaction-acquisition
+failure three times and numerous Prisma connection-pool timeouts during the comparison
+window. One connection-pool timeout also occurred while rapidly creating, using, and
+deleting the first temporary audit key; the corrected probe waited for both accounting
+writes before cleanup and completed without a subsequent error. This is a known database
+pool baseline, not a regression introduced by this release, and should be hardened in a
+separate operational change.
 
 ## Provider contract probes
 
@@ -55,5 +64,5 @@ is marked `BLOCKED` with its documented replacement.
 
 | Consumer workflow | Status | Evidence |
 | --- | --- | --- |
-| Studio Pro with `gemini-3.5-flash` | BLOCKED | Both available browser sessions redirect to Studio Pro sign-in. No Magic Lens code changes were made. Complete after the user signs in. |
-| Studio Pro with `grok-video-1.5` | BLOCKED | Both available browser sessions redirect to Studio Pro sign-in. No Magic Lens code changes were made. Complete after the user signs in. |
+| Studio Pro with `gemini-3.5-flash` | PASS | A connected Text → AI Model workflow returned exactly `studio-gemini-ok`; the production spend log recorded a successful `vertex_ai/gemini-3.5-flash` request costing `$0.000789`. |
+| Studio Pro with `grok-video-1.5` | PASS | A connected Text → Video Gen workflow completed as job `gen_997bb1d5172444dcbae5178d03c32a83`; the in-app player reached ready state 4 with a 1280x720, 4.041667-second video; gateway cost `$0.56`. Studio's initial `operation:auto` capability probe was rejected without spend, then its explicit `operation:generate` retry succeeded. No Magic Lens code changes were made. |
