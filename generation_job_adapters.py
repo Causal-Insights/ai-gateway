@@ -838,10 +838,14 @@ class VertexAdapter(BaseAdapter):
             "store": True,
             "stream": False,
             "response_format": response_format,
-            "generation_config": {"video_config": {"task": task}},
         }
         if request._previous_interaction_id:
             body["previous_interaction_id"] = request._previous_interaction_id
+        else:
+            # Stateful follow-up turns infer video editing from the stored
+            # interaction. Vertex rejects previous_interaction_id when an
+            # explicit video task is included in the same request.
+            body["generation_config"] = {"video_config": {"task": task}}
         data = await _json_request(
             "POST",
             self._omni_url(),

@@ -374,7 +374,9 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
             adapter, "_vertex_headers", new=AsyncMock(return_value={"Authorization": "Bearer token"})
         ), patch("generation_job_adapters._json_request", new=mocked):
             await adapter.submit(request, job_id="gen_next", callback_url=None)
-        self.assertEqual(mocked.await_args.kwargs["body"]["previous_interaction_id"], "v1_previous")
+        body = mocked.await_args.kwargs["body"]
+        self.assertEqual(body["previous_interaction_id"], "v1_previous")
+        self.assertNotIn("generation_config", body)
 
     async def test_omni_source_video_edit_inherits_source_aspect_ratio(self):
         request = GenerationJobCreate(
