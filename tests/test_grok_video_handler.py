@@ -56,12 +56,10 @@ from custom_handler import GrokVideoException, GrokVideoLLM
 class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self._env = os.environ.get("GROK_API_KEY")
-        self._video_15_verified = os.environ.get("GROK_VIDEO_15_CONTRACT_VERIFIED")
         self._video_15_operations_verified = os.environ.get(
             "GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED"
         )
         os.environ["GROK_API_KEY"] = "test-key"
-        os.environ["GROK_VIDEO_15_CONTRACT_VERIFIED"] = "true"
         os.environ["GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED"] = "false"
 
     def tearDown(self):
@@ -70,7 +68,6 @@ class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
         else:
             os.environ["GROK_API_KEY"] = self._env
         for name, value in (
-            ("GROK_VIDEO_15_CONTRACT_VERIFIED", self._video_15_verified),
             ("GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED", self._video_15_operations_verified),
         ):
             if value is None:
@@ -441,11 +438,24 @@ class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
                 logging_obj=None,
             )
 
-    async def test_video_15_generation_fails_closed_before_probe(self):
-        with patch.dict(os.environ, {"GROK_VIDEO_15_CONTRACT_VERIFIED": "false"}), self.assertRaisesRegex(
-            ValueError, "generation is disabled"
+    async def test_video_15_generation_is_enabled_by_default(self):
+        submit_resp = MagicMock()
+        submit_resp.raise_for_status = MagicMock()
+        submit_resp.json = MagicMock(return_value={"request_id": "req-default"})
+        done_resp = MagicMock()
+        done_resp.raise_for_status = MagicMock()
+        done_resp.json = MagicMock(
+            return_value={
+                "status": "done",
+                "model": "grok-imagine-video-1.5",
+                "video": {"url": "https://cdn.example/default.mp4", "duration": 5},
+            }
+        )
+        client_instance = self._mock_async_client(submit_resp, [done_resp])
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance), patch(
+            "custom_handler_xai.asyncio.sleep", new=AsyncMock(return_value=None)
         ):
-            await GrokVideoLLM().aimage_generation(
+            result = await GrokVideoLLM().aimage_generation(
                 model="grok-video/grok-imagine-video-1.5",
                 prompt="A sunrise",
                 model_response=None,
@@ -454,6 +464,11 @@ class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
                 optional_params={},
                 logging_obj=None,
             )
+        self.assertEqual(result.data[0].url, "https://cdn.example/default.mp4")
+        self.assertEqual(
+            client_instance.post.call_args.kwargs["json"]["model"],
+            "grok-imagine-video-1.5",
+        )
 
     def test_video_15_1080p_fallback_rate(self):
         self.assertAlmostEqual(

@@ -279,12 +279,6 @@ class XAIAdapter(BaseAdapter):
                     "endpoint passes the paid staging contract probes; use grok-video.",
                     code="CAPABILITY_NOT_VERIFIED",
                 )
-        elif is_15 and not _env_enabled("GROK_VIDEO_15_CONTRACT_VERIFIED"):
-            raise ProviderAdapterError(
-                "grok-video-1.5 generation is disabled until its text, image, reference, "
-                "voice, and returned-model contracts pass the paid staging probes.",
-                code="CAPABILITY_NOT_VERIFIED",
-            )
         if request.duration_seconds is not None and request.duration_seconds > 15:
             raise ProviderAdapterError("xAI video duration must be 15 seconds or less.", code="INVALID_REQUEST")
         if request.operation == "generate" and videos:

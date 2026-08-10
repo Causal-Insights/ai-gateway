@@ -347,13 +347,6 @@ class GrokVideoLLM(CustomLLM):
                     "grok-imagine-video-1.5 editing and extension are disabled until the exact "
                     "1.5 endpoint passes the paid staging contract probes; use grok-imagine-video"
                 )
-        elif self._is_video_15_model(upstream_model) and not self._env_enabled(
-            "GROK_VIDEO_15_CONTRACT_VERIFIED"
-        ):
-            raise ValueError(
-                "grok-imagine-video-1.5 generation is disabled until its text, image, reference, "
-                "voice, and returned-model contracts pass the paid staging probes"
-            )
         if raw_operation == "generate" and video_input is not None:
             raise ValueError("operation=generate cannot include a video")
         if raw_operation in {"edit", "extend"} and video_input is None:

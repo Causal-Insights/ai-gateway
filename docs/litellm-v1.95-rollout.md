@@ -65,13 +65,13 @@ callback failures, and content retrieval errors. Stop promotion on any regressio
 
 ## Paid provider probes
 
-- Verify that `grok-video-1.5` returns exactly `grok-imagine-video-1.5` for text,
-  image, reference-image, and preset-voice requests. Only after all four probes
-  pass, set `GROK_VIDEO_15_CONTRACT_VERIFIED=true` on the candidate revision.
-  Editing and extension have a separate fail-closed gate. Set
+- Smoke-test that `grok-video-1.5` returns exactly `grok-imagine-video-1.5` for
+  text, image, reference-image, and preset-voice requests. These documented
+  generation modes are enabled by default. Editing and extension have a
+  separate fail-closed gate. Set
   `GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED=true` only after both operations pass
-  equivalent exact-model and request/response contract probes. Leave either flag
-  false to return a validation error without submitting a paid provider request.
+  equivalent exact-model and request/response contract probes. Leave that flag
+  false to keep those two operations on the documented `grok-video` alias.
 - Verify Omni entitlement in the target Google Cloud project, then submit the
   cheapest text, first-frame, reference, source-video edit, and stateful edit jobs.
 - Run cheapest-setting regression jobs for legacy Grok video, Grok Image Quality,

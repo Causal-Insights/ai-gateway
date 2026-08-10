@@ -153,7 +153,7 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
         adapter = XAIAdapter()
         with patch.dict(
             os.environ,
-            {"GROK_API_KEY": "test-key", "GROK_VIDEO_15_CONTRACT_VERIFIED": "true"},
+            {"GROK_API_KEY": "test-key"},
         ), patch.object(
             adapter, "_upload_file", new=AsyncMock(return_value={"file_id": "file_123"})
         ) as upload, patch(
@@ -197,7 +197,7 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
         mocked = AsyncMock(return_value={"request_id": "req_ref", "status": "pending"})
         with patch.dict(
             os.environ,
-            {"GROK_API_KEY": "test-key", "GROK_VIDEO_15_CONTRACT_VERIFIED": "true"},
+            {"GROK_API_KEY": "test-key"},
         ), patch(
             "generation_job_adapters._json_request", new=mocked
         ):
@@ -218,7 +218,6 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
             os.environ,
             {
                 "GROK_API_KEY": "test-key",
-                "GROK_VIDEO_15_CONTRACT_VERIFIED": "true",
                 "GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED": "false",
             },
         ), self.assertRaises(
@@ -227,14 +226,16 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
             await XAIAdapter().submit(request, job_id="gen_edit", callback_url=None)
         self.assertEqual(caught.exception.code, "CAPABILITY_NOT_VERIFIED")
 
-    async def test_xai_15_rejects_generation_before_contract_probe(self):
+    async def test_xai_15_generation_is_enabled_by_default(self):
         request = GenerationJobCreate(model="grok-video-1.5", prompt="A sunrise")
+        mocked = AsyncMock(return_value={"request_id": "req_enabled", "status": "pending"})
         with patch.dict(
             os.environ,
-            {"GROK_API_KEY": "test-key", "GROK_VIDEO_15_CONTRACT_VERIFIED": "false"},
-        ), self.assertRaises(ProviderAdapterError) as caught:
-            await XAIAdapter().submit(request, job_id="gen_disabled", callback_url=None)
-        self.assertEqual(caught.exception.code, "CAPABILITY_NOT_VERIFIED")
+            {"GROK_API_KEY": "test-key"},
+        ), patch("generation_job_adapters._json_request", new=mocked):
+            result = await XAIAdapter().submit(request, job_id="gen_enabled", callback_url=None)
+        self.assertEqual(result.provider_request_id, "req_enabled")
+        self.assertEqual(mocked.await_args.kwargs["body"]["model"], "grok-imagine-video-1.5")
 
     async def test_xai_15_verified_video_edit_keeps_exact_model(self):
         request = GenerationJobCreate(
