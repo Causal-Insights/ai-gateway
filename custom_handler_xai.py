@@ -815,8 +815,16 @@ class GrokImageLLM(CustomLLM):
         ):
             if key in optional_params:
                 payload[key] = optional_params.pop(key)
-        if str(payload.get("size") or "").upper() in {"1K", "2K"}:
-            payload["resolution"] = str(payload.pop("size")).upper()
+        # xAI's image-quality API accepts only the lowercase enum values
+        # ``1k`` and ``2k``.  Keep accepting either casing at the gateway so
+        # existing OpenAI-style clients do not need to change.
+        size = str(payload.get("size") or "").strip().lower()
+        if size in {"1k", "2k"}:
+            payload.pop("size")
+            payload["resolution"] = size
+        resolution = str(payload.get("resolution") or "").strip().lower()
+        if resolution in {"1k", "2k"}:
+            payload["resolution"] = resolution
 
         headers = {
             "Authorization": f"Bearer {api_key}",

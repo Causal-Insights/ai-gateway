@@ -305,6 +305,7 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
         payload = client_instance.post.call_args.kwargs["json"]
         self.assertEqual(payload["model"], "future-official-model")
         self.assertEqual(len(payload["images"]), 3)
+        self.assertEqual(payload["resolution"], "2k")
         self.assertEqual(out.data[0].b64_json, "ZmFrZS1pbWFnZQ==")
         self.assertEqual(out.data[0].revised_prompt, "revised")
         self.assertAlmostEqual(out._hidden_params["response_cost"], 0.09)
@@ -327,5 +328,5 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
                 optional_params={"size": "2K", "n": 2},
                 logging_obj=None,
             )
-        self.assertEqual(client_instance.post.call_args.kwargs["json"]["resolution"], "2K")
+        self.assertEqual(client_instance.post.call_args.kwargs["json"]["resolution"], "2k")
         self.assertAlmostEqual(out._hidden_params["response_cost"], 0.15)
