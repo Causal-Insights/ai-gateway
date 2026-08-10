@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import ipaddress
 import os
 import socket
+import struct
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import PurePosixPath
@@ -19,6 +21,11 @@ from generation_job_models import GenerationJobCreate, ProviderStatus, ProviderS
 
 
 RETRYABLE_HTTP_STATUSES = {408, 409, 425, 429, 500, 502, 503, 504}
+ENABLED_ENV_VALUES = {"1", "true", "yes", "on"}
+
+
+def _env_enabled(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ENABLED_ENV_VALUES
 
 
 class ProviderAdapterError(Exception):
@@ -264,25 +271,63 @@ class XAIAdapter(BaseAdapter):
         if len(videos) > 1:
             raise ProviderAdapterError("xAI accepts at most one input video.", code="INVALID_MEDIA_INPUT")
         upstream_model = self.upstream_model(request.model)
+        is_15 = "1.5" in upstream_model
+        if is_15 and videos:
+            if not _env_enabled("GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED"):
+                raise ProviderAdapterError(
+                    "grok-video-1.5 editing and extension are disabled until the exact 1.5 "
+                    "endpoint passes the paid staging contract probes; use grok-video.",
+                    code="CAPABILITY_NOT_VERIFIED",
+                )
+        elif is_15 and not _env_enabled("GROK_VIDEO_15_CONTRACT_VERIFIED"):
+            raise ProviderAdapterError(
+                "grok-video-1.5 generation is disabled until its text, image, reference, "
+                "voice, and returned-model contracts pass the paid staging probes.",
+                code="CAPABILITY_NOT_VERIFIED",
+            )
         if request.duration_seconds is not None and request.duration_seconds > 15:
             raise ProviderAdapterError("xAI video duration must be 15 seconds or less.", code="INVALID_REQUEST")
+        if request.operation == "generate" and videos:
+            raise ProviderAdapterError("Generate operations cannot include a source video.", code="INVALID_REQUEST")
+        if request.operation in {"edit", "extend"} and not videos:
+            raise ProviderAdapterError(
+                f"xAI {request.operation} operations require one source video.", code="INVALID_REQUEST"
+            )
+        if request.reference_voice_ids and not is_15:
+            raise ProviderAdapterError(
+                "Preset voice references require grok-video-1.5.", code="CAPABILITY_NOT_SUPPORTED"
+            )
         payload: dict[str, Any] = {"model": upstream_model}
         if request.prompt:
             payload["prompt"] = request.prompt
         if videos:
-            endpoint = "/videos/edits"
+            endpoint = "/videos/extensions" if request.operation == "extend" else "/videos/edits"
             payload["video"] = self._media_value(videos[0], upload_bytes)
             if images:
-                raise ProviderAdapterError("xAI video edits cannot include images.", code="INVALID_MEDIA_INPUT")
+                raise ProviderAdapterError("xAI video operations cannot include images.", code="INVALID_MEDIA_INPUT")
+            if request.operation == "extend" and request.duration_seconds is not None:
+                if not 2 <= request.duration_seconds <= 10:
+                    raise ProviderAdapterError(
+                        "xAI extension duration must be between 2 and 10 seconds.", code="INVALID_REQUEST"
+                    )
+                payload["duration"] = request.duration_seconds
+            elif request.operation != "extend" and request.duration_seconds is not None:
+                raise ProviderAdapterError(
+                    "xAI video editing does not accept a custom duration.", code="INVALID_REQUEST"
+                )
+            if request.aspect_ratio or request.resolution:
+                raise ProviderAdapterError(
+                    "xAI video editing and extension preserve the source format.", code="INVALID_REQUEST"
+                )
         else:
             endpoint = "/videos/generations"
             first = next((item for item in images if item.role == "first_frame"), None)
             references = [item for item in images if item is not first]
             if len(references) > 7:
                 raise ProviderAdapterError("xAI accepts at most seven reference images.", code="INVALID_MEDIA_INPUT")
-            if references and request.duration_seconds and request.duration_seconds > 10:
+            if first and references:
                 raise ProviderAdapterError(
-                    "xAI reference-image video duration must be 10 seconds or less.", code="INVALID_REQUEST"
+                    "xAI requests cannot combine a starting frame with reference images.", code="INVALID_MEDIA_INPUT"
                 )
             if first:
                 payload["image"] = (
@@ -295,11 +340,24 @@ class XAIAdapter(BaseAdapter):
                 if payload.get("prompt") and "<IMAGE_" not in payload["prompt"].upper():
                     placeholders = ", ".join(f"<IMAGE_{index}>" for index in range(1, len(references) + 1))
                     payload["prompt"] = f"{payload['prompt'].rstrip()}\n\nReference images in order: {placeholders}."
+            if request.reference_voice_ids:
+                payload["reference_audios"] = [
+                    {"voice_id": voice_id} for voice_id in request.reference_voice_ids
+                ]
+                if payload.get("prompt") and "<AUDIO_" not in payload["prompt"].upper():
+                    voices = ", ".join(
+                        f"<AUDIO_{index}>" for index in range(len(request.reference_voice_ids))
+                    )
+                    payload["prompt"] = f"{payload['prompt'].rstrip()}\n\nPreset voices in order: {voices}."
             if request.duration_seconds is not None:
                 payload["duration"] = request.duration_seconds
             if request.aspect_ratio and not ("1.5" in upstream_model and first):
                 payload["aspect_ratio"] = request.aspect_ratio
             if request.resolution:
+                if references and request.resolution.lower() == "1080p":
+                    raise ProviderAdapterError(
+                        "xAI reference-to-video is capped at 720p.", code="INVALID_REQUEST"
+                    )
                 payload["resolution"] = request.resolution
         data = await _json_request(
             "POST",
@@ -324,6 +382,14 @@ class XAIAdapter(BaseAdapter):
                 "resolution": request.resolution,
                 "image_count": len(images),
                 "has_input_video": bool(videos),
+                "operation": (
+                    request.operation
+                    if request.operation != "auto"
+                    else "edit"
+                    if videos
+                    else "generate"
+                ),
+                "reference_voice_count": len(request.reference_voice_ids),
             },
         )
 
@@ -337,10 +403,13 @@ class XAIAdapter(BaseAdapter):
         resolution = str(metadata.get("resolution") or "480p").lower()
         model = str(metadata.get("upstream_model") or "")
         price = 0.08 if "1.5" in model else 0.05
-        if resolution in {"720p", "1080p"}:
+        if resolution == "720p":
             price = 0.14 if "1.5" in model else 0.07
+        elif resolution == "1080p":
+            price = 0.25 if "1.5" in model else 0.07
         image_price = 0.01 if "1.5" in model else 0.002
-        return seconds * price + int(metadata.get("image_count") or 0) * image_price
+        input_video_cost = seconds * 0.01 if metadata.get("has_input_video") else 0
+        return seconds * price + int(metadata.get("image_count") or 0) * image_price + input_video_cost
 
     async def retrieve(self, job: dict[str, Any]) -> ProviderStatus:
         api_key = os.environ.get("GROK_API_KEY")
@@ -350,6 +419,15 @@ class XAIAdapter(BaseAdapter):
             headers={"Authorization": f"Bearer {api_key}"},
         )
         raw = str(data.get("status") or "pending").lower()
+        expected_model = str((job.get("request_metadata") or {}).get("upstream_model") or "")
+        returned_model = str(data.get("model") or "")
+        if returned_model and expected_model and returned_model != expected_model:
+            return ProviderStatus(
+                status="failed",
+                provider_status=raw,
+                error_code="PROVIDER_MODEL_MISMATCH",
+                error_message=f"xAI returned model {returned_model!r}; expected {expected_model!r}.",
+            )
         usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
         cost: Optional[float] = None
         if usage and usage.get("cost_in_usd_ticks") is not None:
@@ -491,6 +569,397 @@ class BytePlusAdapter(BaseAdapter):
 
 class VertexAdapter(BaseAdapter):
     provider = "vertex"
+    omni_model = "gemini-omni-flash-preview"
+    omni_input_cost_per_token = 1.5e-6
+    omni_output_cost_per_token = 9e-6
+    omni_output_video_cost_per_token = 1.75e-5
+
+    @classmethod
+    def _is_omni(cls, model: str, metadata: Optional[dict[str, Any]] = None) -> bool:
+        normalized = (model or "").strip().lower().removeprefix("vertex_ai/")
+        upstream = str((metadata or {}).get("upstream_model") or "").lower().removeprefix("vertex_ai/")
+        return normalized in {"gemini-omni-flash", cls.omni_model} or upstream == cls.omni_model
+
+    @staticmethod
+    async def _vertex_headers() -> dict[str, str]:
+        try:
+            import google.auth
+            from google.auth.transport.requests import Request as GoogleAuthRequest
+
+            credentials, _project = google.auth.default(
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
+            if not credentials.valid or credentials.expired or not credentials.token:
+                await asyncio.to_thread(credentials.refresh, GoogleAuthRequest())
+        except Exception as exc:
+            raise ProviderAdapterError(
+                "Vertex application-default credentials are unavailable.", code="PROVIDER_NOT_CONFIGURED"
+            ) from exc
+        return {"Authorization": f"Bearer {credentials.token}", "Content-Type": "application/json"}
+
+    @staticmethod
+    def _omni_url(interaction_id: Optional[str] = None) -> str:
+        project = (os.environ.get("GOOGLE_CLOUD_PROJECT") or "").strip()
+        if not project:
+            raise ProviderAdapterError(
+                "GOOGLE_CLOUD_PROJECT is not configured.", code="PROVIDER_NOT_CONFIGURED"
+            )
+        base = f"https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/interactions"
+        return f"{base}/{interaction_id}" if interaction_id else base
+
+    @staticmethod
+    def _mp4_duration_seconds(content: bytes) -> Optional[float]:
+        """Read the ISO-BMFF movie header without invoking an external decoder."""
+
+        def boxes(start: int, end: int):
+            offset = start
+            while offset + 8 <= end:
+                size = int.from_bytes(content[offset : offset + 4], "big")
+                kind = content[offset + 4 : offset + 8]
+                header = 8
+                if size == 1:
+                    if offset + 16 > end:
+                        return
+                    size = int.from_bytes(content[offset + 8 : offset + 16], "big")
+                    header = 16
+                elif size == 0:
+                    size = end - offset
+                if size < header or offset + size > end:
+                    return
+                yield kind, offset + header, offset + size
+                offset += size
+
+        for kind, payload_start, box_end in boxes(0, len(content)):
+            if kind != b"moov":
+                continue
+            for child_kind, child_start, child_end in boxes(payload_start, box_end):
+                if child_kind != b"mvhd" or child_end - child_start < 20:
+                    continue
+                version = content[child_start]
+                if version == 0 and child_end - child_start >= 20:
+                    timescale = struct.unpack_from(">I", content, child_start + 12)[0]
+                    duration = struct.unpack_from(">I", content, child_start + 16)[0]
+                elif version == 1 and child_end - child_start >= 32:
+                    timescale = struct.unpack_from(">I", content, child_start + 20)[0]
+                    duration = struct.unpack_from(">Q", content, child_start + 24)[0]
+                else:
+                    return None
+                if not timescale or not duration:
+                    return None
+                return duration / timescale
+        return None
+
+    @staticmethod
+    async def _omni_media_content(media: Any, upload_bytes) -> tuple[dict[str, str], bytes]:
+        if media.upload_field:
+            if not upload_bytes or media.upload_field not in upload_bytes:
+                raise ProviderAdapterError(
+                    f"Missing multipart field {media.upload_field!r}.", code="INVALID_MEDIA_INPUT"
+                )
+            _filename, content, mime_type = upload_bytes[media.upload_field]
+        else:
+            _filename, content, mime_type = await _download_media(str(media.url))
+        expected = f"{media.type}/"
+        if not (mime_type or "").startswith(expected):
+            raise ProviderAdapterError(
+                f"Gemini Omni {media.type} input has incompatible MIME type {mime_type!r}.",
+                code="INVALID_MEDIA_INPUT",
+            )
+        return {
+            "type": media.type,
+            "data": base64.b64encode(content).decode("ascii"),
+            "mime_type": mime_type,
+        }, content
+
+    @staticmethod
+    def _omni_video_item(data: dict[str, Any]) -> Optional[dict[str, Any]]:
+        for step in reversed(data.get("steps") or []):
+            if not isinstance(step, dict) or step.get("type") != "model_output":
+                continue
+            for item in reversed(step.get("content") or []):
+                if isinstance(item, dict) and item.get("type") == "video":
+                    return item
+        output = data.get("output_video")
+        return output if isinstance(output, dict) else None
+
+    @staticmethod
+    def _omni_cost(usage: Any) -> Optional[float]:
+        if not isinstance(usage, dict):
+            return None
+        try:
+            input_tokens = int(usage.get("total_input_tokens") or 0)
+            output_tokens = int(usage.get("total_output_tokens") or 0)
+            thought_tokens = int(usage.get("total_thought_tokens") or 0)
+        except (TypeError, ValueError):
+            return None
+        video_tokens = 0
+        for item in usage.get("output_tokens_by_modality") or []:
+            if isinstance(item, dict) and str(item.get("modality") or "").lower() == "video":
+                try:
+                    video_tokens += int(item.get("tokens") or 0)
+                except (TypeError, ValueError):
+                    return None
+        video_tokens = min(max(0, video_tokens), max(0, output_tokens))
+        try:
+            from litellm import get_model_info
+
+            model_info = get_model_info(
+                model="gemini-omni-flash-preview", custom_llm_provider="vertex_ai"
+            )
+        except Exception:
+            model_info = {}
+        try:
+            input_rate = float(
+                model_info.get("input_cost_per_token")
+                or os.environ.get("GEMINI_OMNI_INPUT_COST_PER_TOKEN")
+                or VertexAdapter.omni_input_cost_per_token
+            )
+            output_rate = float(
+                model_info.get("output_cost_per_token")
+                or os.environ.get("GEMINI_OMNI_OUTPUT_COST_PER_TOKEN")
+                or VertexAdapter.omni_output_cost_per_token
+            )
+            video_rate = float(
+                model_info.get("output_cost_per_video_token")
+                or os.environ.get("GEMINI_OMNI_OUTPUT_VIDEO_COST_PER_TOKEN")
+                or VertexAdapter.omni_output_video_cost_per_token
+            )
+        except (TypeError, ValueError):
+            return None
+        text_and_thought_tokens = max(0, output_tokens - video_tokens) + max(0, thought_tokens)
+        return input_tokens * input_rate + text_and_thought_tokens * output_rate + video_tokens * video_rate
+
+    async def _submit_omni(self, request: GenerationJobCreate, upload_bytes=None) -> ProviderSubmission:
+        images = [item for item in request.media_inputs if item.type == "image"]
+        videos = [item for item in request.media_inputs if item.type == "video"]
+        first_frames = [item for item in images if item.role == "first_frame"]
+        references = [item for item in images if item.role != "first_frame"]
+        if request.reference_voice_ids:
+            raise ProviderAdapterError(
+                "Gemini Omni does not support audio references or voice editing.",
+                code="CAPABILITY_NOT_SUPPORTED",
+            )
+        if any(item.role == "last_frame" for item in request.media_inputs):
+            raise ProviderAdapterError(
+                "Gemini Omni does not support last-frame interpolation.", code="CAPABILITY_NOT_SUPPORTED"
+            )
+        if len(first_frames) > 1:
+            raise ProviderAdapterError("Gemini Omni accepts one first frame.", code="INVALID_MEDIA_INPUT")
+        if len(images) > 10:
+            raise ProviderAdapterError("Gemini Omni accepts up to ten images.", code="INVALID_MEDIA_INPUT")
+        if len(videos) > 1:
+            raise ProviderAdapterError("Gemini Omni accepts one source video.", code="INVALID_MEDIA_INPUT")
+        if videos and images:
+            raise ProviderAdapterError(
+                "Gemini Omni video editing cannot include image references.", code="INVALID_MEDIA_INPUT"
+            )
+        if request.previous_job_id and videos:
+            raise ProviderAdapterError(
+                "previous_job_id is mutually exclusive with a source video.", code="INVALID_REQUEST"
+            )
+        if request.previous_job_id and request.media_inputs:
+            raise ProviderAdapterError(
+                "Stateful Gemini Omni edits accept a prompt but no new media.", code="INVALID_REQUEST"
+            )
+        if request.operation == "extend":
+            raise ProviderAdapterError(
+                "Gemini Omni does not support video extension.", code="CAPABILITY_NOT_SUPPORTED"
+            )
+        has_edit_source = bool(videos or request.previous_job_id)
+        if request.operation == "generate" and has_edit_source:
+            raise ProviderAdapterError("Generate operations cannot include an edit source.", code="INVALID_REQUEST")
+        if request.operation == "edit" and not has_edit_source:
+            raise ProviderAdapterError("Gemini Omni edits require source video or previous_job_id.", code="INVALID_REQUEST")
+        if request.duration_seconds is not None and not 3 <= request.duration_seconds <= 10:
+            raise ProviderAdapterError(
+                "Gemini Omni duration must be between 3 and 10 seconds.", code="INVALID_REQUEST"
+            )
+        if request.resolution and request.resolution.lower() != "720p":
+            raise ProviderAdapterError("Gemini Omni output is fixed at 720p.", code="INVALID_REQUEST")
+        if request.aspect_ratio and request.aspect_ratio not in {"16:9", "9:16"}:
+            raise ProviderAdapterError(
+                "Gemini Omni aspect_ratio must be 16:9 or 9:16.", code="INVALID_REQUEST"
+            )
+        if has_edit_source and request.aspect_ratio:
+            raise ProviderAdapterError(
+                "Gemini Omni video editing inherits the source aspect ratio; omit aspect_ratio.",
+                code="INVALID_REQUEST",
+            )
+        prompt = request.prompt.strip()
+        if not prompt:
+            raise ProviderAdapterError("Gemini Omni requires a prompt.", code="INVALID_REQUEST")
+        if request.duration_seconds is not None:
+            prompt = f"Create exactly a {request.duration_seconds}-second video. {prompt}"
+
+        contents: list[dict[str, str]] = []
+        for media in request.media_inputs:
+            content, raw = await self._omni_media_content(media, upload_bytes)
+            if media.type == "video":
+                duration = self._mp4_duration_seconds(raw)
+                if duration is None:
+                    raise ProviderAdapterError(
+                        "Gemini Omni source videos must be MP4 files with readable duration metadata.",
+                        code="INVALID_MEDIA_INPUT",
+                    )
+                if duration > 10:
+                    raise ProviderAdapterError(
+                        "Gemini Omni source videos must be 10 seconds or shorter.",
+                        code="INVALID_MEDIA_INPUT",
+                    )
+            contents.append(content)
+        if images:
+            declarations: list[str] = []
+            for index, media in enumerate(images, start=1):
+                if media.role == "first_frame":
+                    declarations.append(f"[# Sources <FIRST_FRAME>@Image{index}]")
+                else:
+                    ref_index = references.index(media)
+                    declarations.append(f"[# References <IMAGE_REF_{ref_index}>@Image{index}]")
+            prompt = " ".join(declarations) + " " + prompt
+            if first_frames:
+                prompt += " Use the first-frame image as the starting frame."
+            if references:
+                prompt += " Use the other images as references, not as literal initial frames."
+        if contents:
+            contents.append({"type": "text", "text": prompt})
+            interaction_input: Any = [{"type": "user_input", "content": contents}]
+        else:
+            interaction_input = prompt
+        task = (
+            "edit"
+            if has_edit_source
+            else "image_to_video"
+            if first_frames and not references
+            else "reference_to_video"
+            if references
+            else "text_to_video"
+        )
+        response_format: dict[str, Any] = {"type": "video"}
+        if not has_edit_source:
+            response_format["aspect_ratio"] = request.aspect_ratio or "16:9"
+        body: dict[str, Any] = {
+            "model": self.omni_model,
+            "input": interaction_input,
+            "background": True,
+            "store": True,
+            "stream": False,
+            "response_format": response_format,
+            "generation_config": {"video_config": {"task": task}},
+        }
+        if request._previous_interaction_id:
+            body["previous_interaction_id"] = request._previous_interaction_id
+        data = await _json_request(
+            "POST",
+            self._omni_url(),
+            headers=await self._vertex_headers(),
+            body=body,
+            submission=True,
+        )
+        interaction_id = data.get("id")
+        if not interaction_id:
+            raise ProviderAdapterError(
+                "Vertex accepted the Omni request without an interaction ID.",
+                code="SUBMISSION_OUTCOME_UNKNOWN",
+                outcome_unknown=True,
+            )
+        return ProviderSubmission(
+            provider_request_id=str(interaction_id),
+            provider_status=str(data.get("status") or "in_progress"),
+            progress=100 if data.get("status") == "completed" else None,
+            request_metadata={
+                "upstream_model": self.omni_model,
+                "operation": request.operation if request.operation != "auto" else task,
+                "previous_job_id": request.previous_job_id,
+                "duration_seconds": request.duration_seconds,
+                "resolution": "720p",
+                "aspect_ratio": request.aspect_ratio if not has_edit_source else None,
+                "image_count": len(images),
+                "has_input_video": bool(videos),
+            },
+        )
+
+    async def _retrieve_omni(self, job: dict[str, Any]) -> ProviderStatus:
+        data = await _json_request(
+            "GET",
+            self._omni_url(str(job["provider_request_id"])),
+            headers=await self._vertex_headers(),
+        )
+        raw = str(data.get("status") or "in_progress").lower()
+        usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
+        if raw == "completed":
+            video = self._omni_video_item(data)
+            if not video or not (video.get("data") or video.get("uri")):
+                return ProviderStatus(
+                    status="failed",
+                    provider_status=raw,
+                    error_code="PROVIDER_MALFORMED_RESULT",
+                    error_message="Gemini Omni completed without video content.",
+                )
+            return ProviderStatus(
+                status="completed",
+                provider_status=raw,
+                progress=100,
+                result_mime_type=str(video.get("mime_type") or "video/mp4"),
+                usage=usage,
+                cost_usd=self._omni_cost(usage),
+            )
+        if raw in {"failed", "cancelled", "incomplete"}:
+            error = data.get("error") or data.get("incomplete_details") or {}
+            return ProviderStatus(
+                status="cancelled" if raw == "cancelled" else "failed",
+                provider_status=raw,
+                error_code=str(error.get("code") or f"OMNI_{raw.upper()}"),
+                error_message=_clean_error(error or raw),
+            )
+        if raw == "requires_action":
+            return ProviderStatus(
+                status="failed",
+                provider_status=raw,
+                error_code="OMNI_REQUIRES_ACTION",
+                error_message="Gemini Omni returned an unsupported requires_action state.",
+            )
+        return ProviderStatus(
+            status="queued" if raw == "queued" else "in_progress",
+            provider_status=raw,
+            progress=data.get("progress"),
+            usage=usage,
+        )
+
+    async def _omni_content(self, job: dict[str, Any]) -> ContentSource:
+        data = await _json_request(
+            "GET",
+            self._omni_url(str(job["provider_request_id"])),
+            headers=await self._vertex_headers(),
+        )
+        video = self._omni_video_item(data)
+        if not video:
+            raise ProviderAdapterError("Gemini Omni video content is unavailable.", code="CONTENT_NOT_AVAILABLE")
+        mime_type = str(video.get("mime_type") or "video/mp4")
+        encoded = video.get("data")
+        if encoded:
+            try:
+                return ContentSource(content=base64.b64decode(encoded, validate=True), mime_type=mime_type)
+            except (ValueError, TypeError) as exc:
+                raise ProviderAdapterError(
+                    "Gemini Omni returned malformed video data.", code="CONTENT_RETRIEVAL_FAILED"
+                ) from exc
+        uri = str(video.get("uri") or "")
+        if not uri.startswith("https://"):
+            raise ProviderAdapterError(
+                "Gemini Omni returned an unsupported video URI.", code="CONTENT_RETRIEVAL_FAILED"
+            )
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(120, connect=10), follow_redirects=True) as client:
+                response = await client.get(uri, headers=await self._vertex_headers())
+                response.raise_for_status()
+                return ContentSource(
+                    content=response.content,
+                    mime_type=response.headers.get("content-type", mime_type).split(";", 1)[0],
+                )
+        except httpx.HTTPError as exc:
+            raise ProviderAdapterError(
+                "Gemini Omni video download failed.", code="CONTENT_RETRIEVAL_FAILED", retryable=True
+            ) from exc
 
     @staticmethod
     def _router():
@@ -523,6 +992,13 @@ class VertexAdapter(BaseAdapter):
         return stream
 
     async def submit(self, request: GenerationJobCreate, *, job_id: str, callback_url: Optional[str], upload_bytes=None) -> ProviderSubmission:
+        if self._is_omni(request.model):
+            return await self._submit_omni(request, upload_bytes)
+        if request.previous_job_id or request.reference_voice_ids or request.operation not in {"auto", "generate"}:
+            raise ProviderAdapterError(
+                "The selected Veo alias does not support this durable-job operation.",
+                code="CAPABILITY_NOT_SUPPORTED",
+            )
         if len(request.media_inputs) > 1:
             raise ProviderAdapterError("Veo accepts at most one input reference.", code="INVALID_MEDIA_INPUT")
         if any(media.type != "image" for media in request.media_inputs):
@@ -558,6 +1034,8 @@ class VertexAdapter(BaseAdapter):
         )
 
     async def retrieve(self, job: dict[str, Any]) -> ProviderStatus:
+        if self._is_omni(str(job.get("model") or ""), job.get("request_metadata") or {}):
+            return await self._retrieve_omni(job)
         try:
             response = await self._router().avideo_status(video_id=job["provider_request_id"], model=job["model"], timeout=30)
         except Exception as exc:
@@ -579,6 +1057,8 @@ class VertexAdapter(BaseAdapter):
         return ProviderStatus(status="queued" if raw == "queued" else "in_progress", provider_status=raw, progress=data.get("progress"))
 
     async def content(self, job: dict[str, Any]) -> ContentSource:
+        if self._is_omni(str(job.get("model") or ""), job.get("request_metadata") or {}):
+            return await self._omni_content(job)
         try:
             response = await self._router().avideo_content(video_id=job["provider_request_id"], model=job["model"], timeout=60)
         except Exception as exc:
@@ -604,6 +1084,12 @@ def provider_for_model(model: str) -> str:
     if normalized.startswith(("seedance", "dreamina-seedance")):
         return "byteplus"
     if normalized.startswith("veo-") or normalized.startswith("vertex_ai/veo-"):
+        return "vertex"
+    if normalized in {
+        "gemini-omni-flash",
+        "gemini-omni-flash-preview",
+        "vertex_ai/gemini-omni-flash-preview",
+    }:
         return "vertex"
     raise ProviderAdapterError(
         f"Model {model!r} is not enabled for durable video jobs.", code="UNSUPPORTED_MODEL"

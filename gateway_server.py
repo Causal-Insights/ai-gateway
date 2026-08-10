@@ -2,11 +2,18 @@
 
 from contextlib import asynccontextmanager
 
+from gateway_logging import configure_gateway_logging
+
+
+configure_gateway_logging()
+
 from litellm.proxy._types import LiteLLMRoutes
 from litellm.proxy.proxy_server import app
 
 from generation_job_routes import router as generation_jobs_router
 from generation_job_repository import repository
+from generation_job_scheduler import start_local_scheduler, stop_local_scheduler
+from gateway_request_policy import GatewayRequestPolicyMiddleware
 
 
 GENERATION_JOB_LLM_ROUTES = (
@@ -34,6 +41,7 @@ def register_generation_job_llm_routes() -> None:
 
 register_generation_job_llm_routes()
 app.include_router(generation_jobs_router)
+app.add_middleware(GatewayRequestPolicyMiddleware)
 
 _litellm_lifespan = app.router.lifespan_context
 
@@ -42,9 +50,11 @@ _litellm_lifespan = app.router.lifespan_context
 async def _gateway_lifespan(application):
     async with _litellm_lifespan(application):
         await repository.pool()
+        await start_local_scheduler()
         try:
             yield
         finally:
+            await stop_local_scheduler()
             await repository.close()
 
 

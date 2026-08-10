@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 
 TERMINAL_STATUSES = {"completed", "failed", "expired", "cancelled"}
@@ -39,6 +39,9 @@ class GenerationJobCreate(BaseModel):
 
     model: str = Field(min_length=1, max_length=200)
     modality: Literal["video"] = "video"
+    operation: Literal["auto", "generate", "edit", "extend"] = "auto"
+    previous_job_id: Optional[str] = Field(default=None, min_length=5, max_length=200)
+    reference_voice_ids: list[str] = Field(default_factory=list, max_length=3)
     prompt: str = Field(default="", max_length=100_000)
     duration_seconds: Optional[int] = Field(default=None, ge=1, le=60)
     resolution: Optional[str] = Field(default=None, max_length=32)
@@ -46,11 +49,22 @@ class GenerationJobCreate(BaseModel):
     generate_audio: bool = False
     media_inputs: list[MediaInput] = Field(default_factory=list, max_length=10)
     metadata: dict[str, str] = Field(default_factory=dict)
+    _previous_interaction_id: Optional[str] = PrivateAttr(default=None)
 
     @field_validator("model")
     @classmethod
     def normalize_model(cls, value: str) -> str:
         return value.strip()
+
+    @field_validator("reference_voice_ids")
+    @classmethod
+    def validate_reference_voice_ids(cls, value: list[str]) -> list[str]:
+        normalized = [str(item).strip().lower() for item in value]
+        if any(not item or len(item) > 100 for item in normalized):
+            raise ValueError("reference voice IDs must contain 1 to 100 characters")
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("reference voice IDs must be unique")
+        return normalized
 
     @field_validator("metadata")
     @classmethod

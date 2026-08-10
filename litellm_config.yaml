@@ -16,6 +16,32 @@ model_list:
       api_key: os.environ/OPENAI_API_KEY
       reasoning_effort: high
 
+  # Fixed-effort GPT-5.6 aliases. gateway_request_policy.py prevents callers
+  # from overriding the effort encoded by the public alias.
+  - model_name: gpt-5.6-sol-medium
+    litellm_params:
+      model: openai/gpt-5.6-sol
+      api_key: os.environ/OPENAI_API_KEY
+      reasoning_effort: medium
+
+  - model_name: gpt-5.6-terra-medium
+    litellm_params:
+      model: openai/gpt-5.6-terra
+      api_key: os.environ/OPENAI_API_KEY
+      reasoning_effort: medium
+
+  - model_name: gpt-5.6-luna-medium
+    litellm_params:
+      model: openai/gpt-5.6-luna
+      api_key: os.environ/OPENAI_API_KEY
+      reasoning_effort: medium
+
+  - model_name: gpt-5.6-luna-high
+    litellm_params:
+      model: openai/gpt-5.6-luna
+      api_key: os.environ/OPENAI_API_KEY
+      reasoning_effort: high
+
   - model_name: gpt-5.4
     litellm_params:
       model: openai/gpt-5.4
@@ -65,6 +91,18 @@ model_list:
       model: vertex_ai/gemini-3.5-flash
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+
+  - model_name: gemini-3.6-flash
+    litellm_params:
+      model: vertex_ai/gemini-3.6-flash
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: global
+
+  - model_name: gemini-3.5-flash-lite
+    litellm_params:
+      model: vertex_ai/gemini-3.5-flash-lite
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: global
 
   - model_name: gemini-3-flash-preview
     litellm_params:
@@ -127,7 +165,13 @@ model_list:
     litellm_params:
       model: vertex_ai/gemini-omni-flash-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+      vertex_location: global
+
+  - model_name: gemini-omni-flash-preview
+    litellm_params:
+      model: vertex_ai/gemini-omni-flash-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: global
 
   # ── Imagen 4 ─────────────────────────────────────────────────────────────
   - model_name: imagen-4.0
@@ -158,6 +202,27 @@ model_list:
       timeout: 1260
     model_info:
       mode: image_generation
+      supported_openai_params:
+        - duration
+        - seconds
+        - aspect_ratio
+        - resolution
+        - image
+        - image_url
+        - image_file_id
+        - video
+        - video_url
+        - video_file_id
+        - reference_images
+        - reference_image_urls
+        - referenceImageUrls
+        - reference_image_file_ids
+        - reference_audios
+        - reference_voice_ids
+        - operation
+        - output
+        - storage_options
+        - user
       input_cost_per_token: 0
       output_cost_per_token: 0
       output_cost_per_second: 0.05
@@ -178,14 +243,37 @@ model_list:
       timeout: 1260
     model_info:
       mode: image_generation
+      supported_openai_params:
+        - duration
+        - seconds
+        - aspect_ratio
+        - resolution
+        - image
+        - image_url
+        - image_file_id
+        - video
+        - video_url
+        - video_file_id
+        - reference_images
+        - reference_image_urls
+        - referenceImageUrls
+        - reference_image_file_ids
+        - reference_audios
+        - reference_voice_ids
+        - operation
+        - output
+        - storage_options
+        - user
       input_cost_per_token: 0
       output_cost_per_token: 0
       output_cost_per_second: 0.08
       output_cost_per_second_720p: 0.14
+      output_cost_per_second_1080p: 0.25
       metadata:
         grok_imagine_video_upstream: grok-imagine-video-1.5
         grok_video_price_per_second_480p: 0.08
         grok_video_price_per_second_720p: 0.14
+        grok_video_price_per_second_1080p: 0.25
         grok_video_reference_image_usd: 0.01
         grok_video_input_video_per_second_usd: 0.01
 
@@ -196,14 +284,37 @@ model_list:
       timeout: 1260
     model_info:
       mode: image_generation
+      supported_openai_params:
+        - duration
+        - seconds
+        - aspect_ratio
+        - resolution
+        - image
+        - image_url
+        - image_file_id
+        - video
+        - video_url
+        - video_file_id
+        - reference_images
+        - reference_image_urls
+        - referenceImageUrls
+        - reference_image_file_ids
+        - reference_audios
+        - reference_voice_ids
+        - operation
+        - output
+        - storage_options
+        - user
       input_cost_per_token: 0
       output_cost_per_token: 0
       output_cost_per_second: 0.08
       output_cost_per_second_720p: 0.14
+      output_cost_per_second_1080p: 0.25
       metadata:
         grok_imagine_video_upstream: grok-imagine-video-1.5-2026-05-30
         grok_video_price_per_second_480p: 0.08
         grok_video_price_per_second_720p: 0.14
+        grok_video_price_per_second_1080p: 0.25
         grok_video_reference_image_usd: 0.01
         grok_video_input_video_per_second_usd: 0.01
 
@@ -214,12 +325,31 @@ model_list:
       api_key: os.environ/GROK_API_KEY
     model_info:
       mode: image_generation
+      supported_openai_params:
+        - image
+        - images
+        - image_url
+        - image_urls
+        - image_file_id
+        - image_file_ids
+        - n
+        - size
+        - resolution
+        - aspect_ratio
+        - response_format
+        - output_format
+        - storage_options
+        - quality
+        - style
+        - background
+        - user
       input_cost_per_token: 0
       output_cost_per_token: 0
-      # Approx xAI Grok Imagine Image Quality combined 1K edit/reference cost:
+      # xAI Grok Imagine Image Quality input/output fallback rates:
       # $0.01 input image + $0.05 output image. Text/thinking pricing is not published separately.
       # Text-only generation is $0.05/image; 2K output with one input image is $0.08/image.
-      input_cost_per_image: 0.06
+      input_cost_per_image: 0.01
+      output_cost_per_image: 0.05
 
   - model_name: grok-imagine-image-quality
     litellm_params:
@@ -227,12 +357,31 @@ model_list:
       api_key: os.environ/GROK_API_KEY
     model_info:
       mode: image_generation
+      supported_openai_params:
+        - image
+        - images
+        - image_url
+        - image_urls
+        - image_file_id
+        - image_file_ids
+        - n
+        - size
+        - resolution
+        - aspect_ratio
+        - response_format
+        - output_format
+        - storage_options
+        - quality
+        - style
+        - background
+        - user
       input_cost_per_token: 0
       output_cost_per_token: 0
-      # Approx xAI Grok Imagine Image Quality combined 1K edit/reference cost:
+      # xAI Grok Imagine Image Quality input/output fallback rates:
       # $0.01 input image + $0.05 output image. Text/thinking pricing is not published separately.
       # Text-only generation is $0.05/image; 2K output with one input image is $0.08/image.
-      input_cost_per_image: 0.06
+      input_cost_per_image: 0.01
+      output_cost_per_image: 0.05
 
   # ── Seedance 2.0 (BytePlus ARK) ───────────────────────────────────────────
   # The custom handler submits an ARK task, then waits up to SEEDANCE_SYNC_WAIT_S

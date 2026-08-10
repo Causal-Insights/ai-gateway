@@ -221,6 +221,36 @@ async def create_generation_job(
     except ProviderAdapterError as exc:
         raise HTTPException(422, detail={"code": exc.code, "message": str(exc)}) from exc
     owner_hash, owner_context = _owner(user)
+    if payload.previous_job_id:
+        if provider != "vertex" or payload.model.lower() not in {
+            "gemini-omni-flash",
+            "gemini-omni-flash-preview",
+            "vertex_ai/gemini-omni-flash-preview",
+        }:
+            raise HTTPException(
+                422,
+                detail={
+                    "code": "INVALID_PREVIOUS_JOB",
+                    "message": "previous_job_id is supported only for Gemini Omni jobs.",
+                },
+            )
+        previous = await repository.get(payload.previous_job_id, owner_hash)
+        if (
+            not previous
+            or previous.get("status") != "completed"
+            or previous.get("provider") != "vertex"
+            or str(previous.get("model") or "").lower()
+            not in {"gemini-omni-flash", "gemini-omni-flash-preview", "vertex_ai/gemini-omni-flash-preview"}
+            or not previous.get("provider_request_id")
+        ):
+            raise HTTPException(
+                422,
+                detail={
+                    "code": "INVALID_PREVIOUS_JOB",
+                    "message": "previous_job_id must identify your completed Gemini Omni job.",
+                },
+            )
+        payload._previous_interaction_id = str(previous["provider_request_id"])
     request_hash = _hash_request(payload, uploads)
     job_id = f"gen_{uuid4().hex}"
     callback_token = secrets.token_urlsafe(32) if provider == "byteplus" else None
@@ -237,7 +267,12 @@ async def create_generation_job(
         modality=payload.modality,
         model=payload.model,
         provider=provider,
-        request_metadata={"client_metadata": safe_client_metadata(payload.metadata)},
+        request_metadata={
+            "client_metadata": safe_client_metadata(payload.metadata),
+            "operation": payload.operation,
+            "previous_job_id": payload.previous_job_id,
+            "reference_voice_ids": payload.reference_voice_ids,
+        },
         deadline_at=deadline,
         callback_token_hash=callback_hash,
     )

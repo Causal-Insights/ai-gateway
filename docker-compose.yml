@@ -16,6 +16,8 @@ services:
       retries: 20
 
   litellm:
+    image: ai-gateway-litellm:local
+    platform: linux/amd64
     build: .
     container_name: litellm-proxy
     restart: unless-stopped
@@ -28,6 +30,17 @@ services:
       DATABASE_URL: ${LOCAL_DATABASE_URL:-postgresql://litellm:litellm_local@postgres:5432/litellm_local}
       PORT: 4000
       CONFIG_FILE_PATH: /app/litellm_config.yaml
+      # Local Vertex requests use the host's gcloud Application Default
+      # Credentials. Cloud Run continues to use its attached service account.
+      GOOGLE_APPLICATION_CREDENTIALS: /var/run/google/application_default_credentials.json
+      # Registration emits one warning per custom deployment when cache pricing
+      # is inapplicable. Keep production warnings intact; filter only this known
+      # local startup message.
+      SUPPRESS_LITELLM_REGISTER_MODEL_CACHE_WARNINGS: "true"
+      # Local durable jobs poll inside this container. This takes precedence
+      # over any production Cloud Tasks settings present in .env.
+      GENERATION_LOCAL_POLLING: "true"
+      GENERATION_LOCAL_POLL_TARGET_URL: http://127.0.0.1:4000
       # Append-only audit log of ARK task ids (enable in .env). Mount a host file below.
       SEEDANCE_TASK_LEDGER_PATH: ${SEEDANCE_TASK_LEDGER_PATH:-/app/seedance_task_ledger.jsonl}
     ports:
@@ -45,11 +58,22 @@ services:
       - ./generation_job_adapters.py:/app/generation_job_adapters.py:ro
       - ./generation_job_scheduler.py:/app/generation_job_scheduler.py:ro
       - ./generation_job_routes.py:/app/generation_job_routes.py:ro
+      - ./gateway_request_policy.py:/app/gateway_request_policy.py:ro
+      - ./gateway_logging.py:/app/gateway_logging.py:ro
+      - ./gateway_healthcheck.py:/app/gateway_healthcheck.py:ro
       - ./gateway_server.py:/app/gateway_server.py:ro
+      - ./gateway_entrypoint.sh:/app/gateway_entrypoint.sh:ro
       - ./callback_server.py:/app/callback_server.py:ro
       - ./migrations:/app/migrations:ro
       - ./seedance_task_ledger.jsonl:/app/seedance_task_ledger.jsonl
       - /Users/jason/dev/keys:/Users/jason/dev/keys:ro
+      - ${LOCAL_GOOGLE_ADC_PATH:-/Users/jason/.config/gcloud/application_default_credentials.json}:/var/run/google/application_default_credentials.json:ro
+    healthcheck:
+      test: ["CMD", "python", "/app/gateway_healthcheck.py"]
+      interval: 5s
+      timeout: 6s
+      retries: 30
+      start_period: 30s
 
 volumes:
   litellm-local-db:

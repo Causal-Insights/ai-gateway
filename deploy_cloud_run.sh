@@ -2,8 +2,8 @@
 # Redeploy LiteLLM proxy to Google Cloud Run (build + push + deploy).
 #
 # Usage:
-#   ./deploy_cloud_run.sh
-#   PROJECT_ID=ai-gateway-495414 REGION=us-central1 ./deploy_cloud_run.sh --memory 2Gi --cpu 2
+#   ./deploy_cloud_run.sh --tag <immutable-release-tag> --candidate-only
+#   PROJECT_ID=ai-gateway-495414 REGION=us-central1 ./deploy_cloud_run.sh --tag <immutable-release-tag>
 #
 # Prerequisites:
 #   - gcloud CLI authenticated (`gcloud auth login`)
@@ -21,7 +21,11 @@ SERVICE_NAME="${SERVICE_NAME:-ai-gateway-proxy}"
 CALLBACK_SERVICE_NAME="${CALLBACK_SERVICE_NAME:-ai-gateway-callbacks}"
 AR_REPO="${AR_REPO:-ai-gateway}"
 IMAGE_NAME="${IMAGE_NAME:-litellm-proxy}"
-IMAGE_TAG="${IMAGE_TAG:-latest}"
+IMAGE_TAG="${IMAGE_TAG:-}"
+CANDIDATE_ONLY="${CANDIDATE_ONLY:-false}"
+RUN_LITELLM_MIGRATIONS="${RUN_LITELLM_MIGRATIONS:-false}"
+GROK_VIDEO_15_CONTRACT_VERIFIED="${GROK_VIDEO_15_CONTRACT_VERIFIED:-false}"
+GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED="${GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED:-false}"
 
 DATABASE_URL_SECRET="${DATABASE_URL_SECRET:-DATABASE_URL}"
 LITELLM_MASTER_KEY_SECRET="${LITELLM_MASTER_KEY_SECRET:-LITELLM_MASTER_KEY}"
@@ -124,11 +128,30 @@ while [[ $# -gt 0 ]]; do
     --min-instances) MIN_INSTANCES="$2"; shift 2 ;;
     --max-instances) MAX_INSTANCES="$2"; shift 2 ;;
     --allow-unauthenticated) ALLOW_UNAUTHENTICATED="true"; shift ;;
+    --candidate-only) CANDIDATE_ONLY="true"; shift ;;
+    --run-migrations) RUN_LITELLM_MIGRATIONS="true"; shift ;;
     --runtime-sa) RUNTIME_SA="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
 done
+
+if [[ -z "${IMAGE_TAG}" ]]; then
+  echo "ERROR: --tag (or IMAGE_TAG) is required; mutable default tags are disabled." >&2
+  exit 2
+fi
+if [[ "${IMAGE_TAG}" == "latest" ]]; then
+  echo "ERROR: IMAGE_TAG=latest is not allowed. Use a unique release or commit tag." >&2
+  exit 2
+fi
+if [[ "${RUN_LITELLM_MIGRATIONS}" == "true" && "${CANDIDATE_ONLY}" != "true" ]]; then
+  echo "ERROR: --run-migrations requires --candidate-only." >&2
+  exit 2
+fi
+if [[ "${RUN_LITELLM_MIGRATIONS}" == "true" ]]; then
+  MIN_INSTANCES=1
+  MAX_INSTANCES=1
+fi
 
 IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
 
@@ -142,6 +165,10 @@ echo "==> Seedance sync wait: ${SEEDANCE_SYNC_WAIT_S}s"
 echo "==> Seedance poll cap:  ${SEEDANCE_POLL_TIMEOUT_S}s"
 echo "==> Database secret: ${DATABASE_URL_SECRET}"
 echo "==> Unauthenticated access: ${ALLOW_UNAUTHENTICATED}"
+echo "==> Candidate only: ${CANDIDATE_ONLY}"
+echo "==> Run migrations: ${RUN_LITELLM_MIGRATIONS}"
+echo "==> Grok Video 1.5 generation verified: ${GROK_VIDEO_15_CONTRACT_VERIFIED}"
+echo "==> Grok Video 1.5 video operations verified: ${GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED}"
 
 gcloud config set project "${PROJECT_ID}" >/dev/null
 
@@ -208,7 +235,7 @@ DEPLOY_ARGS=(
   --timeout "${TIMEOUT}"
   --min-instances "${MIN_INSTANCES}"
   --max-instances "${MAX_INSTANCES}"
-  --update-env-vars "SEEDANCE_SYNC_WAIT_S=${SEEDANCE_SYNC_WAIT_S},SEEDANCE_POLL_TIMEOUT_S=${SEEDANCE_POLL_TIMEOUT_S}"
+  --update-env-vars "SEEDANCE_SYNC_WAIT_S=${SEEDANCE_SYNC_WAIT_S},SEEDANCE_POLL_TIMEOUT_S=${SEEDANCE_POLL_TIMEOUT_S},RUN_LITELLM_MIGRATIONS=${RUN_LITELLM_MIGRATIONS},GROK_VIDEO_15_CONTRACT_VERIFIED=${GROK_VIDEO_15_CONTRACT_VERIFIED},GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED=${GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED}"
   --set-secrets "DATABASE_URL=${DATABASE_URL_SECRET}:latest,LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY_SECRET}:latest,OPENAI_API_KEY=${OPENAI_API_KEY_SECRET}:latest,GROK_API_KEY=${GROK_API_KEY_SECRET}:latest,BYTEDANCE_API_KEY=${BYTEDANCE_API_KEY_SECRET}:latest,ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY_SECRET}:latest"
 )
 
@@ -222,8 +249,25 @@ else
   DEPLOY_ARGS+=(--no-allow-unauthenticated)
 fi
 
+if [[ "${CANDIDATE_ONLY}" == "true" ]]; then
+  DEPLOY_ARGS+=(--no-traffic)
+fi
+
 echo "==> Deploying to Cloud Run..."
 gcloud "${DEPLOY_ARGS[@]}"
+
+if [[ "${CANDIDATE_ONLY}" == "true" ]]; then
+  CANDIDATE_REVISION="$(gcloud run revisions list \
+    --service "${SERVICE_NAME}" \
+    --region "${REGION}" \
+    --sort-by='~metadata.creationTimestamp' \
+    --limit=1 \
+    --format='value(metadata.name)')"
+  echo
+  echo "Candidate deployed with no traffic: ${CANDIDATE_REVISION}"
+  echo "Run the migration and contract gates before assigning traffic."
+  exit 0
+fi
 
 SERVICE_URL="$(gcloud run services describe "${SERVICE_NAME}" --region "${REGION}" --format='value(status.url)')"
 

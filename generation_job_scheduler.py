@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import logging
 import os
 import random
 import time
@@ -15,9 +16,99 @@ import httpx
 
 
 POLL_DELAYS_SECONDS = (5, 10, 20)
+logger = logging.getLogger("ai_gateway.generation_jobs.scheduler")
 _token: Optional[str] = None
 _token_expires_at = 0.0
 _token_lock = asyncio.Lock()
+_local_tasks: set[asyncio.Task[None]] = set()
+_local_reconciler: Optional[asyncio.Task[None]] = None
+
+
+def _local_polling_enabled() -> bool:
+    return os.environ.get("GENERATION_LOCAL_POLLING", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _local_target() -> str:
+    return os.environ.get(
+        "GENERATION_LOCAL_POLL_TARGET_URL",
+        f"http://127.0.0.1:{os.environ.get('PORT', '8080')}",
+    ).rstrip("/")
+
+
+def _internal_headers() -> dict[str, str]:
+    secret = os.environ.get("GENERATION_INTERNAL_SECRET")
+    return {"X-Gateway-Internal-Secret": secret} if secret else {}
+
+
+async def _post_local(path: str) -> None:
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post(f"{_local_target()}{path}", headers=_internal_headers())
+        response.raise_for_status()
+
+
+def _track_local_task(task: asyncio.Task[None]) -> None:
+    _local_tasks.add(task)
+    task.add_done_callback(_local_tasks.discard)
+
+
+async def _run_local_poll(job_id: str, when: datetime) -> None:
+    delay = max(0.0, (when.astimezone(timezone.utc) - datetime.now(timezone.utc)).total_seconds())
+    await asyncio.sleep(delay)
+    try:
+        await _post_local(f"/internal/generation-jobs/{job_id}/poll")
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.exception("local_generation_poll_failed", extra={"generation_job_id": job_id})
+
+
+def _schedule_local_poll(job_id: str, when: datetime) -> None:
+    _track_local_task(
+        asyncio.create_task(
+            _run_local_poll(job_id, when), name=f"generation-local-poll-{job_id}"
+        )
+    )
+
+
+async def _local_reconcile_loop() -> None:
+    # Recover due jobs after a local container restart and retry a poll whose
+    # loopback request failed. Production recovery remains Cloud Scheduler/Tasks.
+    await asyncio.sleep(2)
+    while True:
+        try:
+            await _post_local("/internal/generation-jobs/reconcile")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("local_generation_reconcile_failed")
+        await asyncio.sleep(10)
+
+
+async def start_local_scheduler() -> None:
+    global _local_reconciler
+    if not _local_polling_enabled() or (_local_reconciler and not _local_reconciler.done()):
+        return
+    _local_reconciler = asyncio.create_task(
+        _local_reconcile_loop(), name="generation-local-reconciler"
+    )
+
+
+async def stop_local_scheduler() -> None:
+    global _local_reconciler
+    tasks = list(_local_tasks)
+    if _local_reconciler:
+        tasks.append(_local_reconciler)
+    for task in tasks:
+        task.cancel()
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+    _local_tasks.clear()
+    _local_reconciler = None
 
 
 def next_poll_time(attempt: int, *, now: Optional[datetime] = None) -> datetime:
@@ -65,6 +156,9 @@ async def _access_token() -> str:
 
 async def enqueue_poll(job_id: str, when: datetime) -> bool:
     """Enqueue one idempotent poll task; false means queueing is not configured."""
+    if _local_polling_enabled():
+        _schedule_local_poll(job_id, when)
+        return True
     config = _queue_config()
     if config is None:
         return False
@@ -105,4 +199,3 @@ async def enqueue_poll(job_id: str, when: datetime) -> bool:
         return True
     response.raise_for_status()
     return True
-

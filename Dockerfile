@@ -1,4 +1,4 @@
-FROM docker.litellm.ai/berriai/litellm:main-v1.83.14-stable
+FROM ghcr.io/berriai/litellm:v1.95.0@sha256:50e647bd5ee32010317378335d5830dbbcd793b4dd1a9a4460bd34a9272cda95
 
 WORKDIR /app
 
@@ -19,9 +19,15 @@ COPY generation_job_repository.py /app/generation_job_repository.py
 COPY generation_job_adapters.py /app/generation_job_adapters.py
 COPY generation_job_scheduler.py /app/generation_job_scheduler.py
 COPY generation_job_routes.py /app/generation_job_routes.py
+COPY gateway_request_policy.py /app/gateway_request_policy.py
+COPY gateway_logging.py /app/gateway_logging.py
+COPY gateway_healthcheck.py /app/gateway_healthcheck.py
 COPY gateway_server.py /app/gateway_server.py
+COPY gateway_entrypoint.sh /app/gateway_entrypoint.sh
 COPY callback_server.py /app/callback_server.py
 COPY migrations /app/migrations
+
+RUN chmod 0755 /app/gateway_entrypoint.sh
 
 # Ensure unbuffered logs
 ENV PYTHONUNBUFFERED=1
@@ -30,8 +36,7 @@ ENV CONFIG_FILE_PATH=/app/litellm_config.yaml
 # Cloud Run sets PORT; default to 8080 for local use
 ENV PORT=8080
 
-# Base image ENTRYPOINT runs `litellm "$@"`; a shell-wrapped CMD becomes `litellm sh -c ...` and breaks.
-# Override ENTRYPOINT so we can expand $PORT and bind on all interfaces for Cloud Run.
-ENTRYPOINT ["/bin/sh", "-c"]
-# Use LiteLLM's FastAPI app and lifespan, adding only the durable generation router.
-CMD ["exec uvicorn gateway_server:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# Keep migrations an explicit no-traffic action, then start LiteLLM's FastAPI
+# application with the gateway's durable routes and request policies attached.
+ENTRYPOINT ["/app/gateway_entrypoint.sh"]
+CMD []

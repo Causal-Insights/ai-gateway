@@ -56,13 +56,27 @@ from custom_handler import GrokVideoException, GrokVideoLLM
 class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self._env = os.environ.get("GROK_API_KEY")
+        self._video_15_verified = os.environ.get("GROK_VIDEO_15_CONTRACT_VERIFIED")
+        self._video_15_operations_verified = os.environ.get(
+            "GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED"
+        )
         os.environ["GROK_API_KEY"] = "test-key"
+        os.environ["GROK_VIDEO_15_CONTRACT_VERIFIED"] = "true"
+        os.environ["GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED"] = "false"
 
     def tearDown(self):
         if self._env is None:
             os.environ.pop("GROK_API_KEY", None)
         else:
             os.environ["GROK_API_KEY"] = self._env
+        for name, value in (
+            ("GROK_VIDEO_15_CONTRACT_VERIFIED", self._video_15_verified),
+            ("GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED", self._video_15_operations_verified),
+        ):
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
 
     def _mock_async_client(self, post_resp: MagicMock, get_responses: list):
         instance = AsyncMock()
@@ -350,3 +364,106 @@ class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(submit_body["duration"], 8)
         self.assertEqual(submit_body["image"], {"url": "https://cdn.example/image.png"})
         self.assertNotIn("prompt", submit_body)
+
+    async def test_video_15_reference_images_and_preset_voices(self):
+        submit_resp = MagicMock()
+        submit_resp.raise_for_status = MagicMock()
+        submit_resp.json = MagicMock(return_value={"request_id": "req-ref"})
+        done_resp = MagicMock()
+        done_resp.raise_for_status = MagicMock()
+        done_resp.json = MagicMock(
+            return_value={
+                "status": "done",
+                "model": "grok-imagine-video-1.5",
+                "video": {"url": "https://cdn.example/ref.mp4", "duration": 5},
+            }
+        )
+        client_instance = self._mock_async_client(submit_resp, [done_resp])
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance), patch(
+            "custom_handler_xai.asyncio.sleep", new=AsyncMock(return_value=None)
+        ):
+            await GrokVideoLLM().aimage_generation(
+                model="grok-video/grok-imagine-video-1.5",
+                prompt="The speaker talks",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={
+                    "reference_image_file_ids": ["file_one", "file_two"],
+                    "reference_voice_ids": ["eve", "leo"],
+                    "resolution": "720p",
+                },
+                logging_obj=None,
+            )
+        payload = client_instance.post.call_args.kwargs["json"]
+        self.assertEqual(payload["reference_images"], [{"file_id": "file_one"}, {"file_id": "file_two"}])
+        self.assertEqual(payload["reference_audios"], [{"voice_id": "eve"}, {"voice_id": "leo"}])
+        self.assertIn("<AUDIO_0>", payload["prompt"])
+
+    async def test_legacy_extension_uses_extension_endpoint(self):
+        submit_resp = MagicMock()
+        submit_resp.raise_for_status = MagicMock()
+        submit_resp.json = MagicMock(return_value={"request_id": "req-extend"})
+        done_resp = MagicMock()
+        done_resp.raise_for_status = MagicMock()
+        done_resp.json = MagicMock(
+            return_value={"status": "done", "video": {"url": "https://cdn.example/extended.mp4", "duration": 8}}
+        )
+        client_instance = self._mock_async_client(submit_resp, [done_resp])
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance), patch(
+            "custom_handler_xai.asyncio.sleep", new=AsyncMock(return_value=None)
+        ):
+            await GrokVideoLLM().aimage_generation(
+                model="grok-video/grok-imagine-video",
+                prompt="Continue the motion",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={
+                    "operation": "extend",
+                    "video_file_id": "file_video",
+                    "duration": 4,
+                },
+                logging_obj=None,
+            )
+        self.assertEqual(client_instance.post.call_args.args[0], "https://api.x.ai/v1/videos/extensions")
+        self.assertEqual(client_instance.post.call_args.kwargs["json"]["duration"], 4)
+
+    async def test_video_15_never_falls_back_for_video_edit(self):
+        with self.assertRaisesRegex(ValueError, "disabled until"):
+            await GrokVideoLLM().aimage_generation(
+                model="grok-video/grok-imagine-video-1.5",
+                prompt="Edit",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"video_url": "https://cdn.example/source.mp4"},
+                logging_obj=None,
+            )
+
+    async def test_video_15_generation_fails_closed_before_probe(self):
+        with patch.dict(os.environ, {"GROK_VIDEO_15_CONTRACT_VERIFIED": "false"}), self.assertRaisesRegex(
+            ValueError, "generation is disabled"
+        ):
+            await GrokVideoLLM().aimage_generation(
+                model="grok-video/grok-imagine-video-1.5",
+                prompt="A sunrise",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={},
+                logging_obj=None,
+            )
+
+    def test_video_15_1080p_fallback_rate(self):
+        self.assertAlmostEqual(
+            GrokVideoLLM()._estimate_cost(
+                duration_seconds=4,
+                resolution="1080p",
+                reference_image_count=0,
+                has_image_input=False,
+                has_video_input=False,
+                upstream_model="grok-imagine-video-1.5",
+            ),
+            1.0,
+        )

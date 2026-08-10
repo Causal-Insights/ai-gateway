@@ -22,6 +22,8 @@ def _ensure_litellm_stubs():
     class ImageObject:
         def __init__(self, url=None, **kwargs):
             self.url = url
+            for key, value in kwargs.items():
+                setattr(self, key, value)
 
     class ImageResponse:
         def __init__(self, created=0, data=None, **kwargs):
@@ -267,3 +269,63 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertIn("internal error", str(ctx.exception))
+
+    async def test_multi_image_edit_preserves_model_and_exact_usage_cost(self):
+        response = MagicMock()
+        response.raise_for_status = MagicMock()
+        response.json = MagicMock(
+            return_value={
+                "data": [
+                    {
+                        "b64_json": "ZmFrZS1pbWFnZQ==",
+                        "mime_type": "image/jpeg",
+                        "revised_prompt": "revised",
+                        "file_output": {"file_id": "file_123"},
+                    }
+                ],
+                "usage": {"cost_in_usd_ticks": 900_000_000},
+            }
+        )
+        client_instance = self._mock_async_client(response)
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance):
+            out = await GrokImageLLM().aimage_edit(
+                model="grok-image/future-official-model",
+                image=[
+                    "https://cdn.example/one.png",
+                    {"file_id": "file_two"},
+                    io.BytesIO(b"third"),
+                ],
+                prompt="Combine them",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"resolution": "2K", "storage_options": {"filename": "out.jpg"}},
+                logging_obj=None,
+            )
+        payload = client_instance.post.call_args.kwargs["json"]
+        self.assertEqual(payload["model"], "future-official-model")
+        self.assertEqual(len(payload["images"]), 3)
+        self.assertEqual(out.data[0].b64_json, "ZmFrZS1pbWFnZQ==")
+        self.assertEqual(out.data[0].revised_prompt, "revised")
+        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.09)
+
+    async def test_two_k_fallback_cost_counts_inputs_and_outputs(self):
+        response = MagicMock()
+        response.raise_for_status = MagicMock()
+        response.json = MagicMock(
+            return_value={"data": [{"url": "https://cdn.example/one.jpg"}, {"url": "https://cdn.example/two.jpg"}]}
+        )
+        client_instance = self._mock_async_client(response)
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance):
+            out = await GrokImageLLM().aimage_edit(
+                model="grok-image/grok-imagine-image-quality",
+                image=["https://cdn.example/input.png"],
+                prompt="Two variants",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"size": "2K", "n": 2},
+                logging_obj=None,
+            )
+        self.assertEqual(client_instance.post.call_args.kwargs["json"]["resolution"], "2K")
+        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.15)
