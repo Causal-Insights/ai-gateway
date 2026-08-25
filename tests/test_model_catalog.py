@@ -36,8 +36,10 @@ EXISTING_MODEL_MAP = {
     "grok-imagine-image-quality": "grok-image/grok-imagine-image-quality",
     "seedance-2.0": "seedance/dreamina-seedance-2-0-260128",
     "seedance-2.0-fast": "seedance/dreamina-seedance-2-0-fast-260128",
+    "seedance-2.5": "seedance/dreamina-seedance-2-5-260628",
     "seedream-5.0": "seedream/seedream-5-0-260128",
     "seedream-5.0-lite": "seedream/seedream-5-0-lite-260128",
+    "seedream-5.0-pro": "seedream/dola-seedream-5-0-pro-260628",
     "grok-latest": "xai/grok-4.20-non-reasoning-latest",
     "grok-4.20-reasoning": "xai/grok-4.20-reasoning-latest",
     "grok-4.20": "xai/grok-4.20-non-reasoning-latest",
@@ -74,10 +76,15 @@ class ModelCatalogTests(unittest.TestCase):
         self.assertEqual(catalog["gpt-5.6-terra-medium"], "openai/gpt-5.6-terra")
         self.assertEqual(catalog["gpt-5.6-luna-medium"], "openai/gpt-5.6-luna")
         self.assertEqual(catalog["gpt-5.6-luna-high"], "openai/gpt-5.6-luna")
-        self.assertEqual(catalog["gemini-3.6-flash"], "vertex_ai/gemini-3.6-flash")
+        self.assertEqual(catalog["gemini-3.7-flash"], "vertex_ai/gemini-3.7-flash")
+        self.assertNotIn("gemini-3.6-flash", catalog)
         self.assertEqual(catalog["gemini-3.5-flash-lite"], "vertex_ai/gemini-3.5-flash-lite")
         self.assertEqual(
             catalog["gemini-omni-flash-preview"], "vertex_ai/gemini-omni-flash-preview"
+        )
+        self.assertEqual(
+            catalog["grok-imagine-image-2.0"],
+            "grok-image/grok-imagine-image-2.0",
         )
         self.assertNotIn("grok-image-2", catalog)
 

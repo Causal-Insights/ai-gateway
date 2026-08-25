@@ -454,26 +454,107 @@ class XAIAdapter(BaseAdapter):
 class BytePlusAdapter(BaseAdapter):
     provider = "byteplus"
     default_base = "https://ark.ap-southeast.bytepluses.com/api/v3"
+    seedance_2_5_default_base = "https://operator.las.ap-southeast-1.bytepluses.com/api/v1"
+    seedance_2_5_rates = {"480p": 0.2055855, "720p": 0.462075}
 
     @staticmethod
     def upstream_model(model: str) -> str:
         aliases = {
             "seedance-2.0": "dreamina-seedance-2-0-260128",
             "seedance-2.0-fast": "dreamina-seedance-2-0-fast-260128",
+            "seedance-2.5": "dreamina-seedance-2-5-260628",
             "seedance-2": "dreamina-seedance-2-0-260128",
             "seedance": "dreamina-seedance-2-0-260128",
         }
         return aliases.get(model, model.removeprefix("seedance/"))
 
-    def _headers(self) -> dict[str, str]:
-        api_key = os.environ.get("BYTEDANCE_API_KEY")
+    @staticmethod
+    def _is_2_5_model(model: str) -> bool:
+        return "seedance-2-5" in (model or "").lower() or (model or "").lower() == "seedance-2.5"
+
+    def _base(self, model: str) -> str:
+        if self._is_2_5_model(model):
+            return (
+                os.environ.get("SEEDANCE_2_5_BASE_URL") or self.seedance_2_5_default_base
+            ).rstrip("/")
+        return (os.environ.get("SEEDANCE_ARK_BASE") or self.default_base).rstrip("/")
+
+    def _headers(self, model: str) -> dict[str, str]:
+        api_key = (
+            os.environ.get("SEEDANCE_2_5_API_KEY")
+            if self._is_2_5_model(model)
+            else os.environ.get("BYTEDANCE_API_KEY")
+        )
         if not api_key:
-            raise ProviderAdapterError("BYTEDANCE_API_KEY is not configured.", code="PROVIDER_NOT_CONFIGURED")
+            key_name = "SEEDANCE_2_5_API_KEY" if self._is_2_5_model(model) else "BYTEDANCE_API_KEY"
+            raise ProviderAdapterError(f"{key_name} is not configured.", code="PROVIDER_NOT_CONFIGURED")
         return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+    def _validate_request(self, request: GenerationJobCreate, *, upstream_model: str) -> None:
+        images = [media for media in request.media_inputs if media.type == "image"]
+        videos = [media for media in request.media_inputs if media.type == "video"]
+        if self._is_2_5_model(upstream_model):
+            if request.operation in {"edit", "extend"}:
+                raise ProviderAdapterError(
+                    "Seedance 2.5 editing and extension are not enabled.",
+                    code="CAPABILITY_NOT_SUPPORTED",
+                )
+            if videos:
+                raise ProviderAdapterError(
+                    "Seedance 2.5 video inputs are not enabled.",
+                    code="CAPABILITY_NOT_SUPPORTED",
+                )
+            if any(media.role in {"last_frame", "source"} for media in images):
+                raise ProviderAdapterError(
+                    "Seedance 2.5 currently supports first-frame or reference-image generation only.",
+                    code="CAPABILITY_NOT_SUPPORTED",
+                )
+            first_frames = [media for media in images if media.role == "first_frame"]
+            references = [media for media in images if media.role == "reference"]
+            if len(first_frames) > 1 or (first_frames and references):
+                raise ProviderAdapterError(
+                    "Seedance 2.5 accepts either one first frame or an ordered reference-image set.",
+                    code="INVALID_MEDIA_INPUT",
+                )
+            if len(images) > 30:
+                raise ProviderAdapterError(
+                    "Seedance 2.5 accepts at most 30 reference images.",
+                    code="INVALID_MEDIA_INPUT",
+                )
+            duration = request.duration_seconds or 4
+            if not 4 <= duration <= 30:
+                raise ProviderAdapterError(
+                    "Seedance 2.5 duration must be between 4 and 30 seconds.",
+                    code="INVALID_REQUEST",
+                )
+            resolution = (request.resolution or "720p").lower()
+            if resolution not in self.seedance_2_5_rates:
+                raise ProviderAdapterError(
+                    "Seedance 2.5 resolution must be 480p or 720p.",
+                    code="INVALID_REQUEST",
+                )
+            return
+
+        if len(images) > 9:
+            raise ProviderAdapterError(
+                "Seedance 2.0 accepts at most 9 reference images.", code="INVALID_MEDIA_INPUT"
+            )
+        if len(videos) > 3:
+            raise ProviderAdapterError(
+                "Seedance 2.0 accepts at most 3 reference videos.", code="INVALID_MEDIA_INPUT"
+            )
+
+    @staticmethod
+    def _provider_image_role(role: str) -> str:
+        if role == "reference":
+            return "reference_image"
+        return role
 
     async def submit(self, request: GenerationJobCreate, *, job_id: str, callback_url: Optional[str], upload_bytes=None) -> ProviderSubmission:
         if not request.prompt.strip():
             raise ProviderAdapterError("Seedance requires a non-empty prompt.", code="INVALID_REQUEST")
+        upstream_model = self.upstream_model(request.model)
+        self._validate_request(request, upstream_model=upstream_model)
         content: list[dict[str, Any]] = [{"type": "text", "text": request.prompt}]
         for media in request.media_inputs:
             media_url = media.url
@@ -485,14 +566,17 @@ class BytePlusAdapter(BaseAdapter):
             if not media_url:
                 raise ProviderAdapterError("Seedance media input is missing.", code="INVALID_MEDIA_INPUT")
             if media.type == "image":
-                content.append({"type": "image_url", "image_url": {"url": media_url}, "role": media.role})
+                content.append({
+                    "type": "image_url",
+                    "image_url": {"url": media_url},
+                    "role": self._provider_image_role(media.role),
+                })
             else:
                 if not media_url.startswith("https://"):
                     raise ProviderAdapterError(
                         "Seedance input videos must use an HTTPS URL.", code="INVALID_MEDIA_INPUT"
                     )
                 content.append({"type": "video_url", "video_url": {"url": media_url}, "role": "reference_video"})
-        upstream_model = self.upstream_model(request.model)
         body: dict[str, Any] = {
             "model": upstream_model,
             "content": content,
@@ -505,9 +589,13 @@ class BytePlusAdapter(BaseAdapter):
         }
         if callback_url:
             body["callback_url"] = callback_url
-        base = (os.environ.get("SEEDANCE_ARK_BASE") or self.default_base).rstrip("/")
+        base = self._base(upstream_model)
         data = await _json_request(
-            "POST", f"{base}/contents/generations/tasks", headers=self._headers(), body=body, submission=True
+            "POST",
+            f"{base}/contents/generations/tasks",
+            headers=self._headers(upstream_model),
+            body=body,
+            submission=True,
         )
         task_id = data.get("id")
         if not task_id:
@@ -518,19 +606,44 @@ class BytePlusAdapter(BaseAdapter):
         return ProviderSubmission(
             provider_request_id=str(task_id),
             provider_status=str(data.get("status") or "queued"),
-            request_metadata={"upstream_model": upstream_model, "has_input_video": any(m.type == "video" for m in request.media_inputs)},
+            request_metadata={
+                "upstream_model": upstream_model,
+                "has_input_video": any(m.type == "video" for m in request.media_inputs),
+                "duration_seconds": request.duration_seconds or 4,
+                "resolution": (request.resolution or ("720p" if self._is_2_5_model(upstream_model) else "480p")).lower(),
+            },
         )
 
     @staticmethod
     def _cost(job: dict[str, Any], data: dict[str, Any]) -> Optional[float]:
         usage = data.get("usage") or {}
+        for value in (usage.get("cost_usd"), usage.get("cost"), data.get("cost_usd")):
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed >= 0:
+                return parsed
+        metadata = job.get("request_metadata") or {}
+        upstream_model = str(data.get("model") or metadata.get("upstream_model") or "")
+        if BytePlusAdapter._is_2_5_model(upstream_model):
+            resolution = str(metadata.get("resolution") or "720p").lower()
+            env_name = f"SEEDANCE_2_5_PRICE_PER_SECOND_{resolution.upper()}"
+            fallback = BytePlusAdapter.seedance_2_5_rates.get(resolution)
+            if fallback is None:
+                return None
+            try:
+                rate = float(os.environ.get(env_name, str(fallback)))
+                duration = int(metadata.get("duration_seconds") or 0)
+            except (TypeError, ValueError):
+                return None
+            return duration * rate if duration > 0 else None
         try:
             tokens = int(usage.get("completion_tokens") or usage.get("total_tokens") or 0)
         except (TypeError, ValueError):
             return None
         if tokens <= 0:
             return None
-        metadata = job.get("request_metadata") or {}
         is_fast = "fast" in str(data.get("model") or metadata.get("upstream_model") or "").lower()
         has_video = bool(metadata.get("has_input_video"))
         if is_fast:
@@ -540,9 +653,13 @@ class BytePlusAdapter(BaseAdapter):
         return tokens * rate / 1_000_000.0
 
     async def retrieve(self, job: dict[str, Any]) -> ProviderStatus:
-        base = (os.environ.get("SEEDANCE_ARK_BASE") or self.default_base).rstrip("/")
+        metadata = job.get("request_metadata") or {}
+        model = str(metadata.get("upstream_model") or job.get("model") or "")
+        base = self._base(model)
         data = await _json_request(
-            "GET", f"{base}/contents/generations/tasks/{job['provider_request_id']}", headers=self._headers()
+            "GET",
+            f"{base}/contents/generations/tasks/{job['provider_request_id']}",
+            headers=self._headers(model),
         )
         raw = str(data.get("status") or "running").lower()
         if raw == "succeeded":

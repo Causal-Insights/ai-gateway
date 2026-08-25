@@ -57,6 +57,7 @@ class GenerationJobModelTests(unittest.TestCase):
     def test_provider_mapping(self):
         self.assertEqual(provider_for_model("grok-video-1.5"), "xai")
         self.assertEqual(provider_for_model("seedance-2.0"), "byteplus")
+        self.assertEqual(provider_for_model("seedance-2.5"), "byteplus")
         self.assertEqual(provider_for_model("veo-3.1-fast"), "vertex")
         self.assertEqual(provider_for_model("gemini-omni-flash"), "vertex")
         self.assertEqual(provider_for_model("gemini-omni-flash-preview"), "vertex")
@@ -324,6 +325,133 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
             )
         content = mocked.await_args.kwargs["body"]["content"]
         self.assertTrue(content[1]["image_url"]["url"].startswith("data:image/png;base64,"))
+
+    async def test_byteplus_maps_reference_role_and_allows_nine_images(self):
+        request = GenerationJobCreate(
+            model="seedance-2.0",
+            prompt="Keep the referenced subjects consistent",
+            media_inputs=[
+                {
+                    "type": "image",
+                    "role": "reference",
+                    "url": f"https://example.com/reference-{index}.png",
+                }
+                for index in range(9)
+            ],
+        )
+        mocked = AsyncMock(return_value={"id": "task_refs", "status": "queued"})
+        with patch.dict(os.environ, {"BYTEDANCE_API_KEY": "test-key"}), patch(
+            "generation_job_adapters._json_request", new=mocked
+        ):
+            await BytePlusAdapter().submit(request, job_id="gen_refs", callback_url=None)
+        content = mocked.await_args.kwargs["body"]["content"]
+        self.assertEqual(len(content), 10)
+        self.assertTrue(all(item["role"] == "reference_image" for item in content[1:]))
+
+    async def test_byteplus_rejects_tenth_seedance_2_image(self):
+        request = GenerationJobCreate(
+            model="seedance-2.0",
+            prompt="Too many references",
+            media_inputs=[
+                {
+                    "type": "image",
+                    "role": "reference",
+                    "url": f"https://example.com/reference-{index}.png",
+                }
+                for index in range(10)
+            ],
+        )
+        with patch.dict(os.environ, {"BYTEDANCE_API_KEY": "test-key"}), self.assertRaises(
+            ProviderAdapterError
+        ) as caught:
+            await BytePlusAdapter().submit(request, job_id="gen_refs", callback_url=None)
+        self.assertEqual(caught.exception.code, "INVALID_MEDIA_INPUT")
+
+    async def test_seedance_2_5_uses_las_endpoint_and_exact_upstream_model(self):
+        request = GenerationJobCreate(
+            model="seedance-2.5",
+            prompt="A cinematic garden in the rain",
+            duration_seconds=30,
+            resolution="480p",
+            aspect_ratio="16:9",
+            generate_audio=True,
+            media_inputs=[
+                {
+                    "type": "image",
+                    "role": "reference",
+                    "url": f"https://example.com/reference-{index}.png",
+                }
+                for index in range(30)
+            ],
+        )
+        mocked = AsyncMock(return_value={"id": "task_25", "status": "queued"})
+        with patch.dict(
+            os.environ,
+            {
+                "SEEDANCE_2_5_API_KEY": "test-key",
+                "SEEDANCE_2_5_BASE_URL": "https://las.example/api/v1",
+            },
+        ), patch("generation_job_adapters._json_request", new=mocked):
+            result = await BytePlusAdapter().submit(
+                request, job_id="gen_25", callback_url=None
+            )
+        body = mocked.await_args.kwargs["body"]
+        self.assertEqual(
+            mocked.await_args.args[1],
+            "https://las.example/api/v1/contents/generations/tasks",
+        )
+        self.assertEqual(body["model"], "dreamina-seedance-2-5-260628")
+        self.assertEqual(body["resolution"], "480p")
+        self.assertEqual(body["duration"], 30)
+        self.assertEqual(len(body["content"]), 31)
+        self.assertEqual(result.request_metadata["upstream_model"], "dreamina-seedance-2-5-260628")
+
+    async def test_seedance_2_5_rejects_unpublished_modes_and_settings(self):
+        cases = (
+            GenerationJobCreate(
+                model="seedance-2.5",
+                prompt="edit",
+                operation="edit",
+                media_inputs=[
+                    {"type": "video", "role": "source", "url": "https://example.com/source.mp4"}
+                ],
+            ),
+            GenerationJobCreate(
+                model="seedance-2.5", prompt="too long", duration_seconds=31
+            ),
+            GenerationJobCreate(
+                model="seedance-2.5", prompt="too large", resolution="1080p"
+            ),
+        )
+        for request in cases:
+            with self.subTest(request=request), patch.dict(
+                os.environ, {"SEEDANCE_2_5_API_KEY": "test-key"}
+            ), self.assertRaises(ProviderAdapterError):
+                await BytePlusAdapter().submit(request, job_id="gen_invalid", callback_url=None)
+
+    async def test_seedance_2_5_terminal_cost_uses_resolution_and_duration(self):
+        job = {
+            "model": "seedance-2.5",
+            "provider_request_id": "task_25",
+            "request_metadata": {
+                "upstream_model": "dreamina-seedance-2-5-260628",
+                "duration_seconds": 4,
+                "resolution": "720p",
+                "has_input_video": False,
+            },
+        }
+        data = {
+            "status": "succeeded",
+            "model": "dreamina-seedance-2-5-260628",
+            "content": {"video_url": "https://example.com/output.mp4"},
+            "usage": {},
+        }
+        with patch.dict(os.environ, {"SEEDANCE_2_5_API_KEY": "test-key"}), patch(
+            "generation_job_adapters._json_request", new=AsyncMock(return_value=data)
+        ):
+            result = await BytePlusAdapter().retrieve(job)
+        self.assertEqual(result.status, "completed")
+        self.assertAlmostEqual(result.cost_usd, 4 * 0.462075)
 
     async def test_omni_submission_maps_first_frame_and_references(self):
         request = GenerationJobCreate(

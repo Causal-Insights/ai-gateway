@@ -17,7 +17,9 @@ Env:
 
 from __future__ import annotations
 
+import logging
 import os
+import re
 import time
 from typing import Any, List, Optional, Union
 
@@ -31,10 +33,14 @@ DEFAULT_ARK_BASE = "https://ark.ap-southeast.bytepluses.com/api/v3"
 
 DEFAULT_MODEL_5_0 = "seedream-5-0-260128"
 DEFAULT_MODEL_5_0_LITE = "seedream-5-0-lite-260128"
+DEFAULT_MODEL_5_0_PRO = "dola-seedream-5-0-pro-260628"
 
 # BytePlus ModelArk list price (Seedream 5.0 / 5.0 Lite, 2K & 3K, per generated image).
 DEFAULT_PRICE_PER_IMAGE_5_0 = 0.035
 DEFAULT_PRICE_PER_IMAGE_5_0_LITE = 0.035
+DEFAULT_PRICE_PER_IMAGE_5_0_PRO_1K = 0.045
+DEFAULT_PRICE_PER_IMAGE_5_0_PRO_2K = 0.09
+DEFAULT_PRICE_PER_ADDITIONAL_INPUT_IMAGE_5_0_PRO = 0.003
 # Optional web_search tool surcharge (per request when tools includes web_search).
 DEFAULT_WEB_SEARCH_PRICE_PER_REQUEST = 0.0006
 
@@ -53,6 +59,16 @@ _ARK_PASSTHROUGH_KEYS = (
     "optimize_prompt_options",
 )
 
+_PRESERVED_PARAM_ALIASES = {
+    "seedream_size": "size",
+    "seedream_output_count": "n",
+    "seedream_response_format": "response_format",
+    "seedream_output_format": "output_format",
+    "seedream_stream": "stream",
+}
+
+_LOGGER = logging.getLogger(__name__)
+
 
 class SeedreamException(Exception):
     """Raised when ModelArk Seedream image generation fails."""
@@ -62,6 +78,7 @@ class SeedreamLLM(CustomLLM):
     """Wraps BytePlus ModelArk Seedream 5 image generation (sync, OpenAI-compatible)."""
 
     MAX_REFERENCE_IMAGES = 14
+    MAX_REFERENCE_IMAGES_PRO = 10
 
     @staticmethod
     def _env_float(name: str, default: float, *, minimum: float = 0.0) -> float:
@@ -81,13 +98,83 @@ class SeedreamLLM(CustomLLM):
             return model.strip()
         return DEFAULT_MODEL_5_0_LITE
 
-    def _price_per_image(self, ark_model: str) -> float:
+    @staticmethod
+    def _is_pro_model(ark_model: str) -> bool:
+        return "seedream-5-0-pro" in (ark_model or "").lower()
+
+    def _max_reference_images(self, ark_model: str) -> int:
+        return self.MAX_REFERENCE_IMAGES_PRO if self._is_pro_model(ark_model) else self.MAX_REFERENCE_IMAGES
+
+    def _price_per_image(self, ark_model: str, *, size: Any = None) -> float:
         lower = (ark_model or "").lower()
+        if self._is_pro_model(ark_model):
+            raw_size = str(size or "1K").strip().lower()
+            pixel_match = re.fullmatch(r"(\d+)x(\d+)", raw_size)
+            is_high_tier = raw_size == "2k"
+            if pixel_match:
+                width, height = (int(value) for value in pixel_match.groups())
+                is_high_tier = width * height > 2_360_000
+            env_name = (
+                "SEEDREAM_5_0_PRO_2K_PRICE_PER_IMAGE"
+                if is_high_tier
+                else "SEEDREAM_5_0_PRO_1K_PRICE_PER_IMAGE"
+            )
+            default = (
+                DEFAULT_PRICE_PER_IMAGE_5_0_PRO_2K
+                if is_high_tier
+                else DEFAULT_PRICE_PER_IMAGE_5_0_PRO_1K
+            )
+            return self._env_float(env_name, default)
         if "lite" in lower:
             return self._env_float(
                 "SEEDREAM_5_0_LITE_PRICE_PER_IMAGE", DEFAULT_PRICE_PER_IMAGE_5_0_LITE
             )
         return self._env_float("SEEDREAM_5_0_PRICE_PER_IMAGE", DEFAULT_PRICE_PER_IMAGE_5_0)
+
+    @staticmethod
+    def _restore_preserved_params(optional_params: dict) -> None:
+        for private_key, public_key in _PRESERVED_PARAM_ALIASES.items():
+            if private_key in optional_params:
+                optional_params[public_key] = optional_params.pop(private_key)
+
+    def _validate_pro_params(self, optional_params: dict, *, reference_count: int) -> None:
+        if reference_count > self.MAX_REFERENCE_IMAGES_PRO:
+            raise ValueError(
+                f"seedream-5.0-pro supports up to {self.MAX_REFERENCE_IMAGES_PRO} reference images"
+            )
+
+        raw_size = str(optional_params.get("size") or "1K").strip()
+        normalized_size = raw_size.lower()
+        if normalized_size not in {"1k", "2k"}:
+            match = re.fullmatch(r"(\d+)x(\d+)", normalized_size)
+            if not match:
+                raise ValueError("seedream-5.0-pro size must be 1K, 2K, or valid pixel dimensions")
+            width, height = (int(value) for value in match.groups())
+            pixels = width * height
+            ratio = width / height if height else 0
+            if not (921_600 <= pixels <= 4_624_220 and 1 / 16 <= ratio <= 16):
+                raise ValueError(
+                    "seedream-5.0-pro pixel dimensions must satisfy its published pixel and aspect-ratio limits"
+                )
+
+        output_count = optional_params.get("n", 1)
+        if isinstance(output_count, bool):
+            raise ValueError("seedream-5.0-pro n must be 1")
+        try:
+            output_count = int(output_count)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("seedream-5.0-pro n must be 1") from exc
+        if output_count != 1:
+            raise ValueError("seedream-5.0-pro supports exactly one output image per request")
+
+        output_format = str(optional_params.get("output_format") or "png").strip().lower()
+        if output_format not in {"png", "jpeg", "jpg"}:
+            raise ValueError("seedream-5.0-pro output_format must be png or jpeg")
+        if optional_params.get("stream") is True:
+            raise ValueError("seedream-5.0-pro does not support streaming output")
+        sequential = optional_params.get("sequential_image_generation")
+        if sequential is not None and sequential is not False and sequential != "disabled":
+            raise ValueError("seedream-5.0-pro does not support sequential multi-image generation")
 
     @staticmethod
     def _web_search_price() -> float:
@@ -106,8 +193,11 @@ class SeedreamLLM(CustomLLM):
                 return True
         return False
 
-    def _collect_image_inputs(self, optional_params: dict) -> Optional[Union[str, List[str]]]:
+    def _collect_image_inputs(
+        self, optional_params: dict, *, ark_model: str
+    ) -> Optional[Union[str, List[str]]]:
         """Normalize OpenAI / gateway aliases into ModelArk ``image`` (string or list)."""
+        max_reference_images = self._max_reference_images(ark_model)
         if "image_urls" in optional_params:
             raw = optional_params.pop("image_urls")
             if raw is None:
@@ -116,9 +206,9 @@ class SeedreamLLM(CustomLLM):
                 return raw
             if isinstance(raw, list):
                 urls = [str(u).strip() for u in raw if u]
-                if len(urls) > self.MAX_REFERENCE_IMAGES:
+                if len(urls) > max_reference_images:
                     raise ValueError(
-                        f"image_urls supports up to {self.MAX_REFERENCE_IMAGES} images"
+                        f"image_urls supports up to {max_reference_images} images"
                     )
                 return urls
             raise ValueError("image_urls must be a string or list of URLs")
@@ -131,8 +221,8 @@ class SeedreamLLM(CustomLLM):
                 return raw
             if isinstance(raw, list):
                 urls = [str(u).strip() for u in raw if u]
-                if len(urls) > self.MAX_REFERENCE_IMAGES:
-                    raise ValueError(f"images supports up to {self.MAX_REFERENCE_IMAGES} images")
+                if len(urls) > max_reference_images:
+                    raise ValueError(f"images supports up to {max_reference_images} images")
                 return urls
             raise ValueError("images must be a string or list")
 
@@ -144,8 +234,8 @@ class SeedreamLLM(CustomLLM):
                 return raw
             if isinstance(raw, list):
                 urls = [str(u).strip() for u in raw if u]
-                if len(urls) > self.MAX_REFERENCE_IMAGES:
-                    raise ValueError(f"image supports up to {self.MAX_REFERENCE_IMAGES} images")
+                if len(urls) > max_reference_images:
+                    raise ValueError(f"image supports up to {max_reference_images} images")
                 return urls
             raise ValueError("image must be a string or list")
 
@@ -156,9 +246,9 @@ class SeedreamLLM(CustomLLM):
             return None
         if not isinstance(reference, list) or len(reference) == 0:
             raise ValueError("reference_image_urls must be a non-empty list")
-        if len(reference) > self.MAX_REFERENCE_IMAGES:
+        if len(reference) > max_reference_images:
             raise ValueError(
-                f"reference_image_urls supports up to {self.MAX_REFERENCE_IMAGES} images"
+                f"reference_image_urls supports up to {max_reference_images} images"
             )
         urls = []
         for idx, url in enumerate(reference, start=1):
@@ -226,7 +316,15 @@ class SeedreamLLM(CustomLLM):
                     except (TypeError, ValueError):
                         pass
 
-        cost = image_count * self._price_per_image(ark_model)
+        size = body.get("_requested_size")
+        reference_count = body.get("_reference_count", 0)
+        cost = image_count * self._price_per_image(ark_model, size=size)
+        if self._is_pro_model(ark_model):
+            additional_inputs = max(0, int(reference_count or 0) - 1)
+            cost += additional_inputs * self._env_float(
+                "SEEDREAM_5_0_PRO_ADDITIONAL_INPUT_PRICE",
+                DEFAULT_PRICE_PER_ADDITIONAL_INPUT_IMAGE_5_0_PRO,
+            )
         if self._uses_web_search(tools):
             cost += self._web_search_price()
         return cost
@@ -235,6 +333,7 @@ class SeedreamLLM(CustomLLM):
         self, prompt: str, model: str, optional_params: dict
     ) -> tuple[str, dict, dict]:
         optional_params = dict(optional_params or {})
+        self._restore_preserved_params(optional_params)
 
         api_key = os.environ.get("BYTEDANCE_API_KEY")
         if not api_key:
@@ -245,7 +344,10 @@ class SeedreamLLM(CustomLLM):
         if not prompt_text:
             raise ValueError("prompt is required for Seedream image generation")
 
-        image_input = self._collect_image_inputs(optional_params)
+        image_input = self._collect_image_inputs(optional_params, ark_model=ark_model)
+        reference_count = len(image_input) if isinstance(image_input, list) else int(image_input is not None)
+        if self._is_pro_model(ark_model):
+            self._validate_pro_params(optional_params, reference_count=reference_count)
 
         payload: dict[str, Any] = {
             "model": ark_model,
@@ -261,6 +363,17 @@ class SeedreamLLM(CustomLLM):
                 if key == "tools":
                     tools_value = value
                 payload[key] = value
+
+        _LOGGER.info(
+            "seedream.request model=%s requested_size=%s resolved_size=%s transmitted_size=%s reference_count=%d output_count=%s output_format=%s",
+            ark_model,
+            payload.get("size"),
+            payload.get("size"),
+            payload.get("size"),
+            reference_count,
+            payload.get("n", 1),
+            payload.get("output_format"),
+        )
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -298,9 +411,15 @@ class SeedreamLLM(CustomLLM):
                 raise SeedreamException(normalize_error(detail)) from e
 
             body = response.json()
+            cost_body = dict(body)
+            cost_body["_requested_size"] = payload.get("size")
+            image_input = payload.get("image")
+            cost_body["_reference_count"] = (
+                len(image_input) if isinstance(image_input, list) else int(image_input is not None)
+            )
             cost = self._compute_response_cost(
                 ark_model=payload["model"],
-                body=body,
+                body=cost_body,
                 tools=tools,
                 requested_n=requested_n,
             )

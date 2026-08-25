@@ -47,7 +47,9 @@ class GenerationJobCreate(BaseModel):
     resolution: Optional[str] = Field(default=None, max_length=32)
     aspect_ratio: Optional[str] = Field(default=None, max_length=32)
     generate_audio: bool = False
-    media_inputs: list[MediaInput] = Field(default_factory=list, max_length=10)
+    # Provider adapters enforce their model-specific limits. Seedance 2.5 can
+    # accept up to 30 image references; existing adapters retain lower caps.
+    media_inputs: list[MediaInput] = Field(default_factory=list, max_length=30)
     metadata: dict[str, str] = Field(default_factory=dict)
     _previous_interaction_id: Optional[str] = PrivateAttr(default=None)
 

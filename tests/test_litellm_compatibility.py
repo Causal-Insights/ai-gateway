@@ -1,6 +1,8 @@
 import importlib.metadata
 import importlib.util
+import os
 import unittest
+from unittest.mock import patch
 
 
 def _litellm_is_installed() -> bool:
@@ -40,6 +42,48 @@ class LiteLLMCompatibilityTests(unittest.TestCase):
         import gateway_server  # noqa: F401
         import generation_job_adapters  # noqa: F401
         import generation_job_routes  # noqa: F401
+
+    def test_seedream_private_fields_survive_litellm_image_dispatch(self):
+        from custom_handler_seedream import SeedreamLLM
+        from gateway_request_policy import apply_request_policy
+        from litellm.utils import get_optional_params_image_gen
+
+        body, error = apply_request_policy(
+            "/v1/images/generations",
+            {
+                "model": "seedream-5.0-pro",
+                "prompt": "A wide editorial illustration",
+                "size": "2816x1584",
+                "n": 1,
+                "response_format": "url",
+                "output_format": "png",
+            },
+        )
+        self.assertIsNone(error)
+        optional = get_optional_params_image_gen(
+            model="dola-seedream-5-0-pro-260628",
+            n=body["n"],
+            response_format=body["response_format"],
+            size=body["size"],
+            custom_llm_provider="seedream",
+            output_format=body["output_format"],
+            seedream_size=body["seedream_size"],
+            seedream_output_count=body["seedream_output_count"],
+            seedream_response_format=body["seedream_response_format"],
+            seedream_output_format=body["seedream_output_format"],
+        )
+        self.assertEqual(optional["seedream_size"], "2816x1584")
+        self.assertEqual(optional["seedream_output_count"], 1)
+
+        with patch.dict(os.environ, {"BYTEDANCE_API_KEY": "test-key"}):
+            _url, payload, _headers = SeedreamLLM()._prepare_request(
+                "A wide editorial illustration",
+                "dola-seedream-5-0-pro-260628",
+                optional,
+            )
+        self.assertEqual(payload["size"], "2816x1584")
+        self.assertEqual(payload["n"], 1)
+        self.assertEqual(payload["output_format"], "png")
 
 
 if __name__ == "__main__":

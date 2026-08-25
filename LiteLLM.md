@@ -77,6 +77,8 @@ Logical alias → endpoint → upstream (for debugging). Credentials are on the 
 | `gemini-3.1-pro` | `vertex_ai/gemini-3.1-pro-preview` | same |
 | `gemini-3.1-pro-customtools` | `vertex_ai/gemini-3.1-pro-preview-customtools` | same |
 | `gemini-3.5-flash` | `vertex_ai/gemini-3.5-flash` | same |
+| `gemini-3.7-flash` | `vertex_ai/gemini-3.7-flash` (global) | same |
+| `gemini-3.5-flash-lite` | `vertex_ai/gemini-3.5-flash-lite` (global) | same |
 | `gemini-3-flash-preview` | `vertex_ai/gemini-3-flash-preview` | same |
 | `gemini-3.1-flash-lite-preview` | `vertex_ai/gemini-3.1-flash-lite-preview` | same |
 | `grok-latest` | `xai/grok-4.20-non-reasoning-latest` | `GROK_API_KEY` |
@@ -109,6 +111,7 @@ OpenAI SDKs: `base_url=LITELLM_BASE_URL`, `api_key=LITELLM_MASTER_KEY`, standard
 | `imagen-4.0-ultra` | Image | `vertex_ai/imagen-4.0-ultra-generate-001` | GCP + Vertex |
 | `grok-image` | Image | custom → `grok-imagine-image-quality` | `GROK_API_KEY` |
 | `grok-imagine-image-quality` | Image | same as `grok-image` | `GROK_API_KEY` |
+| `grok-imagine-image-2.0` | Image | custom → exact xAI Image 2.0 model | `GROK_API_KEY` |
 | `grok-video` | **Video (MP4)** | custom → `grok-imagine-video`; text-to-video or image-to-video | `GROK_API_KEY` (proxy) |
 | `grok-video-1.5` | **Video (MP4)** | custom → `grok-imagine-video-1.5-preview`; **image-to-video only** | `GROK_API_KEY` (proxy + client file upload) |
 | `grok-imagine-video-1.5-2026-05-30` | **Video (MP4)** | same handler/pricing as `grok-video-1.5` (dated xAI model id) | same |
@@ -116,8 +119,10 @@ OpenAI SDKs: `base_url=LITELLM_BASE_URL`, `api_key=LITELLM_MASTER_KEY`, standard
 See [xAI Grok video](#xai-grok-video) for modes, file upload, and pricing.
 | `seedance-2.0` | **Video (MP4)** | custom → ARK `dreamina-seedance-2-0-260128` | `BYTEDANCE_API_KEY` |
 | `seedance-2.0-fast` | **Video (MP4)** | custom → ARK `dreamina-seedance-2-0-fast-260128` | `BYTEDANCE_API_KEY` |
+| `seedance-2.5` | **Video (MP4, durable only; disabled in Magic Lens)** | LAS → `dreamina-seedance-2-5-260628` | `SEEDANCE_2_5_API_KEY` |
 | `seedream-5.0` | Image | custom → ModelArk `seedream-5-0-260128` | `BYTEDANCE_API_KEY` |
 | `seedream-5.0-lite` | Image | custom → ModelArk `seedream-5-0-lite-260128` | `BYTEDANCE_API_KEY` |
+| `seedream-5.0-pro` | Image | custom → ModelArk `dola-seedream-5-0-pro-260628` | `BYTEDANCE_API_KEY` |
 
 Standard image body: `prompt`, optional `n`, `size`, `quality`, etc. (provider-dependent).
 
@@ -310,12 +315,13 @@ Env: `GROK_VIDEO_15_PRICE_PER_SECOND_480P`, `GROK_VIDEO_15_PRICE_PER_SECOND_720P
 
 ---
 
-### xAI Grok image (`grok-image`, `grok-imagine-image-quality`)
+### xAI Grok image (`grok-image`, `grok-imagine-image-quality`, `grok-imagine-image-2.0`)
 
 - **Generate:** `POST /v1/images/generations` with `prompt`
 - **Edit:** `POST /v1/images/edits` multipart with `image` + `prompt`
 - **Proxy env:** `GROK_API_KEY`
-- **Cost metadata:** `input_cost_per_image: 0.06` (approx combined 1K quality path)
+- **Image 2.0:** 1K/2K, `quality=low|medium`, up to five input images.
+- **Image 2.0 pricing:** $0.01/input image; $0.04 (1K low), $0.06 (2K low or 1K medium), $0.08 (2K medium) per output image.
 
 ---
 
@@ -517,6 +523,7 @@ Override on proxy: `SEEDANCE_PRICE_PER_MTOK`, `SEEDANCE_PRICE_PER_MTOK_VIDEO`, `
 |---------------|-------------------|-------|
 | `seedream-5.0` | `seedream-5-0-260128` | Seedream 5.0 (2K / 3K) |
 | `seedream-5.0-lite` | `seedream-5-0-lite-260128` | Seedream 5.0 Lite (2K / 3K, web search) |
+| `seedream-5.0-pro` | `dola-seedream-5-0-pro-260628` | Seedream 5.0 Pro (1K / 2K, one output, up to 10 references) |
 
 **Endpoint:** `POST /v1/images/generations` — **synchronous** (one request returns image URL(s); no task polling).
 
@@ -539,6 +546,8 @@ Override on proxy: `SEEDANCE_PRICE_PER_MTOK`, `SEEDANCE_PRICE_PER_MTOK_VIDEO`, `
 | `tools` | `[{ "type": "web_search" }]` — **5.0 Lite** real-time search (adds latency + surcharge) |
 | `optimize_prompt_options` | e.g. `{ "mode": "standard" }` |
 | `stream` | Stream partial results when supported |
+
+Seedream Pro accepts only one output, PNG/JPEG, no streaming, and up to ten references. The Gateway request policy copies `size`, `n`, and format fields into model-scoped private fields so LiteLLM 1.95 cannot consume them before custom-provider dispatch; the handler restores the public ModelArk fields.
 
 **Example (text-to-image)**
 
@@ -577,8 +586,9 @@ Handler sets `x-litellm-response-cost` from output image count × per-image rate
 |---------------|----------------------------------|---------------------------|
 | `seedream-5.0` | $0.035 | + $0.0006 when `tools: [{ "type": "web_search" }]` |
 | `seedream-5.0-lite` | $0.035 | + $0.0006 when `tools: [{ "type": "web_search" }]` |
+| `seedream-5.0-pro` | $0.045 (1K) / $0.09 (2K), plus $0.003 per input after the first | Not supported |
 
-Override on proxy: `SEEDREAM_5_0_PRICE_PER_IMAGE`, `SEEDREAM_5_0_LITE_PRICE_PER_IMAGE`, `SEEDREAM_WEB_SEARCH_PRICE_PER_REQUEST`, `SEEDREAM_ARK_BASE`.
+Override on proxy: `SEEDREAM_5_0_PRICE_PER_IMAGE`, `SEEDREAM_5_0_LITE_PRICE_PER_IMAGE`, `SEEDREAM_5_0_PRO_1K_PRICE_PER_IMAGE`, `SEEDREAM_5_0_PRO_2K_PRICE_PER_IMAGE`, `SEEDREAM_5_0_PRO_ADDITIONAL_INPUT_PRICE`, `SEEDREAM_WEB_SEARCH_PRICE_PER_REQUEST`, `SEEDREAM_ARK_BASE`.
 
 **Client timeout:** **≥ 120s** for complex prompts / web search; default handler HTTP timeout is **300s**.
 

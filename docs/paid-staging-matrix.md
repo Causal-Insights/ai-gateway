@@ -40,7 +40,7 @@ separate operational change.
 | `gpt-5.6-terra-medium` chat | PASS | Exact alias, fixed medium reasoning, and non-empty output. |
 | `gpt-5.6-luna-medium` chat | PASS | Exact alias, fixed medium reasoning, and non-empty output. |
 | `gpt-5.6-luna-high` Responses | PASS | Exact alias, fixed high reasoning, and non-empty Responses output. |
-| `gemini-3.6-flash` text/stream/tools | PASS | Vertex global text response, streaming completion, and forced tool call succeeded. |
+| `gemini-3.7-flash` text/stream/tools | PASS | Vertex global text, streaming, and forced-tool calls passed on the no-traffic candidate; the post-promotion live chat probe also passed. |
 | `gemini-3.5-flash-lite` text/stream/tools | PASS | Vertex global text response, streaming completion, and forced tool call succeeded. |
 | `gemini-3.5-flash` existing text alias | PASS | Candidate and 50% production canary returned successful responses through the deployed Cloud Run service account. |
 | Gemini Omni text-to-video | PASS | Job `gen_5553fa840f044a1da3c14c0b6439ce27`; audiovisual MP4 retrieved; `$0.3061485`. |

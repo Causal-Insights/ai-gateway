@@ -144,7 +144,7 @@ class SeedanceException(Exception):
 class SeedanceLLM(CustomLLM):
     """Wraps the BytePlus ARK Seedance 2.0 async content generation API."""
 
-    MAX_REFERENCE_IMAGES = 7
+    MAX_REFERENCE_IMAGES = 9
 
     def __init__(self) -> None:
         super().__init__()
@@ -486,6 +486,10 @@ class SeedanceLLM(CustomLLM):
 
         ark_base = self._ark_base()
         ark_model = self._resolve_upstream_model(model)
+        if "seedance-2-5" in ark_model.lower():
+            raise ValueError(
+                "seedance-2.5 requires the durable /v1/generation-jobs endpoint"
+            )
         poll_interval = self._poll_interval_s()
         poll_timeout = self._poll_timeout_s()
         headers = {

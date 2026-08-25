@@ -5,8 +5,8 @@ This repo packages a LiteLLM Proxy plus custom handlers for:
 - **Grok video** (`grok-video` / `grok-imagine-video`; **1.5** via `grok-video-1.5` → `grok-imagine-video-1.5`)
 - **Gemini Omni Flash Preview** durable audiovisual video generation and editing
 - **Grok Imagine Image Quality** generation and up-to-three-image editing
-- **Seedance 2.0** (BytePlus ModelArk video)
-- **Seedream 5** (BytePlus ModelArk image)
+- **Seedance 2.0** plus disabled durable **Seedance 2.5** onboarding (BytePlus video)
+- **Seedream 5** including **Seedream 5.0 Pro** (BytePlus ModelArk image)
 
 It can run locally via `docker-compose` and in production on **Google Cloud Run**.
 
@@ -50,6 +50,18 @@ Reset local DB state without touching production:
 ```bash
 docker compose down -v
 ```
+
+After the local Gateway is healthy, the Seedream Pro acceptance smoke must be
+explicitly acknowledged and only targets a loopback URL:
+
+```bash
+python scripts/smoke_seedream_5_pro.py \
+  --confirm-paid \
+  --api-base http://127.0.0.1:4000
+```
+
+The script refuses non-loopback hosts, submits one image, downloads it, and
+verifies the exact requested dimensions and PNG/JPEG encoding.
 
 ---
 
@@ -104,6 +116,8 @@ Then configure environment variables (via `gcloud run services update` or the co
 - `OPENAI_API_KEY`
 - `GROK_API_KEY`
 - `BYTEDANCE_API_KEY` (Seedance 2.0 / Seedream 5 / BytePlus ModelArk)
+- `SEEDANCE_2_5_API_KEY` (separate disabled Seedance 2.5 LAS durable-job credential)
+- Optional Seedance 2.5 settings: `SEEDANCE_2_5_BASE_URL`, `SEEDANCE_2_5_PRICE_PER_SECOND_480P`, `SEEDANCE_2_5_PRICE_PER_SECOND_720P`.
 - Optional Seedance legacy tuning: `SEEDANCE_ARK_BASE`, `SEEDANCE_ARK_MODEL`, `SEEDANCE_POLL_INTERVAL_S`, `SEEDANCE_POLL_TIMEOUT_S`. These settings only support deprecated blocking calls; new consumers should use durable jobs.
 - `ELEVENLABS_API_KEY`
 - **Vertex (`vertex_ai/*` models in `litellm_config.yaml`)**: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` (e.g. `us-central1`). On Cloud Run, attach a service account with Vertex permissions; local Docker may need `GOOGLE_APPLICATION_CREDENTIALS` (or `VERTEXAI_CREDENTIALS`) pointing at a key file.
@@ -155,7 +169,7 @@ Replace `<cloud-run-url>` with the HTTPS URL shown by `gcloud run deploy`.
   - Later, you can move to per-client keys managed by LiteLLM.
 - **Models**: use the logical model names from `litellm_config.yaml`, e.g.:
   - `gpt-latest`, `gpt-5.6-sol-medium`, `gpt-5.6-terra-medium`, `gpt-5.6-luna-medium`, `gpt-5.6-luna-high`
-  - `gemini-latest`, `gemini-3.6-flash`, `gemini-3.5-flash-lite`, `gemini-omni-flash-preview`
+  - `gemini-latest`, `gemini-3.7-flash`, `gemini-3.5-flash-lite`, `gemini-omni-flash-preview`
   - `imagen-4.0`, `grok-video`, `grok-video-1.5`, `grok-imagine-image-quality`, `seedance-2.0`, `seedream-5.0`, `seedream-5.0-lite`
 
 Clients **never** send provider API keys or upstream URLs; only the proxy holds those in its environment.

@@ -2,7 +2,7 @@
 Tests for Seedream 5 ModelArk custom handler.
 
 Gateway aliases (``litellm_config.yaml`` ``model_name``): ``seedream-5.0``,
-``seedream-5.0-lite``. The handler receives the ModelArk upstream model id from
+``seedream-5.0-lite`` and ``seedream-5.0-pro``. The handler receives the ModelArk upstream model id from
 ``litellm_params.model`` (after the ``seedream/`` prefix).
 
 Uses unittest + mocks only. Stubs ``litellm`` so CI/local runs need not install it.
@@ -19,10 +19,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 # Gateway aliases — what clients pass to POST /v1/images/generations
 GATEWAY_MODEL_5_0 = "seedream-5.0"
 GATEWAY_MODEL_5_0_LITE = "seedream-5.0-lite"
+GATEWAY_MODEL_5_0_PRO = "seedream-5.0-pro"
 
 # ModelArk upstream ids — what the handler POSTs to /images/generations
 ARK_MODEL_5_0 = "seedream-5-0-260128"
 ARK_MODEL_5_0_LITE = "seedream-5-0-lite-260128"
+ARK_MODEL_5_0_PRO = "dola-seedream-5-0-pro-260628"
 
 
 def _ensure_litellm_stubs():
@@ -73,7 +75,7 @@ def _seedream_entries_from_config() -> dict[str, str]:
     text = (REPO_ROOT / "litellm_config.yaml").read_text(encoding="utf-8")
     entries: dict[str, str] = {}
     for block in re.finditer(
-        r"- model_name: (seedream-5\.0(?:-lite)?)\s+litellm_params:\s+model: seedream/(\S+)",
+        r"- model_name: (seedream-5\.0(?:-lite|-pro)?)\s+litellm_params:\s+model: seedream/(\S+)",
         text,
     ):
         entries[block.group(1)] = block.group(2)
@@ -88,6 +90,7 @@ class TestSeedreamConfig(unittest.TestCase):
             {
                 GATEWAY_MODEL_5_0: ARK_MODEL_5_0,
                 GATEWAY_MODEL_5_0_LITE: ARK_MODEL_5_0_LITE,
+                GATEWAY_MODEL_5_0_PRO: ARK_MODEL_5_0_PRO,
             },
         )
 
@@ -207,6 +210,76 @@ class TestSeedreamHandler(unittest.IsolatedAsyncioTestCase):
 
         # 2 images × $0.035 + $0.0006 web search
         self.assertAlmostEqual(out._hidden_params["response_cost"], 0.0706, places=6)
+
+    async def test_pro_restores_private_params_and_prices_additional_inputs(self):
+        captured = {}
+
+        async def fake_post(url, headers=None, json=None):
+            captured["url"] = url
+            captured["json"] = json
+            response = MagicMock()
+            response.raise_for_status = MagicMock()
+            response.json = MagicMock(
+                return_value={"data": [{"url": "https://cdn.example/pro.png"}]}
+            )
+            return response
+
+        instance = AsyncMock()
+        instance.post = fake_post
+        instance.__aenter__ = AsyncMock(return_value=instance)
+        instance.__aexit__ = AsyncMock(return_value=None)
+
+        llm = SeedreamLLM()
+        with patch("custom_handler_seedream.httpx.AsyncClient", return_value=instance):
+            out = await llm.aimage_generation(
+                model=ARK_MODEL_5_0_PRO,
+                prompt="Preserve this editorial layout",
+                model_response=MagicMock(),
+                api_key=None,
+                api_base=None,
+                optional_params={
+                    "image_urls": [
+                        "https://example.com/a.png",
+                        "https://example.com/b.png",
+                        "https://example.com/c.png",
+                    ],
+                    "seedream_size": "2816x1584",
+                    "seedream_output_count": 1,
+                    "seedream_response_format": "url",
+                    "seedream_output_format": "png",
+                },
+                logging_obj=MagicMock(),
+            )
+
+        self.assertEqual(captured["json"]["size"], "2816x1584")
+        self.assertEqual(captured["json"]["n"], 1)
+        self.assertEqual(captured["json"]["response_format"], "url")
+        self.assertEqual(captured["json"]["output_format"], "png")
+        # 2K output ($0.09) + two inputs after the first ($0.006).
+        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.096, places=6)
+
+    async def test_pro_rejects_unsupported_tier_count_stream_and_reference_limit(self):
+        llm = SeedreamLLM()
+        cases = (
+            {"size": "3K"},
+            {"size": "1K", "n": 2},
+            {"size": "1K", "stream": True},
+            {
+                "size": "1K",
+                "image_urls": [f"https://example.com/{index}.png" for index in range(11)],
+            },
+        )
+        for optional_params in cases:
+            with self.subTest(optional_params=optional_params), self.assertRaises(ValueError):
+                await llm.aimage_generation(
+                    model=ARK_MODEL_5_0_PRO,
+                    prompt="test",
+                    model_response=MagicMock(),
+                    api_key=None,
+                    api_base=None,
+                    optional_params=optional_params,
+                    logging_obj=MagicMock(),
+                )
 
     async def test_missing_api_key_raises(self):
         os.environ.pop("BYTEDANCE_API_KEY", None)
