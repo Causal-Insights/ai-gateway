@@ -37,11 +37,31 @@ Multipart submissions put the JSON above in a `request` form field. Each media i
 Veo accept supported multipart references.
 
 `operation` defaults to `auto`: a source video selects editing and all other inputs select
-generation. `extend` is available only on legacy `grok-video`. Gemini Omni accepts text,
-one first frame, reference images, a first frame plus references, one source video for editing,
-or `previous_job_id` for a stateful edit. A previous job must belong to the same key owner and
-must be a completed Omni job. Source uploads must be MP4 so the gateway can enforce the
-10-second input limit. Omni output is a 720p MP4 with its generated soundtrack embedded.
+generation. Gemini Omni Flash 1.1 uses the canonical `gemini-omni-1.1-flash` alias. The
+historical `gemini-omni-flash`, `gemini-omni-flash-preview`, and
+`gemini-omni-1.1-flash-preview` aliases resolve to the same 1.1 Vertex upstream so saved
+requests keep working.
+
+Gemini Omni Flash 1.1 accepts text, one first frame, up to ten reference images, a first frame
+plus references, ordered first and last frames for interpolation, one source video for editing
+or extension, and `previous_job_id` for stateful edit or extension. Reference images may
+accompany a source only for an explicit `extend` operation. A previous job must belong to the
+same key owner and may be a completed job created through either an original or 1.1 Omni
+alias. Source uploads must be MP4 so the Gateway can enforce the ten-second input limit.
+Outputs are three to ten seconds, one video at fixed 24 FPS, 16:9 or 9:16, and 360p, 720p,
+1080p, or 4K. Native generated audio is always present; uploaded audio and voice references
+are rejected.
+
+The public stable alias deliberately maps to the Google Cloud Vertex Interactions model
+`gemini-omni-1.1-flash-preview`. Do not change that upstream to the Gemini Developer API GA
+ID without an authenticated Vertex acceptance probe. Every durable job records the exact
+upstream model in protected request metadata, while historical job rows retain the model alias
+originally submitted.
+
+Production verification on 2026-09-01 exercised every declared Omni 1.1 media path,
+including first/last interpolation, source editing and extension, prior-interaction
+continuation, and a 1080p audiovisual output. Revision `ai-gateway-proxy-00052-68m`
+serves 100% and maps every retained Omni alias to the exact preview upstream.
 
 `grok-video-1.5` supports text, starting-image, reference-image, and up to three preset voice
 references. It never falls back to a different upstream model. Video editing and extension use

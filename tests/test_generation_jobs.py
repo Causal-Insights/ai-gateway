@@ -14,10 +14,12 @@ from generation_job_adapters import (
     ProviderAdapterError,
     VertexAdapter,
     XAIAdapter,
+    _json_request,
     _validate_public_https_url,
     provider_for_model,
 )
 from generation_job_models import GenerationJobCreate, safe_client_metadata
+from generation_job_routes import _is_compatible_omni_previous_job
 from generation_job_scheduler import enqueue_poll, next_poll_time
 
 
@@ -59,8 +61,34 @@ class GenerationJobModelTests(unittest.TestCase):
         self.assertEqual(provider_for_model("seedance-2.0"), "byteplus")
         self.assertEqual(provider_for_model("seedance-2.5"), "byteplus")
         self.assertEqual(provider_for_model("veo-3.1-fast"), "vertex")
-        self.assertEqual(provider_for_model("gemini-omni-flash"), "vertex")
-        self.assertEqual(provider_for_model("gemini-omni-flash-preview"), "vertex")
+        for model in (
+            "gemini-omni-flash",
+            "gemini-omni-flash-preview",
+            "gemini-omni-1.1-flash",
+            "gemini-omni-1.1-flash-preview",
+            "vertex_ai/gemini-omni-flash-preview",
+            "vertex_ai/gemini-omni-1.1-flash-preview",
+        ):
+            with self.subTest(model=model):
+                self.assertEqual(provider_for_model(model), "vertex")
+
+    def test_original_omni_interactions_can_continue_through_every_1_1_alias(self):
+        previous = {
+            "status": "completed",
+            "provider": "vertex",
+            "model": "gemini-omni-flash-preview",
+            "provider_request_id": "interaction_original",
+        }
+        for requested_model in (
+            "gemini-omni-flash",
+            "gemini-omni-flash-preview",
+            "gemini-omni-1.1-flash",
+            "gemini-omni-1.1-flash-preview",
+        ):
+            with self.subTest(requested_model=requested_model):
+                self.assertTrue(_is_compatible_omni_previous_job(requested_model, previous))
+        self.assertFalse(_is_compatible_omni_previous_job("veo-3.1-fast", previous))
+        self.assertFalse(_is_compatible_omni_previous_job("gemini-omni-1.1-flash", {**previous, "provider_request_id": None}))
 
     def test_media_rejects_non_https_url(self):
         for url in ("http://unsafe.example/image.png", "data:image/png;base64,AAAA"):
@@ -127,6 +155,32 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
     async def test_media_download_rejects_private_addresses(self):
         with self.assertRaises(ProviderAdapterError):
             await _validate_public_https_url("https://127.0.0.1/internal")
+
+    async def test_submission_rate_limit_is_a_definitive_provider_rejection(self):
+        import httpx
+
+        request = httpx.Request("POST", "https://provider.example/interactions")
+        response = httpx.Response(
+            429,
+            request=request,
+            json={"error": {"message": "Quota exceeded"}},
+        )
+        client = AsyncMock()
+        client.__aenter__.return_value = client
+        client.request.return_value = response
+        with patch("generation_job_adapters.httpx.AsyncClient", return_value=client):
+            with self.assertRaises(ProviderAdapterError) as caught:
+                await _json_request(
+                    "POST",
+                    str(request.url),
+                    headers={"Authorization": "Bearer token"},
+                    body={"model": "gemini-omni-1.1-flash-preview"},
+                    submission=True,
+                )
+        self.assertEqual(caught.exception.code, "PROVIDER_RATE_LIMITED")
+        self.assertTrue(caught.exception.retryable)
+        self.assertFalse(caught.exception.outcome_unknown)
+        self.assertEqual(caught.exception.status_code, 429)
 
     async def test_xai_submit_returns_request_id_without_polling(self):
         request = GenerationJobCreate(
@@ -480,10 +534,14 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
             )
         body = mocked.await_args.kwargs["body"]
         self.assertEqual(result.provider_request_id, "v1_interaction")
-        self.assertEqual(body["model"], "gemini-omni-flash-preview")
+        self.assertEqual(body["model"], "gemini-omni-1.1-flash-preview")
         self.assertTrue(body["background"])
         self.assertTrue(body["store"])
         self.assertEqual(body["generation_config"]["video_config"]["task"], "reference_to_video")
+        self.assertEqual(
+            body["response_format"],
+            {"type": "video", "resolution": "720p", "duration": "6s", "aspect_ratio": "9:16"},
+        )
         prompt = body["input"][0]["content"][-1]["text"]
         self.assertIn("<FIRST_FRAME>@Image1", prompt)
         self.assertIn("<IMAGE_REF_0>@Image2", prompt)
@@ -528,7 +586,7 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
             )
         body = mocked.await_args.kwargs["body"]
         self.assertEqual(body["generation_config"]["video_config"]["task"], "edit")
-        self.assertEqual(body["response_format"], {"type": "video"})
+        self.assertEqual(body["response_format"], {"type": "video", "resolution": "720p"})
 
     async def test_omni_source_video_edit_rejects_aspect_ratio_override(self):
         request = GenerationJobCreate(
@@ -579,11 +637,107 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status.cost_usd, 0.25)
         self.assertEqual(content.content, b"mp4-bytes")
 
-    async def test_omni_rejects_extension_and_last_frame(self):
+    async def test_omni_content_rejects_oversized_inline_video(self):
+        data = {
+            "id": "v1_large",
+            "status": "completed",
+            "steps": [{
+                "type": "model_output",
+                "content": [{
+                    "type": "video",
+                    "mime_type": "video/mp4",
+                    "data": base64.b64encode(b"12345").decode(),
+                }],
+            }],
+        }
+        job = {
+            "model": "gemini-omni-1.1-flash",
+            "provider_request_id": "v1_large",
+            "request_metadata": {"upstream_model": "gemini-omni-1.1-flash-preview"},
+        }
+        adapter = VertexAdapter()
+        with patch.dict(os.environ, {
+            "GOOGLE_CLOUD_PROJECT": "project-1",
+            "GEMINI_OMNI_MAX_CONTENT_BYTES": "4",
+        }), patch.object(
+            adapter, "_vertex_headers", new=AsyncMock(return_value={"Authorization": "Bearer token"})
+        ), patch("generation_job_adapters._json_request", new=AsyncMock(return_value=data)):
+            with self.assertRaises(ProviderAdapterError) as caught:
+                await adapter.content(job)
+        self.assertEqual(caught.exception.code, "CONTENT_TOO_LARGE")
+
+    async def test_omni_maps_first_and_last_frame_interpolation(self):
         request = GenerationJobCreate(
-            model="gemini-omni-flash-preview",
+            model="gemini-omni-1.1-flash",
             prompt="Interpolate",
+            operation="generate",
+            resolution="1080p",
+            duration_seconds=5,
+            media_inputs=[
+                {"type": "image", "role": "first_frame", "upload_field": "first"},
+                {"type": "image", "role": "last_frame", "upload_field": "last"},
+            ],
+        )
+        mocked = AsyncMock(return_value={"id": "v1_interpolation", "status": "in_progress"})
+        adapter = VertexAdapter()
+        with patch.dict(os.environ, {"GOOGLE_CLOUD_PROJECT": "project-1"}), patch.object(
+            adapter, "_vertex_headers", new=AsyncMock(return_value={"Authorization": "Bearer token"})
+        ), patch("generation_job_adapters._json_request", new=mocked):
+            await adapter.submit(
+                request,
+                job_id="gen_interpolation",
+                callback_url=None,
+                upload_bytes={
+                    "first": ("first.png", b"first", "image/png"),
+                    "last": ("last.png", b"last", "image/png"),
+                },
+            )
+        body = mocked.await_args.kwargs["body"]
+        prompt = body["input"][0]["content"][-1]["text"]
+        self.assertIn("<FIRST_FRAME>@Image1", prompt)
+        self.assertIn("<LAST_FRAME>@Image2", prompt)
+        self.assertEqual(body["generation_config"]["video_config"]["task"], "image_to_video")
+        self.assertEqual(
+            body["response_format"],
+            {"type": "video", "resolution": "1080p", "duration": "5s", "aspect_ratio": "16:9"},
+        )
+
+    async def test_omni_source_extension_accepts_reference_images(self):
+        request = GenerationJobCreate(
+            model="gemini-omni-flash",
+            prompt="Continue into a moonlit clearing",
             operation="extend",
+            resolution="4K",
+            duration_seconds=3,
+            media_inputs=[
+                {"type": "video", "role": "source", "upload_field": "source"},
+                {"type": "image", "role": "reference", "upload_field": "reference"},
+            ],
+        )
+        mocked = AsyncMock(return_value={"id": "v1_extension", "status": "in_progress"})
+        adapter = VertexAdapter()
+        with patch.dict(os.environ, {"GOOGLE_CLOUD_PROJECT": "project-1"}), patch.object(
+            adapter, "_vertex_headers", new=AsyncMock(return_value={"Authorization": "Bearer token"})
+        ), patch("generation_job_adapters._json_request", new=mocked):
+            result = await adapter.submit(
+                request,
+                job_id="gen_extension",
+                callback_url=None,
+                upload_bytes={
+                    "source": ("source.mp4", self._mp4_with_duration(10), "video/mp4"),
+                    "reference": ("reference.webp", b"reference", "image/webp"),
+                },
+            )
+        body = mocked.await_args.kwargs["body"]
+        self.assertEqual(body["generation_config"]["video_config"]["task"], "extend")
+        self.assertEqual(body["response_format"], {"type": "video", "resolution": "4k", "duration": "3s"})
+        self.assertEqual(result.request_metadata["upstream_model"], "gemini-omni-1.1-flash-preview")
+        self.assertEqual(result.request_metadata["operation"], "extend")
+
+    async def test_omni_rejects_last_frame_without_first_frame(self):
+        request = GenerationJobCreate(
+            model="gemini-omni-1.1-flash",
+            prompt="Interpolate",
             media_inputs=[{"type": "image", "role": "last_frame", "upload_field": "last"}],
         )
         with self.assertRaises(ProviderAdapterError) as caught:
@@ -593,7 +747,35 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
                 callback_url=None,
                 upload_bytes={"last": ("last.png", b"last", "image/png")},
             )
-        self.assertEqual(caught.exception.code, "CAPABILITY_NOT_SUPPORTED")
+        self.assertEqual(caught.exception.code, "INVALID_MEDIA_INPUT")
+
+    async def test_omni_rejects_mismatched_media_roles(self):
+        cases = (
+            (
+                {"type": "image", "role": "source", "upload_field": "media"},
+                ("image.png", b"image", "image/png"),
+            ),
+            (
+                {"type": "video", "role": "reference", "upload_field": "media"},
+                ("video.mp4", self._mp4_with_duration(10), "video/mp4"),
+            ),
+        )
+        for media_input, upload in cases:
+            with self.subTest(media_input=media_input):
+                request = GenerationJobCreate(
+                    model="gemini-omni-1.1-flash",
+                    prompt="Invalid role",
+                    operation="edit" if media_input["type"] == "video" else "generate",
+                    media_inputs=[media_input],
+                )
+                with self.assertRaises(ProviderAdapterError) as caught:
+                    await VertexAdapter().submit(
+                        request,
+                        job_id="gen_invalid_role",
+                        callback_url=None,
+                        upload_bytes={"media": upload},
+                    )
+                self.assertEqual(caught.exception.code, "INVALID_MEDIA_INPUT")
 
     async def test_omni_rejects_voice_editing(self):
         request = GenerationJobCreate(

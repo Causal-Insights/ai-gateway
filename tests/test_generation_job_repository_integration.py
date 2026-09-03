@@ -108,6 +108,30 @@ class GenerationJobRepositoryIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(await self.repository.log_spend_once(self.job_id, log_once))
         self.assertEqual(calls, 1)
 
+    async def test_submission_failure_persists_retryability(self):
+        await self.repository.create_or_get(
+            job_id=self.job_id,
+            owner_key_hash=self.owner,
+            owner_context={},
+            idempotency_key=self.idempotency,
+            request_hash="rate-limit-hash",
+            modality="video",
+            model="gemini-omni-1.1-flash",
+            provider="vertex",
+            request_metadata={},
+            deadline_at=datetime.now(timezone.utc) + timedelta(hours=2),
+            callback_token_hash=None,
+        )
+        failed = await self.repository.mark_submission_failed(
+            self.job_id,
+            code="PROVIDER_RATE_LIMITED",
+            message="Quota exceeded",
+            retryable=True,
+        )
+        self.assertEqual(failed["status"], "failed")
+        self.assertEqual(failed["error_code"], "PROVIDER_RATE_LIMITED")
+        self.assertTrue(failed["error_retryable"])
+
 
 if __name__ == "__main__":
     unittest.main()

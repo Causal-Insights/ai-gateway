@@ -92,9 +92,9 @@ model_list:
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
-  - model_name: gemini-3.7-flash
+  - model_name: gemini-3.8-flash
     litellm_params:
-      model: vertex_ai/gemini-3.7-flash
+      model: vertex_ai/gemini-3.8-flash
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: global
 
@@ -163,13 +163,25 @@ model_list:
 
   - model_name: gemini-omni-flash
     litellm_params:
-      model: vertex_ai/gemini-omni-flash-preview
+      model: vertex_ai/gemini-omni-1.1-flash-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: global
 
   - model_name: gemini-omni-flash-preview
     litellm_params:
-      model: vertex_ai/gemini-omni-flash-preview
+      model: vertex_ai/gemini-omni-1.1-flash-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: global
+
+  - model_name: gemini-omni-1.1-flash
+    litellm_params:
+      model: vertex_ai/gemini-omni-1.1-flash-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: global
+
+  - model_name: gemini-omni-1.1-flash-preview
+    litellm_params:
+      model: vertex_ai/gemini-omni-1.1-flash-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: global
 

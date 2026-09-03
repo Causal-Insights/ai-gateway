@@ -55,9 +55,16 @@ class GatewayRequestPolicyTests(unittest.TestCase):
 
     def test_omni_is_rejected_on_text_endpoints(self):
         for path in ("/v1/chat/completions", "/v1/responses"):
-            _body, error = apply_request_policy(path, {"model": "gemini-omni-flash-preview"})
-            self.assertIsNotNone(error)
-            self.assertEqual(error.code, "OMNI_REQUIRES_DURABLE_JOB")
+            for model in (
+                "gemini-omni-flash",
+                "gemini-omni-flash-preview",
+                "gemini-omni-1.1-flash",
+                "gemini-omni-1.1-flash-preview",
+            ):
+                with self.subTest(path=path, model=model):
+                    _body, error = apply_request_policy(path, {"model": model})
+                    self.assertIsNotNone(error)
+                    self.assertEqual(error.code, "OMNI_REQUIRES_DURABLE_JOB")
 
     def test_grok_image_2_preserves_fields_consumed_by_litellm(self):
         body, error = apply_request_policy(

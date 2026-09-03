@@ -25,7 +25,7 @@ EXISTING_MODEL_MAP = {
     "veo-3.1": "vertex_ai/veo-3.1-generate-001",
     "veo-3.1-fast": "vertex_ai/veo-3.1-fast-generate-001",
     "veo-3.1-lite": "vertex_ai/veo-3.1-lite-generate-001",
-    "gemini-omni-flash": "vertex_ai/gemini-omni-flash-preview",
+    "gemini-omni-flash": "vertex_ai/gemini-omni-1.1-flash-preview",
     "imagen-4.0": "vertex_ai/imagen-4.0-generate-001",
     "imagen-4.0-fast": "vertex_ai/imagen-4.0-fast-generate-001",
     "imagen-4.0-ultra": "vertex_ai/imagen-4.0-ultra-generate-001",
@@ -79,9 +79,16 @@ class ModelCatalogTests(unittest.TestCase):
         self.assertEqual(catalog["gemini-3.7-flash"], "vertex_ai/gemini-3.7-flash")
         self.assertNotIn("gemini-3.6-flash", catalog)
         self.assertEqual(catalog["gemini-3.5-flash-lite"], "vertex_ai/gemini-3.5-flash-lite")
-        self.assertEqual(
-            catalog["gemini-omni-flash-preview"], "vertex_ai/gemini-omni-flash-preview"
-        )
+        for alias in (
+            "gemini-omni-flash",
+            "gemini-omni-flash-preview",
+            "gemini-omni-1.1-flash",
+            "gemini-omni-1.1-flash-preview",
+        ):
+            with self.subTest(alias=alias):
+                self.assertEqual(
+                    catalog[alias], "vertex_ai/gemini-omni-1.1-flash-preview"
+                )
         self.assertEqual(
             catalog["grok-imagine-image-2.0"],
             "grok-image/grok-imagine-image-2.0",

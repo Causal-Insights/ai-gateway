@@ -5,6 +5,11 @@ Release candidate: `8635ecdb92d371f3047e56ab8574f7aa5c82badc`
 Immutable application image:
 `us-central1-docker.pkg.dev/ai-gateway-495414/ai-gateway/litellm-proxy@sha256:d9a7ff3e4cd53f37d22c0dd6136dd051435691adbb48d808828a2a70956a7716`
 
+Gemini Omni Flash 1.1 production supplement (2026-09-01): revision
+`ai-gateway-proxy-00052-68m` serves 100% using image digest
+`sha256:929000dedc6fffc5a1ac0566012da1d390695f432ab395cf4569bb35eac2fde7`.
+The complete Gateway suite passed with 127 tests and 3 documented skips before promotion.
+
 Status values are `PASS`, `FAIL`, `BLOCKED`, and `PENDING`. Promotion to production
 requires every required row to be `PASS` unless an explicitly unsupported workflow
 is marked `BLOCKED` with its documented replacement.
@@ -43,12 +48,24 @@ separate operational change.
 | `gemini-3.7-flash` text/stream/tools | PASS | Vertex global text, streaming, and forced-tool calls passed on the no-traffic candidate; the post-promotion live chat probe also passed. |
 | `gemini-3.5-flash-lite` text/stream/tools | PASS | Vertex global text response, streaming completion, and forced tool call succeeded. |
 | `gemini-3.5-flash` existing text alias | PASS | Candidate and 50% production canary returned successful responses through the deployed Cloud Run service account. |
-| Gemini Omni text-to-video | PASS | Job `gen_5553fa840f044a1da3c14c0b6439ce27`; audiovisual MP4 retrieved; `$0.3061485`. |
-| Gemini Omni first-frame-to-video | PASS | Job `gen_d1538fb753ba46cfb7bbd5220b419d87`; completed with the first-frame role preserved; `$0.3092235`. |
-| Gemini Omni reference-images-to-video | PASS | Job `gen_8f40fa1dcd8d4de2ab73e0306b50b26c`; completed with reference images; `$0.3087015`. |
-| Gemini Omni first-frame plus references | PASS | Job `gen_8b1b16af00a547c8b5152d002e3d67c9`; completed with both image roles; `$0.309477`. |
-| Gemini Omni source-video edit | PASS | Job `gen_07312f69aeeb41b7a73e9c98d0fc4dec`; completed from one source video; `$0.334998`. |
-| Gemini Omni previous-job iterative edit | PASS | Job `gen_6cd84cfc0518466a80642d0f0779189a`; same-owner prior interaction completed and produced a new MP4; `$0.3071385`. |
+| Gemini Omni original preview text-to-video (historical) | PASS | Job `gen_5553fa840f044a1da3c14c0b6439ce27`; audiovisual MP4 retrieved; `$0.3061485`. |
+| Gemini Omni original preview first-frame-to-video (historical) | PASS | Job `gen_d1538fb753ba46cfb7bbd5220b419d87`; completed with the first-frame role preserved; `$0.3092235`. |
+| Gemini Omni original preview reference-images-to-video (historical) | PASS | Job `gen_8f40fa1dcd8d4de2ab73e0306b50b26c`; completed with reference images; `$0.3087015`. |
+| Gemini Omni original preview first-frame plus references (historical) | PASS | Job `gen_8b1b16af00a547c8b5152d002e3d67c9`; completed with both image roles; `$0.309477`. |
+| Gemini Omni original preview source-video edit (historical) | PASS | Job `gen_07312f69aeeb41b7a73e9c98d0fc4dec`; completed from one source video; `$0.334998`. |
+| Gemini Omni original preview previous-job iterative edit (historical) | PASS | Job `gen_6cd84cfc0518466a80642d0f0779189a`; same-owner prior interaction completed and produced a new MP4; `$0.3071385`. |
+| Gemini Omni Flash 1.1 text-to-video | PASS | Job `gen_0d70eabbc1254d79bfd8b628bac60d91`; interaction `video-ca88e187-9d08-402a-9dd5-3c70bb02670e`; exact `gemini-omni-1.1-flash-preview`; inspected 3-second audiovisual 360p/24 FPS MP4; `$0.103695`. |
+| Gemini Omni Flash 1.1 first-frame-to-video | PASS | Job `gen_91de5a126a724a5bb684c33648eec592`; interaction `video-6d99d8ba-2e1e-43b5-afca-c6998d2984c7`; first-frame role preserved; inspected audiovisual 360p/24 FPS MP4; `$0.107856`. |
+| Gemini Omni Flash 1.1 reference-images-to-video | PASS | Job `gen_0d71252f0e994f0eb19dbfb924af842f`; interaction `video-88d85fb2-4e66-44f2-9f8b-99a101d88706`; reference roles preserved; inspected audiovisual MP4; `$0.109014`. |
+| Gemini Omni Flash 1.1 first frame plus references | PASS | Job `gen_5cdd4e7e7d3649ddb47ab82f77fda4a2`; interaction `video-79923544-a6c0-4406-ba99-6bff16f0743b`; both role types preserved; inspected audiovisual MP4; `$0.1089735`. |
+| Gemini Omni Flash 1.1 first/last interpolation | PASS | Job `gen_5e79efe6b18044c6ac75606d485070a1`; interaction `video-6c0a3bcd-5940-4b49-a959-004b9e8ed212`; ordered first/last roles preserved; inspected audiovisual MP4; `$0.108078`. |
+| Gemini Omni Flash 1.1 source-video edit | PASS | Job `gen_20a8ce589ff94f86a2a783de2009ce8f`; interaction `video-1456b65d-2912-4516-b33e-e1c200d6d7b1`; source edit completed with inherited source settings; `$0.111975`. |
+| Gemini Omni Flash 1.1 source-video edit with selectable resolution | PASS | The same edit job explicitly requested and returned non-default 360p, proving the Interactions resolution field is honored. |
+| Gemini Omni Flash 1.1 source-video extension | PASS | Job `gen_d849e7e1dc5d47118b51c495594c9531`; interaction `video-5d590039-50b3-4a8f-8d15-11e8b13fa957`; source plus reference extension completed; `$0.113427`. |
+| Gemini Omni Flash 1.1 previous-interaction extension | PASS | Job `gen_82c32ba44dd441709429e2f50c57d2ee`; interaction `video-6a0b8fc2-f990-4a6d-8ea8-a6ad0606030b`; same-owner cross-version continuation completed; `$0.10422`. |
+| Gemini Omni Flash 1.1 non-default high-resolution generation | PASS | Job `gen_3f7ce920579e47afa9bceb7101cdc311`; interaction `video-4b9d4bcc-e883-4964-8858-1d79929ea87e`; inspected 1920x1080, 3-second, 24 FPS audiovisual MP4; `$0.4583295`. |
+| Gemini Omni Flash 1.1 Studio end-to-end settlement | PASS | Post-cutover Studio Pro run `f50c92de-7519-4517-a04f-ea284ade8149` used registry version 6 and canonical alias, quoted and charged 3 credits for 3 seconds at 360p, persisted asset `c65c296f-a24e-4c92-baab-47b4f129480d`, and recorded interaction `video-9052b105-c562-40d0-a274-a587c9e3415e` with exact preview upstream. |
+| Gemini Omni Flash 1.1 forced-failure release | PASS | Studio Pro run `1bf777e9-34a1-4520-81e7-b7ceece7ed9a` forced `UNSUPPORTED_MODEL`; hold `244bb02b-9731-4cb7-9eb5-40861d019e09` was fully released with zero charged credits. |
 | Grok Video 1.5 text-to-video | PASS | Job `gen_931f9b59b0e743cd874ee35d682ae2ec`; exact `grok-imagine-video-1.5`; retrievable MP4; `$0.08`. |
 | Grok Video 1.5 image-to-video | PASS | Job `gen_2e0abc38cf164d49a1856c9401a7e5cb`; exact 1.5 model; retrievable MP4; `$0.09`. |
 | Grok Video 1.5 reference-images-to-video | PASS | Job `gen_49b6a709221a4084a42693e118584dc0`; exact 1.5 model; retrievable MP4; `$0.09`. |

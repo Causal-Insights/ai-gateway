@@ -16,7 +16,12 @@ FIXED_REASONING_EFFORT = {
     "gpt-5.6-luna-high": "high",
 }
 GEMINI_FLASH_MODELS = {"gemini-3.7-flash", "gemini-3.5-flash-lite"}
-OMNI_MODELS = {"gemini-omni-flash", "gemini-omni-flash-preview"}
+OMNI_MODELS = {
+    "gemini-omni-flash",
+    "gemini-omni-flash-preview",
+    "gemini-omni-1.1-flash",
+    "gemini-omni-1.1-flash-preview",
+}
 CHAT_PATHS = {"/chat/completions", "/v1/chat/completions"}
 RESPONSES_PATHS = {"/responses", "/v1/responses"}
 POLICY_PATHS = CHAT_PATHS | RESPONSES_PATHS

@@ -170,12 +170,19 @@ class GenerationJobRepository:
             raise RuntimeError(f"generation job {job_id} could not be marked submitted")
         return _row(row) or {}
 
-    async def mark_submission_failed(self, job_id: str, *, code: str, message: str) -> dict:
+    async def mark_submission_failed(
+        self,
+        job_id: str,
+        *,
+        code: str,
+        message: str,
+        retryable: bool = False,
+    ) -> dict:
         pool = await self.pool()
         row = await pool.fetchrow(
             """
             update gateway_generation_jobs
-            set status='failed', error_code=$2, error_message=$3, error_retryable=false,
+            set status='failed', error_code=$2, error_message=$3, error_retryable=$4,
                 completed_at=now(), updated_at=now(), next_poll_at=null
             where id=$1 and status='submitting'
             returning *
@@ -183,6 +190,7 @@ class GenerationJobRepository:
             job_id,
             code,
             message[:4000],
+            retryable,
         )
         return _row(row) or (await self.get(job_id) or {})
 

@@ -148,10 +148,15 @@ async def _json_request(
         data = {"error": {"message": response.text[:2000]}}
     if response.is_error:
         retryable = response.status_code in RETRYABLE_HTTP_STATUSES
+        # A provider 429 is a definitive rejection: no durable interaction was
+        # created, so it must not be mislabeled as an ambiguous submission.
+        rate_limited_submission = submission and response.status_code == 429
         raise ProviderAdapterError(
             _clean_error(data),
             code=(
-                "SUBMISSION_OUTCOME_UNKNOWN"
+                "PROVIDER_RATE_LIMITED"
+                if rate_limited_submission
+                else "SUBMISSION_OUTCOME_UNKNOWN"
                 if submission and retryable
                 else "PROVIDER_REJECTED_SUBMISSION"
                 if submission
@@ -159,8 +164,8 @@ async def _json_request(
                 if retryable
                 else "PROVIDER_STATUS_ERROR"
             ),
-            retryable=retryable and not submission,
-            outcome_unknown=submission and retryable,
+            retryable=retryable and (not submission or rate_limited_submission),
+            outcome_unknown=submission and retryable and not rate_limited_submission,
             status_code=response.status_code,
         )
     if not isinstance(data, dict):
@@ -678,18 +683,32 @@ class BytePlusAdapter(BaseAdapter):
         return ProviderStatus(status="queued" if raw in {"queued", "submitted"} else "in_progress", provider_status=raw, progress=data.get("progress"))
 
 
+GEMINI_OMNI_UPSTREAM_MODEL = "gemini-omni-1.1-flash-preview"
+GEMINI_OMNI_MODEL_NAMES = {
+    "gemini-omni-flash",
+    "gemini-omni-flash-preview",
+    "gemini-omni-1.1-flash",
+    "gemini-omni-1.1-flash-preview",
+    "vertex_ai/gemini-omni-flash-preview",
+    "vertex_ai/gemini-omni-1.1-flash-preview",
+}
+
+
+def is_gemini_omni_model(model: str) -> bool:
+    return (model or "").strip().lower() in GEMINI_OMNI_MODEL_NAMES
+
+
 class VertexAdapter(BaseAdapter):
     provider = "vertex"
-    omni_model = "gemini-omni-flash-preview"
+    omni_model = GEMINI_OMNI_UPSTREAM_MODEL
     omni_input_cost_per_token = 1.5e-6
     omni_output_cost_per_token = 9e-6
     omni_output_video_cost_per_token = 1.75e-5
 
     @classmethod
     def _is_omni(cls, model: str, metadata: Optional[dict[str, Any]] = None) -> bool:
-        normalized = (model or "").strip().lower().removeprefix("vertex_ai/")
-        upstream = str((metadata or {}).get("upstream_model") or "").lower().removeprefix("vertex_ai/")
-        return normalized in {"gemini-omni-flash", cls.omni_model} or upstream == cls.omni_model
+        upstream = str((metadata or {}).get("upstream_model") or "")
+        return is_gemini_omni_model(model) or is_gemini_omni_model(upstream)
 
     @staticmethod
     async def _vertex_headers() -> dict[str, str]:
@@ -776,6 +795,22 @@ class VertexAdapter(BaseAdapter):
                 f"Gemini Omni {media.type} input has incompatible MIME type {mime_type!r}.",
                 code="INVALID_MEDIA_INPUT",
             )
+        allowed_mime_types = {
+            "image": {"image/png", "image/jpeg", "image/webp", "image/heic", "image/heif"},
+            # Uploaded source videos stay MP4-only because the Gateway validates
+            # their duration from the ISO-BMFF header before provider spend.
+            "video": {"video/mp4"},
+        }
+        if mime_type not in allowed_mime_types[media.type]:
+            raise ProviderAdapterError(
+                f"Gemini Omni does not support {mime_type!r} {media.type} inputs on this route.",
+                code="INVALID_MEDIA_INPUT",
+            )
+        if len(content) > 20 * 1024 * 1024:
+            raise ProviderAdapterError(
+                "Gemini Omni inline media inputs must be 20 MB or smaller.",
+                code="INVALID_MEDIA_INPUT",
+            )
         return {
             "type": media.type,
             "data": base64.b64encode(content).decode("ascii"),
@@ -815,7 +850,7 @@ class VertexAdapter(BaseAdapter):
             from litellm import get_model_info
 
             model_info = get_model_info(
-                model="gemini-omni-flash-preview", custom_llm_provider="vertex_ai"
+                model=GEMINI_OMNI_UPSTREAM_MODEL, custom_llm_provider="vertex_ai"
             )
         except Exception:
             model_info = {}
@@ -843,26 +878,41 @@ class VertexAdapter(BaseAdapter):
     async def _submit_omni(self, request: GenerationJobCreate, upload_bytes=None) -> ProviderSubmission:
         images = [item for item in request.media_inputs if item.type == "image"]
         videos = [item for item in request.media_inputs if item.type == "video"]
+        if any(item.role not in {"first_frame", "last_frame", "reference"} for item in images):
+            raise ProviderAdapterError(
+                "Gemini Omni image inputs must use first_frame, last_frame, or reference roles.",
+                code="INVALID_MEDIA_INPUT",
+            )
+        if any(item.role != "source" for item in videos):
+            raise ProviderAdapterError(
+                "Gemini Omni video inputs must use the source role.",
+                code="INVALID_MEDIA_INPUT",
+            )
         first_frames = [item for item in images if item.role == "first_frame"]
-        references = [item for item in images if item.role != "first_frame"]
+        last_frames = [item for item in images if item.role == "last_frame"]
+        references = [item for item in images if item.role == "reference"]
         if request.reference_voice_ids:
             raise ProviderAdapterError(
                 "Gemini Omni does not support audio references or voice editing.",
                 code="CAPABILITY_NOT_SUPPORTED",
             )
-        if any(item.role == "last_frame" for item in request.media_inputs):
-            raise ProviderAdapterError(
-                "Gemini Omni does not support last-frame interpolation.", code="CAPABILITY_NOT_SUPPORTED"
-            )
-        if len(first_frames) > 1:
-            raise ProviderAdapterError("Gemini Omni accepts one first frame.", code="INVALID_MEDIA_INPUT")
+        if len(first_frames) > 1 or len(last_frames) > 1:
+            raise ProviderAdapterError("Gemini Omni accepts one first frame and one last frame.", code="INVALID_MEDIA_INPUT")
+        if last_frames and not first_frames:
+            raise ProviderAdapterError("Gemini Omni last-frame interpolation requires a first frame.", code="INVALID_MEDIA_INPUT")
+        if last_frames and references:
+            raise ProviderAdapterError("Gemini Omni interpolation cannot include additional image references.", code="INVALID_MEDIA_INPUT")
         if len(images) > 10:
             raise ProviderAdapterError("Gemini Omni accepts up to ten images.", code="INVALID_MEDIA_INPUT")
         if len(videos) > 1:
             raise ProviderAdapterError("Gemini Omni accepts one source video.", code="INVALID_MEDIA_INPUT")
-        if videos and images:
+        if videos and images and request.operation != "extend":
             raise ProviderAdapterError(
-                "Gemini Omni video editing cannot include image references.", code="INVALID_MEDIA_INPUT"
+                "Gemini Omni source-video editing cannot include image references.", code="INVALID_MEDIA_INPUT"
+            )
+        if videos and images and any(item.role != "reference" for item in images):
+            raise ProviderAdapterError(
+                "Gemini Omni source-video extension accepts only reference image inputs.", code="INVALID_MEDIA_INPUT"
             )
         if request.previous_job_id and videos:
             raise ProviderAdapterError(
@@ -872,21 +922,20 @@ class VertexAdapter(BaseAdapter):
             raise ProviderAdapterError(
                 "Stateful Gemini Omni edits accept a prompt but no new media.", code="INVALID_REQUEST"
             )
-        if request.operation == "extend":
-            raise ProviderAdapterError(
-                "Gemini Omni does not support video extension.", code="CAPABILITY_NOT_SUPPORTED"
-            )
         has_edit_source = bool(videos or request.previous_job_id)
         if request.operation == "generate" and has_edit_source:
             raise ProviderAdapterError("Generate operations cannot include an edit source.", code="INVALID_REQUEST")
         if request.operation == "edit" and not has_edit_source:
             raise ProviderAdapterError("Gemini Omni edits require source video or previous_job_id.", code="INVALID_REQUEST")
+        if request.operation == "extend" and not has_edit_source:
+            raise ProviderAdapterError("Gemini Omni extension requires source video or previous_job_id.", code="INVALID_REQUEST")
         if request.duration_seconds is not None and not 3 <= request.duration_seconds <= 10:
             raise ProviderAdapterError(
                 "Gemini Omni duration must be between 3 and 10 seconds.", code="INVALID_REQUEST"
             )
-        if request.resolution and request.resolution.lower() != "720p":
-            raise ProviderAdapterError("Gemini Omni output is fixed at 720p.", code="INVALID_REQUEST")
+        resolution = (request.resolution or "720p").lower()
+        if resolution not in {"360p", "720p", "1080p", "4k"}:
+            raise ProviderAdapterError("Gemini Omni resolution must be 360p, 720p, 1080p, or 4k.", code="INVALID_REQUEST")
         if request.aspect_ratio and request.aspect_ratio not in {"16:9", "9:16"}:
             raise ProviderAdapterError(
                 "Gemini Omni aspect_ratio must be 16:9 or 9:16.", code="INVALID_REQUEST"
@@ -899,9 +948,6 @@ class VertexAdapter(BaseAdapter):
         prompt = request.prompt.strip()
         if not prompt:
             raise ProviderAdapterError("Gemini Omni requires a prompt.", code="INVALID_REQUEST")
-        if request.duration_seconds is not None:
-            prompt = f"Create exactly a {request.duration_seconds}-second video. {prompt}"
-
         contents: list[dict[str, str]] = []
         for media in request.media_inputs:
             content, raw = await self._omni_media_content(media, upload_bytes)
@@ -918,16 +964,22 @@ class VertexAdapter(BaseAdapter):
                         code="INVALID_MEDIA_INPUT",
                     )
             contents.append(content)
-        if images:
+        if images or videos:
             declarations: list[str] = []
             for index, media in enumerate(images, start=1):
                 if media.role == "first_frame":
                     declarations.append(f"[# Sources <FIRST_FRAME>@Image{index}]")
+                elif media.role == "last_frame":
+                    declarations.append(f"[# Sources <LAST_FRAME>@Image{index}]")
                 else:
                     ref_index = references.index(media)
                     declarations.append(f"[# References <IMAGE_REF_{ref_index}>@Image{index}]")
+            if videos:
+                declarations.append("[# Sources <VIDEO_0>@Video1]")
             prompt = " ".join(declarations) + " " + prompt
-            if first_frames:
+            if first_frames and last_frames:
+                prompt += " Use the first-frame image as the starting frame and the last-frame image as the final frame."
+            elif first_frames:
                 prompt += " Use the first-frame image as the starting frame."
             if references:
                 prompt += " Use the other images as references, not as literal initial frames."
@@ -937,7 +989,9 @@ class VertexAdapter(BaseAdapter):
         else:
             interaction_input = prompt
         task = (
-            "edit"
+            "extend"
+            if request.operation == "extend"
+            else "edit"
             if has_edit_source
             else "image_to_video"
             if first_frames and not references
@@ -945,7 +999,12 @@ class VertexAdapter(BaseAdapter):
             if references
             else "text_to_video"
         )
-        response_format: dict[str, Any] = {"type": "video"}
+        response_format: dict[str, Any] = {
+            "type": "video",
+            "resolution": resolution,
+        }
+        if request.duration_seconds is not None:
+            response_format["duration"] = f"{request.duration_seconds}s"
         if not has_edit_source:
             response_format["aspect_ratio"] = request.aspect_ratio or "16:9"
         body: dict[str, Any] = {
@@ -986,7 +1045,7 @@ class VertexAdapter(BaseAdapter):
                 "operation": request.operation if request.operation != "auto" else task,
                 "previous_job_id": request.previous_job_id,
                 "duration_seconds": request.duration_seconds,
-                "resolution": "720p",
+                "resolution": resolution,
                 "aspect_ratio": request.aspect_ratio if not has_edit_source else None,
                 "image_count": len(images),
                 "has_input_video": bool(videos),
@@ -1050,14 +1109,23 @@ class VertexAdapter(BaseAdapter):
         if not video:
             raise ProviderAdapterError("Gemini Omni video content is unavailable.", code="CONTENT_NOT_AVAILABLE")
         mime_type = str(video.get("mime_type") or "video/mp4")
+        maximum = int(
+            os.environ.get("GEMINI_OMNI_MAX_CONTENT_BYTES", str(512 * 1024 * 1024))
+        )
         encoded = video.get("data")
         if encoded:
             try:
-                return ContentSource(content=base64.b64decode(encoded, validate=True), mime_type=mime_type)
+                content = base64.b64decode(encoded, validate=True)
             except (ValueError, TypeError) as exc:
                 raise ProviderAdapterError(
                     "Gemini Omni returned malformed video data.", code="CONTENT_RETRIEVAL_FAILED"
                 ) from exc
+            if len(content) > maximum:
+                raise ProviderAdapterError(
+                    "Gemini Omni video content exceeds the configured size limit.",
+                    code="CONTENT_TOO_LARGE",
+                )
+            return ContentSource(content=content, mime_type=mime_type)
         uri = str(video.get("uri") or "")
         if not uri.startswith("https://"):
             raise ProviderAdapterError(
@@ -1065,12 +1133,28 @@ class VertexAdapter(BaseAdapter):
             )
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(120, connect=10), follow_redirects=True) as client:
-                response = await client.get(uri, headers=await self._vertex_headers())
-                response.raise_for_status()
+                async with client.stream("GET", uri, headers=await self._vertex_headers()) as response:
+                    response.raise_for_status()
+                    declared_size = int(response.headers.get("content-length") or 0)
+                    if declared_size > maximum:
+                        raise ProviderAdapterError(
+                            "Gemini Omni video content exceeds the configured size limit.",
+                            code="CONTENT_TOO_LARGE",
+                        )
+                    content = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        content.extend(chunk)
+                        if len(content) > maximum:
+                            raise ProviderAdapterError(
+                                "Gemini Omni video content exceeds the configured size limit.",
+                                code="CONTENT_TOO_LARGE",
+                            )
                 return ContentSource(
-                    content=response.content,
+                    content=bytes(content),
                     mime_type=response.headers.get("content-type", mime_type).split(";", 1)[0],
                 )
+        except ProviderAdapterError:
+            raise
         except httpx.HTTPError as exc:
             raise ProviderAdapterError(
                 "Gemini Omni video download failed.", code="CONTENT_RETRIEVAL_FAILED", retryable=True
@@ -1200,11 +1284,7 @@ def provider_for_model(model: str) -> str:
         return "byteplus"
     if normalized.startswith("veo-") or normalized.startswith("vertex_ai/veo-"):
         return "vertex"
-    if normalized in {
-        "gemini-omni-flash",
-        "gemini-omni-flash-preview",
-        "vertex_ai/gemini-omni-flash-preview",
-    }:
+    if is_gemini_omni_model(normalized):
         return "vertex"
     raise ProviderAdapterError(
         f"Model {model!r} is not enabled for durable video jobs.", code="UNSUPPORTED_MODEL"

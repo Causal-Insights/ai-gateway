@@ -20,7 +20,7 @@ from litellm.proxy.auth.user_api_key_auth import UserAPIKeyAuth, user_api_key_au
 from pydantic import ValidationError
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
-from generation_job_adapters import ProviderAdapterError, adapter_for, provider_for_model
+from generation_job_adapters import ProviderAdapterError, adapter_for, is_gemini_omni_model, provider_for_model
 from generation_job_models import (
     GenerationJobCreate,
     GenerationJobResponse,
@@ -208,6 +208,18 @@ async def _schedule(job_id: str, when: datetime) -> None:
         logger.exception("generation_poll_enqueue_failed", extra={"generation_job_id": job_id})
 
 
+def _is_compatible_omni_previous_job(requested_model: str, previous: Optional[dict[str, Any]]) -> bool:
+    """Allow same-owner continuation across the original and 1.1 aliases."""
+    return bool(
+        is_gemini_omni_model(requested_model)
+        and previous
+        and previous.get("status") == "completed"
+        and previous.get("provider") == "vertex"
+        and is_gemini_omni_model(str(previous.get("model") or ""))
+        and previous.get("provider_request_id")
+    )
+
+
 @router.post("/v1/generation-jobs", response_model=GenerationJobResponse, status_code=202)
 async def create_generation_job(
     request: Request,
@@ -222,11 +234,7 @@ async def create_generation_job(
         raise HTTPException(422, detail={"code": exc.code, "message": str(exc)}) from exc
     owner_hash, owner_context = _owner(user)
     if payload.previous_job_id:
-        if provider != "vertex" or payload.model.lower() not in {
-            "gemini-omni-flash",
-            "gemini-omni-flash-preview",
-            "vertex_ai/gemini-omni-flash-preview",
-        }:
+        if provider != "vertex" or not is_gemini_omni_model(payload.model):
             raise HTTPException(
                 422,
                 detail={
@@ -235,14 +243,7 @@ async def create_generation_job(
                 },
             )
         previous = await repository.get(payload.previous_job_id, owner_hash)
-        if (
-            not previous
-            or previous.get("status") != "completed"
-            or previous.get("provider") != "vertex"
-            or str(previous.get("model") or "").lower()
-            not in {"gemini-omni-flash", "gemini-omni-flash-preview", "vertex_ai/gemini-omni-flash-preview"}
-            or not previous.get("provider_request_id")
-        ):
+        if not _is_compatible_omni_previous_job(payload.model, previous):
             raise HTTPException(
                 422,
                 detail={
@@ -311,7 +312,12 @@ async def create_generation_job(
             logger.exception("generation_poll_enqueue_failed", extra={"generation_job_id": job_id})
     except ProviderAdapterError as exc:
         code = "SUBMISSION_OUTCOME_UNKNOWN" if exc.outcome_unknown else exc.code
-        job = await repository.mark_submission_failed(job_id, code=code, message=str(exc))
+        job = await repository.mark_submission_failed(
+            job_id,
+            code=code,
+            message=str(exc),
+            retryable=exc.retryable and not exc.outcome_unknown,
+        )
     except Exception as exc:
         logger.exception("generation_submission_unhandled", extra={"generation_job_id": job_id})
         job = await repository.mark_submission_failed(

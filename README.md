@@ -3,7 +3,7 @@
 This repo packages a LiteLLM Proxy plus custom handlers for:
 
 - **Grok video** (`grok-video` / `grok-imagine-video`; **1.5** via `grok-video-1.5` → `grok-imagine-video-1.5`)
-- **Gemini Omni Flash Preview** durable audiovisual video generation and editing
+- **Gemini Omni Flash 1.1** durable audiovisual video generation, editing, interpolation, and extension
 - **Grok Imagine Image Quality** generation and up-to-three-image editing
 - **Seedance 2.0** plus disabled durable **Seedance 2.5** onboarding (BytePlus video)
 - **Seedream 5** including **Seedream 5.0 Pro** (BytePlus ModelArk image)
@@ -169,7 +169,9 @@ Replace `<cloud-run-url>` with the HTTPS URL shown by `gcloud run deploy`.
   - Later, you can move to per-client keys managed by LiteLLM.
 - **Models**: use the logical model names from `litellm_config.yaml`, e.g.:
   - `gpt-latest`, `gpt-5.6-sol-medium`, `gpt-5.6-terra-medium`, `gpt-5.6-luna-medium`, `gpt-5.6-luna-high`
-  - `gemini-latest`, `gemini-3.7-flash`, `gemini-3.5-flash-lite`, `gemini-omni-flash-preview`
+  - `gemini-latest`, `gemini-3.7-flash`, `gemini-3.5-flash-lite`, `gemini-omni-1.1-flash`
+  - compatibility aliases `gemini-omni-flash`, `gemini-omni-flash-preview`, and
+    `gemini-omni-1.1-flash-preview` resolve to the same Gemini Omni Flash 1.1 Vertex upstream
   - `imagen-4.0`, `grok-video`, `grok-video-1.5`, `grok-imagine-image-quality`, `seedance-2.0`, `seedream-5.0`, `seedream-5.0-lite`
 
 Clients **never** send provider API keys or upstream URLs; only the proxy holds those in its environment.
