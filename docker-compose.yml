@@ -59,6 +59,8 @@ services:
       - ./generation_job_scheduler.py:/app/generation_job_scheduler.py:ro
       - ./generation_job_routes.py:/app/generation_job_routes.py:ro
       - ./gateway_request_policy.py:/app/gateway_request_policy.py:ro
+      - ./openai_model_contracts.py:/app/openai_model_contracts.py:ro
+      - ./openai_usage.py:/app/openai_usage.py:ro
       - ./gateway_logging.py:/app/gateway_logging.py:ro
       - ./gateway_healthcheck.py:/app/gateway_healthcheck.py:ro
       - ./gateway_server.py:/app/gateway_server.py:ro
