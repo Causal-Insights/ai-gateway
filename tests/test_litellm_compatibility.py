@@ -43,6 +43,24 @@ class LiteLLMCompatibilityTests(unittest.TestCase):
         import generation_job_adapters  # noqa: F401
         import generation_job_routes  # noqa: F401
 
+    def test_image_25_edit_controls_survive_both_parameter_filters(self):
+        from openai_model_contracts import install_image_adapters, IMAGE_MODELS
+        from litellm.images.main import _get_ImageEditRequestUtils
+        from litellm.utils import ProviderConfigManager
+        from litellm.types.utils import LlmProviders
+        install_image_adapters()
+        utils = _get_ImageEditRequestUtils()
+        for model in IMAGE_MODELS.values():
+            config = ProviderConfigManager.get_provider_image_edit_config(model, LlmProviders.OPENAI)
+            params = dict(model=model, quality="max", output_format="webp", output_compression=83,
+                          n=4, background="transparent", size="1536x1024", mask=b"mask")
+            selected = utils.get_requested_image_edit_optional_param(params)
+            mapped = utils.get_optional_params_image_edit(model, config, selected, drop_params=True)
+            for key in params.keys() - {"model"}:
+                self.assertEqual(mapped[key], params[key])
+        selected = utils.get_requested_image_edit_optional_param(dict(model="gpt-image-1", output_format="webp"))
+        self.assertNotIn("output_format", selected)
+
     def test_seedream_private_fields_survive_litellm_image_dispatch(self):
         from custom_handler_seedream import SeedreamLLM
         from gateway_request_policy import apply_request_policy

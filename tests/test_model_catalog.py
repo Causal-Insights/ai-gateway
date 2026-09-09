@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 EXISTING_MODEL_MAP = {
-    "gpt-latest": "openai/gpt-5.5",
+    "gpt-latest": "openai/gpt-6-astra",
     "gpt-5.5": "openai/gpt-5.5",
     "gpt-5.5-thinking": "openai/gpt-5.5",
     "gpt-5.4": "openai/gpt-5.4",
@@ -72,11 +72,14 @@ class ModelCatalogTests(unittest.TestCase):
 
     def test_new_aliases_have_exact_upstream_models(self):
         catalog = catalog_from_config()
+        self.assertEqual(catalog["gpt-6-astra"], "openai/gpt-6-astra")
+        for name in ("gpt-image-2.5-sunburst", "gpt-image-2.5-flare"):
+            self.assertEqual(catalog[name], f"openai/{name}-2026-09-08")
         self.assertEqual(catalog["gpt-5.6-sol-medium"], "openai/gpt-5.6-sol")
         self.assertEqual(catalog["gpt-5.6-terra-medium"], "openai/gpt-5.6-terra")
         self.assertEqual(catalog["gpt-5.6-luna-medium"], "openai/gpt-5.6-luna")
         self.assertEqual(catalog["gpt-5.6-luna-high"], "openai/gpt-5.6-luna")
-        self.assertEqual(catalog["gemini-3.7-flash"], "vertex_ai/gemini-3.7-flash")
+        self.assertEqual(catalog["gemini-3.8-flash"], "vertex_ai/gemini-3.8-flash")
         self.assertNotIn("gemini-3.6-flash", catalog)
         self.assertEqual(catalog["gemini-3.5-flash-lite"], "vertex_ai/gemini-3.5-flash-lite")
         for alias in (

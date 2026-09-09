@@ -24,6 +24,8 @@ COPY generation_job_adapters.py /app/generation_job_adapters.py
 COPY generation_job_scheduler.py /app/generation_job_scheduler.py
 COPY generation_job_routes.py /app/generation_job_routes.py
 COPY gateway_request_policy.py /app/gateway_request_policy.py
+COPY openai_model_contracts.py /app/openai_model_contracts.py
+COPY openai_usage.py /app/openai_usage.py
 COPY gateway_logging.py /app/gateway_logging.py
 COPY gateway_healthcheck.py /app/gateway_healthcheck.py
 COPY gateway_server.py /app/gateway_server.py

@@ -7,6 +7,7 @@ import math
 import re
 from dataclasses import dataclass
 from typing import Any
+from openai_model_contracts import ASTRA_MODELS, IMAGE_PRESERVED_FIELDS, image_model, validate_astra, validate_image_settings
 
 
 FIXED_REASONING_EFFORT = {
@@ -225,6 +226,33 @@ def apply_request_policy(path: str, body: Any) -> tuple[Any, PolicyError | None]
     if not isinstance(body, dict):
         return body, None
     model = str(body.get("model") or "").strip()
+    if model in ASTRA_MODELS or image_model(model):
+        extra = body.get("extra_body") or {}
+        if not isinstance(extra, dict):
+            return body, PolicyError(code="INVALID_OPENAI_REQUEST", message="extra_body must be an object.")
+        # LiteLLM merges extra_body at dispatch. Validate the effective request
+        # and reject conflicting duplicates before any provider submission.
+        if any(k in body and body[k] != v for k, v in extra.items()):
+            return body, PolicyError(code="INVALID_OPENAI_REQUEST", message="Conflicting extra_body fields.")
+        body.update(extra)
+        body.pop("extra_body", None)
+    if model in ASTRA_MODELS and path in POLICY_PATHS:
+        error = validate_astra(body, responses=path in RESPONSES_PATHS)
+        if error:
+            return body, PolicyError(code="INVALID_ASTRA_REQUEST", message=error)
+    if image_model(model) and path in IMAGE_PATHS:
+        if body.get("stream") not in (None, False) or body.get("partial_images", 0) not in (0, None):
+            return body, PolicyError(code="IMAGE_STREAMING_UNAVAILABLE", message="Image streaming is not available on this Gateway Images route. Use the Responses image-generation tool for streaming.")
+        error = validate_image_settings(body)
+        if error:
+            return body, PolicyError(code="INVALID_IMAGE_REQUEST", message=error)
+        if path.endswith("/generations"):
+            for field in IMAGE_PRESERVED_FIELDS:
+                private = "gateway_openai_image_" + field
+                body.pop(private, None)
+                if field in body:
+                    body[private] = body[field]
+        return body, None
     if path in IMAGE_PATHS and model in GROK_IMAGE_2_MODELS:
         size_error = _normalize_grok_image_2_size(body)
         if size_error is not None:
@@ -336,6 +364,29 @@ class GatewayRequestPolicyMiddleware:
             parsed = json.loads(raw)
         except (UnicodeDecodeError, json.JSONDecodeError):
             parsed = None
+        multipart = False
+        if parsed is None:
+            content_type = next((v.decode("latin1") for k, v in scope.get("headers", []) if k.lower() == b"content-type"), "")
+            if content_type.startswith("multipart/form-data"):
+                # Inspect scalar controls without decoding or rewriting image bytes.
+                from email.parser import BytesParser
+                from email.policy import default
+                envelope = BytesParser(policy=default).parsebytes(
+                    b"Content-Type: " + content_type.encode("latin1") + b"\r\nMIME-Version: 1.0\r\n\r\n" + raw
+                )
+                fields = {}
+                for part in envelope.iter_parts():
+                    name = part.get_param("name", header="content-disposition")
+                    if name and not part.get_filename():
+                        content = part.get_payload(decode=True) or b""
+                        fields[name] = content.decode("utf-8", errors="replace").strip()
+                if image_model(fields.get("model")):
+                    for name in ("n", "partial_images", "output_compression"):
+                        if name in fields and re.fullmatch(r"[0-9]+", fields[name]):
+                            fields[name] = int(fields[name])
+                    if fields.get("stream") in {"true", "false"}:
+                        fields["stream"] = fields["stream"] == "true"
+                    parsed, multipart = fields, True
         if parsed is not None:
             parsed, error = apply_request_policy(str(scope.get("path")), parsed)
             if error:
@@ -352,7 +403,8 @@ class GatewayRequestPolicyMiddleware:
                 )
                 await send({"type": "http.response.body", "body": payload})
                 return
-            raw = json.dumps(parsed, separators=(",", ":"), ensure_ascii=False).encode()
+            if not multipart:
+                raw = json.dumps(parsed, separators=(",", ":"), ensure_ascii=False).encode()
         headers = [(key, value) for key, value in scope.get("headers", []) if key.lower() != b"content-length"]
         headers.append((b"content-length", str(len(raw)).encode()))
         policy_scope = dict(scope)

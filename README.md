@@ -8,6 +8,10 @@ This repo packages a LiteLLM Proxy plus custom handlers for:
 - **Seedance 2.0** plus disabled durable **Seedance 2.5** onboarding (BytePlus video)
 - **Seedream 5** including **Seedream 5.0 Pro** (BytePlus ModelArk image)
 
+The [September 2026 OpenAI Gateway contract](docs/openai-september-2026.md) adds
+Sunburst, Flare, and Astra Responses image-tool routing. Image provider access
+and MagicLens integration remain deferred.
+
 It can run locally via `docker-compose` and in production on **Google Cloud Run**.
 
 Long-running video models also expose the durable job API: submit once with

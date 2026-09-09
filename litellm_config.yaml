@@ -4,6 +4,15 @@ model_list:
     litellm_params:
       model: openai/gpt-6-astra
       api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+    model_info:
+      mode: chat
+      max_input_tokens: 922000
+      max_output_tokens: 128000
+      supports_vision: true
+      supports_function_calling: true
+      supports_response_schema: true
 
   - model_name: gpt-5.5
     litellm_params:
@@ -21,6 +30,15 @@ model_list:
     litellm_params:
       model: openai/gpt-6-astra
       api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+    model_info:
+      mode: chat
+      max_input_tokens: 922000
+      max_output_tokens: 128000
+      supports_vision: true
+      supports_function_calling: true
+      supports_response_schema: true
 
   # Fixed-effort GPT-5.6 aliases. gateway_request_policy.py prevents callers
   # from overriding the effort encoded by the public alias.
@@ -72,6 +90,25 @@ model_list:
     litellm_params:
       model: openai/gpt-image-2
       api_key: os.environ/OPENAI_API_KEY
+
+  # Exact image snapshots; catalog presence does not establish project access.
+  - model_name: gpt-image-2.5-sunburst
+    litellm_params:
+      model: openai/gpt-image-2.5-sunburst-2026-09-08
+      api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+    model_info:
+      mode: image_generation
+
+  - model_name: gpt-image-2.5-flare
+    litellm_params:
+      model: openai/gpt-image-2.5-flare-2026-09-08
+      api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+    model_info:
+      mode: image_generation
 
   # ── Gemini text ──────────────────────────────────────────────────────────
   - model_name: gemini-latest

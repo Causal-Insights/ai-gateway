@@ -36,3 +36,6 @@ local-tests/
 *.webm
 
 test_outputs/
+
+# Reviewed deterministic request fixtures are part of the test contract.
+!tests/fixtures/**/*.json

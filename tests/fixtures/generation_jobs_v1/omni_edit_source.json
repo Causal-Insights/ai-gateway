@@ -1,0 +1,16 @@
+{
+  "body": {
+    "model": "gemini-omni-flash",
+    "operation": "edit",
+    "prompt": "replace the sky",
+    "resolution": "720p",
+    "media_inputs": [
+      {
+        "type": "video",
+        "role": "source",
+        "url": "https://assets.example/source.mp4"
+      }
+    ]
+  },
+  "request_hash": "b0ec428c8533e4d71ed3d6e1150b10624277820448911dcab620bdb59299e8f8"
+}

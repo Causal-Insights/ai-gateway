@@ -14,6 +14,11 @@ from generation_job_routes import router as generation_jobs_router
 from generation_job_repository import repository
 from generation_job_scheduler import start_local_scheduler, stop_local_scheduler
 from gateway_request_policy import GatewayRequestPolicyMiddleware
+from openai_model_contracts import install_image_adapters
+from openai_usage import install_openai_accounting
+
+install_image_adapters()
+install_openai_accounting()
 
 
 GENERATION_JOB_LLM_ROUTES = (
