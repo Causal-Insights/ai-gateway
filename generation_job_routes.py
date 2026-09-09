@@ -20,9 +20,18 @@ from litellm.proxy.auth.user_api_key_auth import UserAPIKeyAuth, user_api_key_au
 from pydantic import ValidationError
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
-from generation_job_adapters import ProviderAdapterError, adapter_for, is_gemini_omni_model, provider_for_model
+from generation_job_adapters import (
+    ADAPTER_REVISIONS,
+    ProviderAdapterError,
+    adapter_for,
+    adapter_for_job,
+    is_gemini_omni_model,
+    provider_for_model,
+    route_for,
+)
 from generation_job_models import (
     GenerationJobCreate,
+    GenerationJobCreateV2,
     GenerationJobResponse,
     JobError,
     JobResult,
@@ -81,7 +90,42 @@ def _hash_request(payload: GenerationJobCreate, upload_bytes: dict[str, tuple[st
     return hashlib.sha256(encoded.encode()).hexdigest()
 
 
-async def _parse_request(request: Request) -> tuple[GenerationJobCreate, dict[str, tuple[str, bytes, str]]]:
+def _hash_request_v2(payload: GenerationJobCreateV2, upload_bytes: dict[str, tuple[str, bytes, str]]) -> str:
+    canonical = json.dumps(
+        payload.model_dump(mode="json", exclude_none=False),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    uploads = json.dumps(
+        sorted(
+            [[name, hashlib.sha256(value[1]).hexdigest(), value[2]] for name, value in upload_bytes.items()]
+        ),
+        separators=(",", ":"),
+    )
+    digest = hashlib.sha256(f"{canonical}\n{uploads}".encode()).hexdigest()
+    return f"gj2:{digest}"
+
+
+def _peek_schema_version(raw: Any) -> Optional[int]:
+    if not isinstance(raw, dict):
+        return None
+    if "request_schema_version" not in raw:
+        return None
+    value = raw.get("request_schema_version")
+    if isinstance(value, bool) or value is None:
+        raise HTTPException(422, detail={"code": "UNSUPPORTED_REQUEST_SCHEMA", "message": "request_schema_version is invalid."})
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            422, detail={"code": "UNSUPPORTED_REQUEST_SCHEMA", "message": "request_schema_version is invalid."}
+        ) from exc
+
+
+async def _parse_request(
+    request: Request,
+) -> tuple[GenerationJobCreate | GenerationJobCreateV2, dict[str, tuple[str, bytes, str]]]:
     content_type = request.headers.get("content-type", "")
     uploads: dict[str, tuple[str, bytes, str]] = {}
     if content_type.startswith("application/json"):
@@ -106,10 +150,22 @@ async def _parse_request(request: Request) -> tuple[GenerationJobCreate, dict[st
                 uploads[name] = (item.filename or name, data, item.content_type or "application/octet-stream")
     else:
         raise HTTPException(415, "Use application/json or multipart/form-data.")
+    schema_version = _peek_schema_version(raw)
+    if schema_version is None:
+        try:
+            return GenerationJobCreate.model_validate(raw), uploads
+        except ValidationError as exc:
+            raise HTTPException(422, detail=exc.errors()) from exc
+    if schema_version != 2:
+        raise HTTPException(
+            422,
+            detail={"code": "UNSUPPORTED_REQUEST_SCHEMA", "message": f"Unsupported request schema {schema_version}."},
+        )
     try:
-        return GenerationJobCreate.model_validate(raw), uploads
+        payload = GenerationJobCreateV2.model_validate(raw)
     except ValidationError as exc:
         raise HTTPException(422, detail=exc.errors()) from exc
+    return payload, uploads
 
 
 def _public_status(status: str) -> str:
@@ -228,8 +284,10 @@ async def create_generation_job(
     user: UserAPIKeyAuth = Depends(user_api_key_auth),
 ) -> GenerationJobResponse:
     payload, uploads = await _parse_request(request)
+    schema_version = 2 if isinstance(payload, GenerationJobCreateV2) else 1
     try:
         provider = provider_for_model(payload.model)
+        provider_route = route_for(payload.model, schema_version)
     except ProviderAdapterError as exc:
         raise HTTPException(422, detail={"code": exc.code, "message": str(exc)}) from exc
     owner_hash, owner_context = _owner(user)
@@ -252,30 +310,43 @@ async def create_generation_job(
                 },
             )
         payload._previous_interaction_id = str(previous["provider_request_id"])
-    request_hash = _hash_request(payload, uploads)
+    request_hash = (
+        _hash_request_v2(payload, uploads)
+        if isinstance(payload, GenerationJobCreateV2)
+        else _hash_request(payload, uploads)
+    )
     job_id = f"gen_{uuid4().hex}"
     callback_token = secrets.token_urlsafe(32) if provider == "byteplus" else None
     callback_hash = hashlib.sha256(callback_token.encode()).hexdigest() if callback_token else None
     deadline = datetime.now(timezone.utc) + timedelta(
         seconds=max(60, int(os.environ.get("GENERATION_JOB_MAX_AGE_SECONDS", "7200")))
     )
+    metadata = {
+        "client_metadata": safe_client_metadata(payload.metadata),
+        "operation": payload.operation,
+        "previous_job_id": payload.previous_job_id,
+    }
+    if isinstance(payload, GenerationJobCreateV2):
+        metadata["profile_id"] = payload.profile_id
+        metadata["contract_revision"] = payload.contract_revision
+        metadata["reference_voice_ids"] = payload.voice_ids
+    else:
+        metadata["reference_voice_ids"] = payload.reference_voice_ids
     job, created, conflict = await repository.create_or_get(
         job_id=job_id,
         owner_key_hash=owner_hash,
         owner_context=owner_context,
         idempotency_key=idempotency_key,
         request_hash=request_hash,
-        modality=payload.modality,
+        modality="video",
         model=payload.model,
         provider=provider,
-        request_metadata={
-            "client_metadata": safe_client_metadata(payload.metadata),
-            "operation": payload.operation,
-            "previous_job_id": payload.previous_job_id,
-            "reference_voice_ids": payload.reference_voice_ids,
-        },
+        request_metadata=metadata,
         deadline_at=deadline,
         callback_token_hash=callback_hash,
+        request_schema_version=schema_version,
+        provider_route=provider_route,
+        adapter_revision=ADAPTER_REVISIONS.get(provider_route, f"{provider_route}@2026-09-03"),
     )
     if conflict:
         raise HTTPException(
@@ -294,7 +365,7 @@ async def create_generation_job(
     if callback_token and callback_base:
         callback_url = f"{callback_base}/callbacks/byteplus/{job_id}?token={callback_token}"
     try:
-        submitted = await adapter_for(provider).submit(
+        submitted = await adapter_for_job({"provider": provider, "provider_route": provider_route}).submit(
             payload, job_id=job_id, callback_url=callback_url, upload_bytes=uploads
         )
         first_poll = next_poll_time(0)
@@ -393,7 +464,7 @@ async def get_generation_job_content(
     if job["status"] != "completed":
         raise HTTPException(409, detail={"code": "CONTENT_NOT_READY", "status": _public_status(job["status"])})
     try:
-        source = await adapter_for(job["provider"]).content(job)
+        source = await adapter_for_job(job).content(job)
     except ProviderAdapterError as exc:
         raise HTTPException(502, detail={"code": exc.code, "message": str(exc)}) from exc
     maximum = int(os.environ.get("GENERATION_MAX_CONTENT_BYTES", str(2 * 1024 * 1024 * 1024)))
@@ -407,7 +478,7 @@ async def get_generation_job_content(
             if exc.code != "CONTENT_URL_EXPIRED" or job["provider"] == "vertex":
                 raise HTTPException(502, detail={"code": exc.code, "message": str(exc)}) from exc
             try:
-                refreshed = await adapter_for(job["provider"]).retrieve(job)
+                refreshed = await adapter_for_job(job).retrieve(job)
             except ProviderAdapterError as refresh_error:
                 raise HTTPException(
                     502, detail={"code": refresh_error.code, "message": str(refresh_error)}
@@ -480,7 +551,7 @@ async def poll_generation_job(job_id: str, request: Request) -> dict[str, Any]:
         return {"accepted": True, "terminal": age > timedelta(seconds=60)}
     deadline_reached = datetime.now(timezone.utc) >= job["deadline_at"]
     try:
-        provider_status = await adapter_for(job["provider"]).retrieve(job)
+        provider_status = await adapter_for_job(job).retrieve(job)
         job = await repository.apply_provider_status(job_id, provider_status)
     except ProviderAdapterError as exc:
         if not exc.retryable:

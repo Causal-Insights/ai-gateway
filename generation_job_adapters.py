@@ -6,18 +6,27 @@ import asyncio
 import base64
 import hashlib
 import ipaddress
+import json
 import os
 import socket
 import struct
+import subprocess
+import tempfile
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import PurePosixPath
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from urllib.parse import unquote, urljoin, urlsplit
 
 import httpx
 
-from generation_job_models import GenerationJobCreate, ProviderStatus, ProviderSubmission
+from generation_job_models import (
+    GenerationJobCreate,
+    GenerationJobCreateV2,
+    ProviderStatus,
+    ProviderSubmission,
+    v2_to_v1,
+)
 
 
 RETRYABLE_HTTP_STATUSES = {408, 409, 425, 429, 500, 502, 503, 504}
@@ -123,6 +132,46 @@ async def _download_media(url: str) -> tuple[str, bytes, str]:
     raise ProviderAdapterError("Media input redirected too many times.", code="INVALID_MEDIA_INPUT")
 
 
+def _as_v1_request(request: Union[GenerationJobCreate, GenerationJobCreateV2]) -> GenerationJobCreate:
+    if isinstance(request, GenerationJobCreateV2):
+        return v2_to_v1(request)
+    return request
+
+
+def probe_media_bytes(content: bytes, suffix: str = ".bin") -> dict[str, Any]:
+    """Inspect uploaded or downloaded media with ffprobe. Returns {} when ffprobe is absent."""
+    if not content:
+        return {}
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as handle:
+        handle.write(content)
+        handle.flush()
+        try:
+            result = subprocess.run(
+                [
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-print_format",
+                    "json",
+                    "-show_format",
+                    "-show_streams",
+                    handle.name,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            return {}
+    if result.returncode != 0:
+        return {}
+    try:
+        return json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        return {}
+
+
 async def _json_request(
     method: str,
     url: str,
@@ -182,7 +231,7 @@ class BaseAdapter:
 
     async def submit(
         self,
-        request: GenerationJobCreate,
+        request: Union[GenerationJobCreate, GenerationJobCreateV2],
         *,
         job_id: str,
         callback_url: Optional[str],
@@ -201,6 +250,8 @@ class BaseAdapter:
 
 class XAIAdapter(BaseAdapter):
     provider = "xai"
+    provider_route = "xai_videos_v1"
+    adapter_revision = "xai_videos_v1@2026-09-03"
     base_url = "https://api.x.ai/v1"
     usd_ticks_per_dollar = 10_000_000_000
 
@@ -267,7 +318,8 @@ class XAIAdapter(BaseAdapter):
             )
         return {"file_id": str(file_id)}
 
-    async def submit(self, request: GenerationJobCreate, *, job_id: str, callback_url: Optional[str], upload_bytes=None) -> ProviderSubmission:
+    async def submit(self, request: Union[GenerationJobCreate, GenerationJobCreateV2], *, job_id: str, callback_url: Optional[str], upload_bytes=None) -> ProviderSubmission:
+        request = _as_v1_request(request)
         api_key = os.environ.get("GROK_API_KEY")
         if not api_key:
             raise ProviderAdapterError("GROK_API_KEY is not configured.", code="PROVIDER_NOT_CONFIGURED")
@@ -458,6 +510,7 @@ class XAIAdapter(BaseAdapter):
 
 class BytePlusAdapter(BaseAdapter):
     provider = "byteplus"
+    adapter_revision = "byteplus_ark_v3@2026-09-03"
     default_base = "https://ark.ap-southeast.bytepluses.com/api/v3"
     seedance_2_5_default_base = "https://operator.las.ap-southeast-1.bytepluses.com/api/v1"
     seedance_2_5_rates = {"480p": 0.2055855, "720p": 0.462075}
@@ -555,7 +608,8 @@ class BytePlusAdapter(BaseAdapter):
             return "reference_image"
         return role
 
-    async def submit(self, request: GenerationJobCreate, *, job_id: str, callback_url: Optional[str], upload_bytes=None) -> ProviderSubmission:
+    async def submit(self, request: Union[GenerationJobCreate, GenerationJobCreateV2], *, job_id: str, callback_url: Optional[str], upload_bytes=None) -> ProviderSubmission:
+        request = _as_v1_request(request)
         if not request.prompt.strip():
             raise ProviderAdapterError("Seedance requires a non-empty prompt.", code="INVALID_REQUEST")
         upstream_model = self.upstream_model(request.model)
@@ -700,6 +754,7 @@ def is_gemini_omni_model(model: str) -> bool:
 
 class VertexAdapter(BaseAdapter):
     provider = "vertex"
+    adapter_revision = "vertex_omni_interactions@2026-09-03"
     omni_model = GEMINI_OMNI_UPSTREAM_MODEL
     omni_input_cost_per_token = 1.5e-6
     omni_output_cost_per_token = 9e-6
@@ -1079,6 +1134,10 @@ class VertexAdapter(BaseAdapter):
             )
         if raw in {"failed", "cancelled", "incomplete"}:
             error = data.get("error") or data.get("incomplete_details") or {}
+            errors = data.get("errors")
+            if not error and isinstance(errors, list) and errors:
+                first_error = errors[0]
+                error = first_error if isinstance(first_error, dict) else {"message": str(first_error)}
             return ProviderStatus(
                 status="cancelled" if raw == "cancelled" else "failed",
                 provider_status=raw,
@@ -1269,27 +1328,336 @@ class VertexAdapter(BaseAdapter):
         raise ProviderAdapterError("Veo returned an unsupported content response.", code="CONTENT_RETRIEVAL_FAILED")
 
 
+class VertexVeoDirectAdapter(BaseAdapter):
+    """Gateway-owned Veo adapter: predictLongRunning + ADC + GCS output. V1 Veo stays on LiteLLM."""
+
+    provider = "vertex"
+    provider_route = "vertex_veo_direct"
+    adapter_revision = "vertex_veo_direct@2026-09-03"
+    upstream_by_alias = {
+        "veo-3.1": "veo-3.1-generate-001",
+        "veo-3.1-fast": "veo-3.1-fast-generate-001",
+        "veo-3.1-lite": "veo-3.1-lite-generate-001",
+        "veo-3.1-generate-001": "veo-3.1-generate-001",
+        "veo-3.1-fast-generate-001": "veo-3.1-fast-generate-001",
+        "veo-3.1-lite-generate-001": "veo-3.1-lite-generate-001",
+    }
+
+    @classmethod
+    def upstream_model(cls, model: str) -> str:
+        normalized = model.strip()
+        if normalized.startswith("vertex_ai/"):
+            normalized = normalized.split("/", 1)[1]
+        return cls.upstream_by_alias.get(normalized, normalized)
+
+    @staticmethod
+    def _project() -> str:
+        project = (os.environ.get("GOOGLE_CLOUD_PROJECT") or "").strip()
+        if not project:
+            raise ProviderAdapterError("GOOGLE_CLOUD_PROJECT is not configured.", code="PROVIDER_NOT_CONFIGURED")
+        return project
+
+    @staticmethod
+    def _location() -> str:
+        return (
+            os.environ.get("VERTEX_LOCATION")
+            or os.environ.get("GOOGLE_CLOUD_LOCATION")
+            or "us-central1"
+        ).strip()
+
+    @staticmethod
+    def _storage_uri(job_id: str) -> str:
+        prefix = (os.environ.get("VEO_OUTPUT_GCS_PREFIX") or "").strip().rstrip("/")
+        if not prefix.startswith("gs://"):
+            raise ProviderAdapterError(
+                "VEO_OUTPUT_GCS_PREFIX must be a gs:// prefix with a 30-day object lifecycle.",
+                code="PROVIDER_NOT_CONFIGURED",
+            )
+        return f"{prefix}/{job_id}/"
+
+    def _model_url(self, model: str, method: str) -> str:
+        location = self._location()
+        project = self._project()
+        return (
+            f"https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}"
+            f"/publishers/google/models/{model}:{method}"
+        )
+
+    async def _inline_image(self, media: Any, upload_bytes) -> dict[str, str]:
+        if getattr(media, "upload_field", None):
+            if not upload_bytes or media.upload_field not in upload_bytes:
+                raise ProviderAdapterError(
+                    f"Missing multipart field {media.upload_field!r}.", code="INVALID_MEDIA_INPUT"
+                )
+            _filename, content, mime_type = upload_bytes[media.upload_field]
+        else:
+            _filename, content, mime_type = await _download_media(str(media.url))
+        if not mime_type.startswith("image/"):
+            mime_type = "image/png"
+        return {"bytesBase64Encoded": base64.b64encode(content).decode("ascii"), "mimeType": mime_type}
+
+    async def submit(
+        self,
+        request: Union[GenerationJobCreate, GenerationJobCreateV2],
+        *,
+        job_id: str,
+        callback_url: Optional[str],
+        upload_bytes=None,
+    ) -> ProviderSubmission:
+        v1 = _as_v1_request(request)
+        if v1.previous_job_id or v1.reference_voice_ids:
+            raise ProviderAdapterError(
+                "Veo does not support previous-job continuation or voice references.",
+                code="CAPABILITY_NOT_SUPPORTED",
+            )
+        upstream = self.upstream_model(v1.model)
+        settings = request.settings if isinstance(request, GenerationJobCreateV2) else {}
+        media_items = list(request.media) if isinstance(request, GenerationJobCreateV2) else list(v1.media_inputs)
+        instance: dict[str, Any] = {"prompt": v1.prompt}
+        first = next((item for item in media_items if getattr(item, "role", None) == "first_frame"), None)
+        last = next((item for item in media_items if getattr(item, "role", None) == "last_frame"), None)
+        references = [item for item in media_items if getattr(item, "role", None) == "reference"]
+        source = next((item for item in media_items if getattr(item, "role", None) == "source"), None)
+        if first is None and len(media_items) == 1 and getattr(media_items[0], "kind", getattr(media_items[0], "type", None)) == "image":
+            first = media_items[0]
+        if first:
+            instance["image"] = await self._inline_image(first, upload_bytes)
+        if last:
+            instance["lastFrame"] = await self._inline_image(last, upload_bytes)
+        if source:
+            if getattr(source, "url", None) and str(source.url).startswith("https://"):
+                instance["video"] = {"uri": source.url, "mimeType": "video/mp4"}
+            else:
+                raise ProviderAdapterError(
+                    "Veo extension requires an HTTPS source video URL.",
+                    code="INVALID_MEDIA_INPUT",
+                )
+        parameters: dict[str, Any] = {
+            "sampleCount": 1,
+            "storageUri": self._storage_uri(job_id),
+        }
+        aspect = settings.get("aspectRatio") or settings.get("aspect_ratio") or v1.aspect_ratio
+        if aspect:
+            parameters["aspectRatio"] = aspect
+        duration = settings.get("duration") or v1.duration_seconds
+        if duration:
+            parameters["durationSeconds"] = int(duration)
+        resolution = settings.get("resolution") or v1.resolution
+        if resolution:
+            parameters["resolution"] = resolution
+        generate_audio = settings.get("generateAudio", settings.get("generate_audio", v1.generate_audio))
+        if generate_audio is not None:
+            parameters["generateAudio"] = bool(generate_audio)
+        if references:
+            parameters["referenceImages"] = [
+                {"image": await self._inline_image(item, upload_bytes), "referenceType": "asset"}
+                for item in references
+            ]
+        data = await _json_request(
+            "POST",
+            self._model_url(upstream, "predictLongRunning"),
+            headers=await VertexAdapter._vertex_headers(),
+            body={"instances": [instance], "parameters": parameters},
+            submission=True,
+        )
+        operation = data.get("name") or data.get("operation")
+        if not operation:
+            raise ProviderAdapterError(
+                "Veo returned no long-running operation name.",
+                code="SUBMISSION_OUTCOME_UNKNOWN",
+                outcome_unknown=True,
+            )
+        return ProviderSubmission(
+            provider_request_id=str(operation),
+            provider_status="queued",
+            request_metadata={"upstream_model": upstream, "gcs_prefix": parameters["storageUri"]},
+        )
+
+    @staticmethod
+    def _result_uri(data: dict[str, Any]) -> Optional[str]:
+        response = data.get("response") or {}
+        samples = response.get("generatedSamples") or response.get("videos") or []
+        if samples:
+            video = samples[0].get("video") or samples[0]
+            return video.get("uri") or video.get("gcsUri") or video.get("gcs_uri")
+        return response.get("video") or data.get("result_url")
+
+    async def retrieve(self, job: dict[str, Any]) -> ProviderStatus:
+        metadata = job.get("request_metadata") or {}
+        upstream = str(metadata.get("upstream_model") or self.upstream_model(str(job.get("model") or "")))
+        data = await _json_request(
+            "POST",
+            self._model_url(upstream, "fetchPredictOperation"),
+            headers=await VertexAdapter._vertex_headers(),
+            body={"operationName": job["provider_request_id"]},
+        )
+        if data.get("error"):
+            return ProviderStatus(
+                status="failed",
+                provider_status="failed",
+                error_code="VEO_FAILED",
+                error_message=_clean_error(data.get("error")),
+            )
+        if not data.get("done"):
+            return ProviderStatus(status="in_progress", provider_status="in_progress", progress=data.get("progress"))
+        uri = self._result_uri(data)
+        if not uri:
+            return ProviderStatus(
+                status="failed",
+                provider_status="done",
+                error_code="PROVIDER_MALFORMED_RESULT",
+                error_message="Veo completed without a video URI.",
+            )
+        return ProviderStatus(
+            status="completed",
+            provider_status="succeeded",
+            progress=100,
+            result_url=str(uri),
+            result_mime_type="video/mp4",
+        )
+
+    @staticmethod
+    def _gcs_http_url(uri: str) -> str:
+        if uri.startswith("https://"):
+            return uri
+        if not uri.startswith("gs://"):
+            raise ProviderAdapterError("Veo content URI is not a GCS object.", code="CONTENT_NOT_AVAILABLE")
+        bucket_and_key = uri[5:]
+        bucket, _, key = bucket_and_key.partition("/")
+        return f"https://storage.googleapis.com/{bucket}/{key}"
+
+    async def content(self, job: dict[str, Any]) -> ContentSource:
+        uri = str(job.get("result_url") or "")
+        if not uri:
+            raise ProviderAdapterError("Completed Veo job has no content location.", code="CONTENT_NOT_AVAILABLE")
+        url = self._gcs_http_url(uri)
+        headers = await VertexAdapter._vertex_headers()
+        maximum = int(os.environ.get("GENERATION_MAX_CONTENT_BYTES", str(2 * 1024 * 1024 * 1024)))
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(120, connect=10), follow_redirects=True) as client:
+                async with client.stream("GET", url, headers=headers) as response:
+                    if response.is_error:
+                        raise ProviderAdapterError(
+                            f"Veo content download failed (HTTP {response.status_code}).",
+                            code="CONTENT_RETRIEVAL_FAILED",
+                            retryable=True,
+                        )
+                    chunks: list[bytes] = []
+                    seen = 0
+                    async for chunk in response.aiter_bytes(1024 * 1024):
+                        seen += len(chunk)
+                        if seen > maximum:
+                            raise ProviderAdapterError("Veo content exceeds the configured size limit.", code="CONTENT_TOO_LARGE")
+                        chunks.append(chunk)
+                    content = b"".join(chunks)
+        except ProviderAdapterError:
+            raise
+        except httpx.HTTPError as exc:
+            raise ProviderAdapterError("Veo content download failed.", code="CONTENT_RETRIEVAL_FAILED", retryable=True) from exc
+        probe_media_bytes(content, suffix=".mp4")
+        return ContentSource(content=content, mime_type="video/mp4")
+
+
+_XAI = XAIAdapter()
+_BYTEPLUS = BytePlusAdapter()
+_VERTEX = VertexAdapter()
+_VERTEX_VEO_DIRECT = VertexVeoDirectAdapter()
+
 _ADAPTERS: dict[str, BaseAdapter] = {
-    "xai": XAIAdapter(),
-    "byteplus": BytePlusAdapter(),
-    "vertex": VertexAdapter(),
+    "xai": _XAI,
+    "byteplus": _BYTEPLUS,
+    "vertex": _VERTEX,
+    "xai_videos_v1": _XAI,
+    "xai_videos_v2": _XAI,
+    "byteplus_las_v1": _BYTEPLUS,
+    "byteplus_ark_v3": _BYTEPLUS,
+    "vertex_litellm_video": _VERTEX,
+    "vertex_omni_interactions": _VERTEX,
+    "vertex_veo_direct": _VERTEX_VEO_DIRECT,
+}
+
+ADAPTER_REVISIONS = {
+    "xai_videos_v1": "xai_videos_v1@2026-09-03",
+    "xai_videos_v2": "xai_videos_v2@2026-09-03",
+    "byteplus_las_v1": "byteplus_las_v1@2026-09-03",
+    "byteplus_ark_v3": "byteplus_ark_v3@2026-09-03",
+    "vertex_litellm_video": "vertex_litellm_video@2026-09-03",
+    "vertex_omni_interactions": "vertex_omni_interactions@2026-09-03",
+    "vertex_veo_direct": "vertex_veo_direct@2026-09-03",
 }
 
 
-def provider_for_model(model: str) -> str:
+def legacy_route_for_model(model: str) -> str:
     normalized = model.strip().lower()
     if normalized.startswith(("grok-video", "grok-imagine-video")):
-        return "xai"
+        return "xai_videos_v1"
+    if normalized.startswith(("seedance-2.5", "dreamina-seedance-2-5")):
+        return "byteplus_las_v1"
     if normalized.startswith(("seedance", "dreamina-seedance")):
-        return "byteplus"
+        return "byteplus_ark_v3"
     if normalized.startswith("veo-") or normalized.startswith("vertex_ai/veo-"):
-        return "vertex"
+        return "vertex_litellm_video"
     if is_gemini_omni_model(normalized):
-        return "vertex"
+        return "vertex_omni_interactions"
     raise ProviderAdapterError(
         f"Model {model!r} is not enabled for durable video jobs.", code="UNSUPPORTED_MODEL"
     )
 
 
+# Omni and Seedance 2.5 stay off this table. Veo V2 uses the same LiteLLM
+# adapter as V1 so generation keeps working without a GCS prefix.
+_V2_ROUTES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("grok-video", "grok-imagine-video"), "xai_videos_v2"),
+    (("seedance-2.0", "dreamina-seedance-2-0"), "byteplus_ark_v3"),
+    (("veo-", "vertex_ai/veo-"), "vertex_litellm_video"),
+)
+
+
+def route_for(model: str, schema_version: int = 1) -> str:
+    if int(schema_version or 1) == 1:
+        return legacy_route_for_model(model)
+    if int(schema_version) != 2:
+        raise ProviderAdapterError(
+            f"Unsupported request schema {schema_version}.", code="UNSUPPORTED_REQUEST_SCHEMA"
+        )
+    normalized = model.strip().lower()
+    for prefixes, route in _V2_ROUTES:
+        if normalized.startswith(prefixes):
+            if route not in _ADAPTERS:
+                raise ProviderAdapterError(
+                    f"Model {model!r} is not enabled for V2 durable video jobs.",
+                    code="UNSUPPORTED_MODEL",
+                )
+            return route
+    raise ProviderAdapterError(
+        f"Model {model!r} is not enabled for V2 durable video jobs.", code="UNSUPPORTED_MODEL"
+    )
+
+
+def provider_for_model(model: str) -> str:
+    route = legacy_route_for_model(model)
+    if route.startswith("xai_"):
+        return "xai"
+    if route.startswith("byteplus_"):
+        return "byteplus"
+    return "vertex"
+
+
 def adapter_for(provider: str) -> BaseAdapter:
+    """V1 shim: provider enum still maps to the legacy adapter instance."""
     return _ADAPTERS[provider]
+
+
+def adapter_for_route(provider_route: str) -> BaseAdapter:
+    if provider_route not in _ADAPTERS:
+        raise ProviderAdapterError(
+            f"Unknown provider route {provider_route!r}.", code="UNSUPPORTED_MODEL"
+        )
+    return _ADAPTERS[provider_route]
+
+
+def adapter_for_job(job: dict[str, Any]) -> BaseAdapter:
+    route = str(job.get("provider_route") or "")
+    if route:
+        return adapter_for_route(route)
+    return adapter_for(str(job.get("provider") or ""))

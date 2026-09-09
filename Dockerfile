@@ -2,6 +2,10 @@ FROM ghcr.io/berriai/litellm:v1.95.0@sha256:50e647bd5ee32010317378335d5830dbbcd7
 
 WORKDIR /app
 
+# LiteLLM 1.95 is Wolfi (apk), not Debian. ffprobe is optional at runtime
+# (adapters return {} when it is missing) but Veo media inspection uses it.
+RUN apk add --no-cache ffmpeg
+
 COPY requirements.txt /app/requirements.txt
 RUN python -m ensurepip && python -m pip install --no-cache-dir -r /app/requirements.txt
 

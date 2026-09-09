@@ -1,8 +1,10 @@
+import json
 import os
 import base64
 import struct
 import unittest
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from fastapi import BackgroundTasks, HTTPException
@@ -13,13 +15,15 @@ from generation_job_adapters import (
     BytePlusAdapter,
     ProviderAdapterError,
     VertexAdapter,
+    VertexVeoDirectAdapter,
     XAIAdapter,
     _json_request,
     _validate_public_https_url,
     provider_for_model,
+    route_for,
 )
-from generation_job_models import GenerationJobCreate, safe_client_metadata
-from generation_job_routes import _is_compatible_omni_previous_job
+from generation_job_models import GenerationJobCreate, GenerationJobCreateV2, safe_client_metadata
+from generation_job_routes import _hash_request, _hash_request_v2, _is_compatible_omni_previous_job, _parse_request
 from generation_job_scheduler import enqueue_poll, next_poll_time
 
 
@@ -61,6 +65,20 @@ class GenerationJobModelTests(unittest.TestCase):
         self.assertEqual(provider_for_model("seedance-2.0"), "byteplus")
         self.assertEqual(provider_for_model("seedance-2.5"), "byteplus")
         self.assertEqual(provider_for_model("veo-3.1-fast"), "vertex")
+        self.assertEqual(route_for("grok-video-1.5", 1), "xai_videos_v1")
+        self.assertEqual(route_for("seedance-2.5", 1), "byteplus_las_v1")
+        self.assertEqual(route_for("seedance-2.0", 1), "byteplus_ark_v3")
+        self.assertEqual(route_for("veo-3.1-fast", 1), "vertex_litellm_video")
+        self.assertEqual(route_for("gemini-omni-flash", 1), "vertex_omni_interactions")
+        self.assertEqual(route_for("grok-video-1.5", 2), "xai_videos_v2")
+        self.assertEqual(route_for("seedance-2.0", 2), "byteplus_ark_v3")
+        self.assertEqual(route_for("veo-3.1-fast", 2), "vertex_litellm_video")
+        with self.assertRaises(ProviderAdapterError) as raised:
+            route_for("gemini-omni-flash", 2)
+        self.assertEqual(raised.exception.code, "UNSUPPORTED_MODEL")
+        with self.assertRaises(ProviderAdapterError) as seedance_25:
+            route_for("seedance-2.5", 2)
+        self.assertEqual(seedance_25.exception.code, "UNSUPPORTED_MODEL")
         for model in (
             "gemini-omni-flash",
             "gemini-omni-flash-preview",
@@ -115,6 +133,116 @@ class GenerationJobModelTests(unittest.TestCase):
             ),
             {"source": "experience_runner", "run_id": "run_1"},
         )
+
+
+FIXTURES_V1 = Path(__file__).resolve().parent / "fixtures" / "generation_jobs_v1"
+FIXTURES_V2 = Path(__file__).resolve().parent / "fixtures" / "generation_jobs_v2"
+GROK_V2_GOLDEN = "gj2:021158aa5b5e9bc8bcb77ab092977ed7ce7d4a76580097eaa04f05786581c370"
+
+
+class GenerationJobHashTests(unittest.TestCase):
+    def test_v1_fixtures_reproduce_frozen_hashes(self):
+        files = sorted(FIXTURES_V1.glob("*.json"))
+        self.assertGreaterEqual(len(files), 4)
+        for path in files:
+            record = json.loads(path.read_text())
+            payload = GenerationJobCreate.model_validate(record["body"])
+            self.assertEqual(_hash_request(payload, {}), record["request_hash"], path.name)
+
+    def test_v2_grok_text_hash_is_pinned(self):
+        record = json.loads((FIXTURES_V2 / "grok_video_15_text.json").read_text())
+        payload = GenerationJobCreateV2.model_validate(record["body"])
+        digest = _hash_request_v2(payload, {})
+        self.assertEqual(digest, GROK_V2_GOLDEN)
+        self.assertEqual(digest, record["request_hash"])
+        self.assertTrue(digest.startswith("gj2:"))
+
+
+class GenerationJobV2ParseTests(unittest.IsolatedAsyncioTestCase):
+    @staticmethod
+    def _json_request(body: dict) -> Request:
+        encoded = json.dumps(body).encode()
+
+        async def receive():
+            return {"type": "http.request", "body": encoded, "more_body": False}
+
+        return Request(
+            {
+                "type": "http",
+                "asgi": {"spec_version": "2.3", "version": "3.0"},
+                "http_version": "1.1",
+                "method": "POST",
+                "scheme": "http",
+                "path": "/v1/generation-jobs",
+                "raw_path": b"/v1/generation-jobs",
+                "query_string": b"",
+                "headers": [(b"content-type", b"application/json"), (b"host", b"test")],
+                "client": ("127.0.0.1", 123),
+                "server": ("test", 80),
+            },
+            receive,
+        )
+
+    async def test_v2_grok_validates_and_hashes(self):
+        body = json.loads((FIXTURES_V2 / "grok_video_15_text.json").read_text())["body"]
+        payload, uploads = await _parse_request(self._json_request(body))
+        self.assertIsInstance(payload, GenerationJobCreateV2)
+        self.assertEqual(_hash_request_v2(payload, uploads), GROK_V2_GOLDEN)
+        self.assertEqual(route_for(payload.model, 2), "xai_videos_v2")
+
+    async def test_schema_3_is_unsupported(self):
+        with self.assertRaises(HTTPException) as raised:
+            await _parse_request(self._json_request({"request_schema_version": 3, "model": "grok-video-1.5"}))
+        self.assertEqual(raised.exception.status_code, 422)
+        self.assertEqual(raised.exception.detail["code"], "UNSUPPORTED_REQUEST_SCHEMA")
+
+    async def test_v2_omni_has_no_route(self):
+        body = {
+            "request_schema_version": 2,
+            "model": "gemini-omni-flash",
+            "contract_revision": "1",
+            "profile_id": "generate.text",
+            "operation": "generate",
+            "prompt": "hello",
+        }
+        payload, _uploads = await _parse_request(self._json_request(body))
+        with self.assertRaises(ProviderAdapterError) as raised:
+            route_for(payload.model, 2)
+        self.assertEqual(raised.exception.code, "UNSUPPORTED_MODEL")
+
+
+class VertexVeoDirectAdapterTests(unittest.IsolatedAsyncioTestCase):
+    async def test_submit_sends_predict_long_running_camel_case(self):
+        request = GenerationJobCreateV2(
+            request_schema_version=2,
+            model="veo-3.1-fast",
+            contract_revision="1",
+            profile_id="generate.text",
+            operation="generate",
+            prompt="sunlit conservatory",
+            settings={"resolution": "1080p", "duration": 8, "aspectRatio": "16:9", "generateAudio": True},
+        )
+        mocked = AsyncMock(return_value={"name": "projects/p/locations/us-central1/operations/op1"})
+        with patch.dict(
+            os.environ,
+            {
+                "GOOGLE_CLOUD_PROJECT": "p",
+                "VERTEX_LOCATION": "us-central1",
+                "VEO_OUTPUT_GCS_PREFIX": "gs://ml-veo-scratch/jobs",
+            },
+        ), patch(
+            "generation_job_adapters.VertexAdapter._vertex_headers",
+            new=AsyncMock(return_value={"Authorization": "Bearer t", "Content-Type": "application/json"}),
+        ), patch("generation_job_adapters._json_request", new=mocked):
+            result = await VertexVeoDirectAdapter().submit(request, job_id="gen_veo", callback_url=None)
+        self.assertEqual(result.provider_request_id, "projects/p/locations/us-central1/operations/op1")
+        url = mocked.await_args.args[1]
+        self.assertIn(":predictLongRunning", url)
+        body = mocked.await_args.kwargs["body"]
+        self.assertEqual(body["parameters"]["aspectRatio"], "16:9")
+        self.assertEqual(body["parameters"]["resolution"], "1080p")
+        self.assertEqual(body["parameters"]["generateAudio"], True)
+        self.assertEqual(body["parameters"]["storageUri"], "gs://ml-veo-scratch/jobs/gen_veo/")
 
 
 class GenerationJobSchedulerTests(unittest.IsolatedAsyncioTestCase):
@@ -636,6 +764,36 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status.status, "completed")
         self.assertEqual(status.cost_usd, 0.25)
         self.assertEqual(content.content, b"mp4-bytes")
+
+    async def test_omni_retrieve_preserves_vertex_plural_errors(self):
+        data = {
+            "id": "v1_blocked",
+            "status": "failed",
+            "errors": [{
+                "code": "content_blocked",
+                "message": "The input violates Google's Responsible AI practices.",
+            }],
+        }
+        job = {
+            "model": "gemini-omni-1.1-flash",
+            "provider_request_id": "v1_blocked",
+            "request_metadata": {"upstream_model": "gemini-omni-1.1-flash-preview"},
+        }
+        adapter = VertexAdapter()
+        with patch.dict(os.environ, {"GOOGLE_CLOUD_PROJECT": "project-1"}), patch.object(
+            adapter, "_vertex_headers", new=AsyncMock(return_value={"Authorization": "Bearer token"})
+        ), patch(
+            "generation_job_adapters._json_request", new=AsyncMock(return_value=data)
+        ):
+            status = await adapter.retrieve(job)
+
+        self.assertEqual(status.status, "failed")
+        self.assertEqual(status.provider_status, "failed")
+        self.assertEqual(status.error_code, "content_blocked")
+        self.assertEqual(
+            status.error_message,
+            "The input violates Google's Responsible AI practices.",
+        )
 
     async def test_omni_content_rejects_oversized_inline_video(self):
         data = {

@@ -87,3 +87,38 @@ to use Cloud Tasks and its configured internal authentication.
 - A paid generation is never resubmitted unless the provider definitively rejected submission.
 - `SUBMISSION_OUTCOME_UNKNOWN` is terminal and requires operator reconciliation.
 - The default deadline is two hours, followed by one final provider status request.
+
+## Request schema version
+
+Absence of `request_schema_version` is V1. `2` selects `GenerationJobCreateV2`. Any other
+value is `422 UNSUPPORTED_REQUEST_SCHEMA`. V1 `GenerationJobCreate` is frozen; do not add
+fields to it. V2 hashes as `gj2:` plus SHA-256 of the canonical dump and sorted upload
+triples. Changing that string is a schema-version bump.
+
+V2 submissions are accepted for models with a V2 route (Grok, Seedance 2.0/fast,
+and Veo). Gemini Omni Flash has no V2 route. Seedance 2.5 has no V2 route.
+Seedance 2.5 has no V2 route until its exact LAS routes are certified.
+
+Each job row stores `request_schema_version`, `provider_route`, and `adapter_revision`.
+Retrieve and content dispatch on the persisted `provider_route`, never on the current
+model alias. In-flight V1 Veo jobs keep `vertex_litellm_video`. Live V2 Veo uses the
+same LiteLLM Vertex adapter after a V2-to-V1 translation so generation keeps working.
+`vertex_veo_direct` (`predictLongRunning` with ADC, camelCase parameters, and
+`VEO_OUTPUT_GCS_PREFIX`) is implemented and unit-tested; it is not the live Veo
+route. Apply a GCS object lifecycle of 30 days or less (ADR-001) and
+grant the Gateway service account `storage.objects.create` and `storage.objects.get` on
+that prefix before pointing any job at `vertex_veo_direct`. Gateway `SEEDANCE_2_5_PRICE_PER_SECOND_*` values are cost evidence, not
+MagicLens quotes.
+
+## Provider routes
+
+| Route | Used for |
+|---|---|
+| `xai_videos_v1` | V1 Grok jobs |
+| `xai_videos_v2` | V2 Grok jobs |
+| `byteplus_ark_v3` | Seedance 2.0 / 2.0-fast |
+| `byteplus_las_v1` | Seedance 2.5 (disabled contract) |
+| `vertex_litellm_video` | V1 and live V2 Veo via LiteLLM |
+| `vertex_veo_direct` | Implemented Vertex `predictLongRunning` adapter; not the live Veo route |
+| `vertex_omni_interactions` | Gemini Omni Flash |
+

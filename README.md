@@ -124,6 +124,7 @@ Then configure environment variables (via `gcloud run services update` or the co
 - Any optional `VERTEXAI_*` / `ELEVENLABS_*` vars you still use elsewhere
 
 `./deploy_cloud_run.sh` binds required secrets explicitly with `--set-secrets`
+(including `SEEDANCE_2_5_API_KEY`)
 and fails before build/deploy if `.env` contains the same database URL as the
 production `DATABASE_URL` secret.
 

@@ -2,7 +2,7 @@ model_list:
   # ── OpenAI ───────────────────────────────────────────────────────────────
   - model_name: gpt-latest
     litellm_params:
-      model: openai/gpt-5.5
+      model: openai/gpt-6-astra
       api_key: os.environ/OPENAI_API_KEY
 
   - model_name: gpt-5.5
@@ -15,6 +15,12 @@ model_list:
       model: openai/gpt-5.5
       api_key: os.environ/OPENAI_API_KEY
       reasoning_effort: high
+
+  # Adding Astra
+  - model_name: gpt-6-astra
+    litellm_params:
+      model: openai/gpt-6-astra
+      api_key: os.environ/OPENAI_API_KEY
 
   # Fixed-effort GPT-5.6 aliases. gateway_request_policy.py prevents callers
   # from overriding the effort encoded by the public alias.

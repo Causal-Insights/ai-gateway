@@ -79,6 +79,116 @@ class GenerationJobCreate(BaseModel):
         return {str(key): str(item) for key, item in value.items()}
 
 
+class MediaInputV2(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slot_id: str = Field(min_length=1, max_length=100)
+    index: int = Field(default=0, ge=0, le=30)
+    kind: Literal["image", "video", "audio"]
+    role: Literal["first_frame", "last_frame", "reference", "source", "reference_video", "reference_audio"] = "reference"
+    url: Optional[str] = None
+    upload_field: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_source(self) -> "MediaInputV2":
+        if bool(self.url) == bool(self.upload_field):
+            raise ValueError("media input requires exactly one of url or upload_field")
+        if self.url and not self.url.startswith("https://"):
+            raise ValueError("media input url must use https://; use multipart for inline media")
+        return self
+
+
+class GenerationJobCreateV2(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    request_schema_version: Literal[2]
+    model: str = Field(min_length=1, max_length=200)
+    contract_revision: str = Field(min_length=1, max_length=200)
+    profile_id: str = Field(min_length=1, max_length=200)
+    operation: Literal["generate", "edit", "extend"]
+    prompt: str = Field(default="", max_length=100_000)
+    settings: dict[str, Any] = Field(default_factory=dict)
+    media: list[MediaInputV2] = Field(default_factory=list, max_length=30)
+    voice_ids: list[str] = Field(default_factory=list, max_length=3)
+    previous_job_id: Optional[str] = Field(default=None, min_length=5, max_length=200)
+    metadata: dict[str, str] = Field(default_factory=dict)
+    _previous_interaction_id: Optional[str] = PrivateAttr(default=None)
+
+    @field_validator("model")
+    @classmethod
+    def normalize_model(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("profile_id")
+    @classmethod
+    def validate_profile_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if "." not in normalized:
+            raise ValueError("profile_id must be operation.topology")
+        return normalized
+
+    @field_validator("settings")
+    @classmethod
+    def validate_settings(cls, value: dict[str, Any]) -> dict[str, Any]:
+        allowed = {
+            "resolution", "duration", "aspectRatio", "aspect_ratio", "generateAudio",
+            "generate_audio", "renderQuality", "render_quality", "frameRate", "frame_rate",
+            "outputCount", "output_count"
+        }
+        extra = [key for key in value if key not in allowed]
+        if extra:
+            raise ValueError(f"unsupported V2 settings: {', '.join(extra)}")
+        if len(value) > 20:
+            raise ValueError("settings supports at most 20 entries")
+        return value
+
+    @field_validator("voice_ids")
+    @classmethod
+    def validate_voice_ids(cls, value: list[str]) -> list[str]:
+        normalized = [str(item).strip().lower() for item in value]
+        if any(not item or len(item) > 100 for item in normalized):
+            raise ValueError("voice IDs must contain 1 to 100 characters")
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("voice IDs must be unique")
+        return normalized
+
+    @field_validator("metadata")
+    @classmethod
+    def validate_metadata(cls, value: dict[str, str]) -> dict[str, str]:
+        if len(value) > 20:
+            raise ValueError("metadata supports at most 20 entries")
+        for key, item in value.items():
+            if len(key) > 100 or len(str(item)) > 500:
+                raise ValueError("metadata keys and values are too long")
+        return {str(key): str(item) for key, item in value.items()}
+
+
+def v2_to_v1(payload: GenerationJobCreateV2) -> GenerationJobCreate:
+    """Translate a V2 body onto the frozen V1 model for adapters that still speak V1."""
+    media = []
+    for item in payload.media:
+        kind = item.kind if item.kind in {"image", "video"} else "video"
+        role = item.role if item.role in {"first_frame", "last_frame", "reference", "source"} else "reference"
+        media.append(MediaInput(type=kind, role=role, url=item.url, upload_field=item.upload_field))
+    settings = payload.settings or {}
+    duration = settings.get("duration")
+    duration_seconds = int(duration) if isinstance(duration, (int, float)) and duration else None
+    generate_audio = settings.get("generateAudio", settings.get("generate_audio", False))
+    return GenerationJobCreate(
+        model=payload.model,
+        operation=payload.operation,
+        previous_job_id=payload.previous_job_id,
+        reference_voice_ids=payload.voice_ids,
+        prompt=payload.prompt,
+        duration_seconds=duration_seconds,
+        resolution=str(settings["resolution"]) if settings.get("resolution") else None,
+        aspect_ratio=str(settings.get("aspectRatio") or settings.get("aspect_ratio") or "") or None,
+        generate_audio=bool(generate_audio),
+        media_inputs=media,
+        metadata=payload.metadata,
+    )
+
+
 class JobError(BaseModel):
     code: str
     message: str

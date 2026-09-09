@@ -68,11 +68,13 @@ class GenerationJobRepository:
 
     async def _migrate(self) -> None:
         assert self._pool is not None
-        migration = Path(__file__).with_name("migrations").joinpath("001_generation_jobs.sql").read_text()
+        migrations_dir = Path(__file__).with_name("migrations")
+        files = sorted(migrations_dir.glob("*.sql"))
         async with self._pool.acquire() as conn:
             async with conn.transaction():
                 await conn.execute("select pg_advisory_xact_lock($1)", 7_451_913_701)
-                await conn.execute(migration)
+                for path in files:
+                    await conn.execute(path.read_text())
 
     async def create_or_get(
         self,
@@ -88,6 +90,9 @@ class GenerationJobRepository:
         request_metadata: dict,
         deadline_at: datetime,
         callback_token_hash: Optional[str],
+        request_schema_version: int = 1,
+        provider_route: Optional[str] = None,
+        adapter_revision: Optional[str] = None,
     ) -> tuple[dict, bool, bool]:
         pool = await self.pool()
         async with pool.acquire() as conn:
@@ -97,8 +102,8 @@ class GenerationJobRepository:
                     insert into gateway_generation_jobs (
                       id, owner_key_hash, owner_context, idempotency_key, request_hash,
                       modality, model, provider, status, request_metadata, deadline_at,
-                      callback_token_hash
-                    ) values ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,'submitting',$9::jsonb,$10,$11)
+                      callback_token_hash, request_schema_version, provider_route, adapter_revision
+                    ) values ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,'submitting',$9::jsonb,$10,$11,$12,$13,$14)
                     on conflict (owner_key_hash, idempotency_key) do nothing
                     returning *
                     """,
@@ -113,6 +118,9 @@ class GenerationJobRepository:
                     _json(request_metadata),
                     deadline_at,
                     callback_token_hash,
+                    request_schema_version,
+                    provider_route,
+                    adapter_revision,
                 )
                 if row:
                     return _row(row) or {}, True, False
