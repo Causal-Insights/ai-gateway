@@ -143,9 +143,13 @@ provider identities are unchanged.
 `tests/fixtures/generation_jobs_v2/grok_video_15_profiles.json` is the literal
 MagicLens compiler output for these profiles; `tests/test_grok_video_v2.py`
 checks the exact provider request and rejects invalid requests without network
-calls. This source change and its offline tests do not establish deployment or
-paid staging evidence. Release the tested Gateway before verifying it through a
-connected MagicLens Studio.
+calls. The combined Grok/Seedance correction was deployed to dev September 10 from
+commit `fbf6dff0e9ccf4071f3d320becd1b850b3a9aeaf`, revision
+`ai-gateway-proxy-video-fbf6dff`, image digest
+`sha256:d2cbb5f421aa476570c7be219fecc5b77ee90a584255d1704f6ec36f84e4f66c`.
+Candidate and post-promotion checks verified exact image/configuration, sole
+traffic, health, aliases and invalid-contract rejection. Paid output evidence
+is separate; this release does not deploy MagicLens application changes.
 
 ## Seedance 2.0 registered V2 profiles
 
@@ -172,8 +176,9 @@ provider cost. Customer quotes remain owned by MagicLens's existing registry.
 `tests/fixtures/generation_jobs_v2/seedance_20_profiles.json` matches the MagicLens
 compiler goldens for all eight model/profile combinations.
 `tests/test_seedance_video_v2.py` verifies provider requests, rejection, source
-format preservation, retry identity, polling and cost. This is local evidence;
-release and paid dev verification are still pending.
+format preservation, retry identity, polling and cost. The combined September 10
+Gateway revision above is deployed and verified. Paid output checks are tracked
+separately in the MagicLens video capability contract.
 
 Official sources rechecked September 10, 2026:
 - https://docs.byteplus.com/en/docs/ModelArk/2291680
