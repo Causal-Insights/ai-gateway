@@ -20,6 +20,9 @@ from urllib.parse import unquote, urljoin, urlsplit
 
 import httpx
 
+from grok_video_contract import validate_grok_video_v2
+from seedance_video_contract import validate_seedance_video_v2, seedance_provider_body, source_resolution
+
 from generation_job_models import (
     GenerationJobCreate,
     GenerationJobCreateV2,
@@ -319,6 +322,12 @@ class XAIAdapter(BaseAdapter):
         return {"file_id": str(file_id)}
 
     async def submit(self, request: Union[GenerationJobCreate, GenerationJobCreateV2], *, job_id: str, callback_url: Optional[str], upload_bytes=None) -> ProviderSubmission:
+        grok15_v2 = isinstance(request, GenerationJobCreateV2) and request.model == "grok-video-1.5"
+        if grok15_v2:
+            try:
+                validate_grok_video_v2(request)
+            except ValueError as exc:
+                raise ProviderAdapterError(str(exc), code="INVALID_VIDEO_CONTRACT") from exc
         request = _as_v1_request(request)
         api_key = os.environ.get("GROK_API_KEY")
         if not api_key:
@@ -349,6 +358,8 @@ class XAIAdapter(BaseAdapter):
                 "Preset voice references require grok-video-1.5.", code="CAPABILITY_NOT_SUPPORTED"
             )
         payload: dict[str, Any] = {"model": upstream_model}
+        if grok15_v2:
+            payload["generate_audio"] = request.generate_audio
         if request.prompt:
             payload["prompt"] = request.prompt
         if videos:
@@ -608,7 +619,35 @@ class BytePlusAdapter(BaseAdapter):
             return "reference_image"
         return role
 
+    async def _submit_v2(self, request: GenerationJobCreateV2, *, job_id: str, callback_url: Optional[str]) -> ProviderSubmission:
+        try:
+            validate_seedance_video_v2(request)
+        except ValueError as exc:
+            raise ProviderAdapterError(str(exc), code="INVALID_VIDEO_CONTRACT") from exc
+        source_tier = None
+        if request.operation == "edit":
+            source = next(item for item in request.media if item.slot_id == "sourceVideo")
+            filename, content, _mime = await _download_media(source.url)
+            probe = await asyncio.to_thread(probe_media_bytes, content, PurePosixPath(filename).suffix or ".mp4")
+            try:
+                source_tier = source_resolution(request.model, probe)
+            except ValueError as exc:
+                raise ProviderAdapterError(str(exc), code="INVALID_MEDIA_INPUT") from exc
+        body = seedance_provider_body(request, job_id=job_id, source_tier=source_tier)
+        if callback_url:
+            body["callback_url"] = callback_url
+        data = await _json_request("POST", f"{self._base(request.model)}/contents/generations/tasks",
+                                   headers=self._headers(request.model), body=body, submission=True)
+        if not data.get("id"):
+            raise ProviderAdapterError("BytePlus accepted the request without returning a task ID.",
+                                       code="SUBMISSION_OUTCOME_UNKNOWN", outcome_unknown=True)
+        return ProviderSubmission(provider_request_id=str(data["id"]), provider_status=str(data.get("status") or "queued"),
+                                  request_metadata={"upstream_model": body["model"], "has_input_video": request.operation == "edit",
+                                                    "duration_seconds": body["duration"], "resolution": body["resolution"]})
+
     async def submit(self, request: Union[GenerationJobCreate, GenerationJobCreateV2], *, job_id: str, callback_url: Optional[str], upload_bytes=None) -> ProviderSubmission:
+        if isinstance(request, GenerationJobCreateV2):
+            return await self._submit_v2(request, job_id=job_id, callback_url=callback_url)
         request = _as_v1_request(request)
         if not request.prompt.strip():
             raise ProviderAdapterError("Seedance requires a non-empty prompt.", code="INVALID_REQUEST")
@@ -708,7 +747,10 @@ class BytePlusAdapter(BaseAdapter):
         if is_fast:
             rate = float(os.environ.get("SEEDANCE_PRICE_PER_MTOK_FAST_VIDEO" if has_video else "SEEDANCE_PRICE_PER_MTOK_FAST", "3.30" if has_video else "5.60"))
         else:
-            rate = float(os.environ.get("SEEDANCE_PRICE_PER_MTOK_VIDEO" if has_video else "SEEDANCE_PRICE_PER_MTOK", "4.30" if has_video else "7.00"))
+            resolution = str(data.get("resolution") or metadata.get("resolution") or "480p").lower()
+            suffix = "_1080P" if resolution == "1080p" else ""
+            rate = float(os.environ.get(("SEEDANCE_PRICE_PER_MTOK_VIDEO" if has_video else "SEEDANCE_PRICE_PER_MTOK") + suffix,
+                                        ("4.70" if has_video else "7.70") if suffix else ("4.30" if has_video else "7.00")))
         return tokens * rate / 1_000_000.0
 
     async def retrieve(self, job: dict[str, Any]) -> ProviderStatus:

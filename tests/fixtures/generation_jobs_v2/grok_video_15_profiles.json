@@ -1,0 +1,87 @@
+[
+  {
+    "name": "text",
+    "body": {
+      "request_schema_version": 2,
+      "model": "grok-video-1.5",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "generate.text",
+      "operation": "generate",
+      "prompt": "A paper boat floats across a pond.",
+      "settings": {
+        "resolution": "480p",
+        "duration": 1,
+        "aspectRatio": "16:9",
+        "generateAudio": true
+      },
+      "media": [],
+      "voice_ids": [
+        "eve"
+      ]
+    }
+  },
+  {
+    "name": "first_frame",
+    "body": {
+      "request_schema_version": 2,
+      "model": "grok-video-1.5",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "generate.first_frame",
+      "operation": "generate",
+      "prompt": "A paper boat floats across a pond.",
+      "settings": {
+        "resolution": "480p",
+        "duration": 1,
+        "generateAudio": true
+      },
+      "media": [
+        {
+          "slot_id": "firstFrame",
+          "index": 0,
+          "kind": "image",
+          "role": "first_frame",
+          "url": "https://assets.example.test/image-0.png"
+        }
+      ],
+      "voice_ids": [
+        "eve"
+      ]
+    }
+  },
+  {
+    "name": "references",
+    "body": {
+      "request_schema_version": 2,
+      "model": "grok-video-1.5",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "generate.references",
+      "operation": "generate",
+      "prompt": "A paper boat floats across a pond.",
+      "settings": {
+        "resolution": "480p",
+        "duration": 1,
+        "aspectRatio": "16:9",
+        "generateAudio": true
+      },
+      "media": [
+        {
+          "slot_id": "referenceImage",
+          "index": 0,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/image-0.png"
+        },
+        {
+          "slot_id": "referenceImage",
+          "index": 1,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/image-1.png"
+        }
+      ],
+      "voice_ids": [
+        "eve"
+      ]
+    }
+  }
+]

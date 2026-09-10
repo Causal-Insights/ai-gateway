@@ -1,0 +1,300 @@
+[
+  {
+    "modelKey": "seedance-2.0",
+    "profile": "generate.text",
+    "settings": {
+      "operation": "generate",
+      "inputMode": "text",
+      "duration": "4s",
+      "generateAudio": false,
+      "resolution": "720p",
+      "aspectRatio": "16:9"
+    },
+    "body": {
+      "request_schema_version": 2,
+      "model": "seedance-2.0",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "generate.text",
+      "operation": "generate",
+      "prompt": "A paper boat floats across calm water.",
+      "settings": {
+        "resolution": "720p",
+        "duration": 4,
+        "aspectRatio": "16:9",
+        "generateAudio": false
+      },
+      "media": []
+    }
+  },
+  {
+    "modelKey": "seedance-2.0",
+    "profile": "generate.first_frame",
+    "settings": {
+      "operation": "generate",
+      "inputMode": "first_frame",
+      "duration": "4s",
+      "generateAudio": false,
+      "resolution": "720p",
+      "aspectRatio": "16:9"
+    },
+    "body": {
+      "request_schema_version": 2,
+      "model": "seedance-2.0",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "generate.first_frame",
+      "operation": "generate",
+      "prompt": "A paper boat floats across calm water.",
+      "settings": {
+        "resolution": "720p",
+        "duration": 4,
+        "aspectRatio": "16:9",
+        "generateAudio": false
+      },
+      "media": [
+        {
+          "slot_id": "firstFrame",
+          "index": 0,
+          "kind": "image",
+          "role": "first_frame",
+          "url": "https://assets.example.test/firstFrame-0.png"
+        }
+      ]
+    }
+  },
+  {
+    "modelKey": "seedance-2.0",
+    "profile": "generate.references",
+    "settings": {
+      "operation": "generate",
+      "inputMode": "references",
+      "duration": "4s",
+      "generateAudio": false,
+      "resolution": "720p",
+      "aspectRatio": "16:9"
+    },
+    "body": {
+      "request_schema_version": 2,
+      "model": "seedance-2.0",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "generate.references",
+      "operation": "generate",
+      "prompt": "A paper boat floats across calm water.",
+      "settings": {
+        "resolution": "720p",
+        "duration": 4,
+        "aspectRatio": "16:9",
+        "generateAudio": false
+      },
+      "media": [
+        {
+          "slot_id": "referenceImage",
+          "index": 0,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/referenceImage-0.png"
+        },
+        {
+          "slot_id": "referenceImage",
+          "index": 1,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/referenceImage-1.png"
+        }
+      ]
+    }
+  },
+  {
+    "modelKey": "seedance-2.0",
+    "profile": "edit.source_video",
+    "settings": {
+      "operation": "edit",
+      "inputMode": "source_video",
+      "duration": "4s",
+      "generateAudio": false
+    },
+    "body": {
+      "request_schema_version": 2,
+      "model": "seedance-2.0",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "edit.source_video",
+      "operation": "edit",
+      "prompt": "Replace the subject in [Video 1] using [Image 1].",
+      "settings": {
+        "duration": 4,
+        "generateAudio": false
+      },
+      "media": [
+        {
+          "slot_id": "sourceVideo",
+          "index": 0,
+          "kind": "video",
+          "role": "source",
+          "url": "https://assets.example.test/sourceVideo-0.mp4"
+        },
+        {
+          "slot_id": "referenceImage",
+          "index": 0,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/referenceImage-0.png"
+        },
+        {
+          "slot_id": "referenceImage",
+          "index": 1,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/referenceImage-1.png"
+        }
+      ]
+    }
+  },
+  {
+    "modelKey": "seedance-2.0-fast",
+    "profile": "generate.text",
+    "settings": {
+      "operation": "generate",
+      "inputMode": "text",
+      "duration": "4s",
+      "generateAudio": false,
+      "resolution": "720p",
+      "aspectRatio": "16:9"
+    },
+    "body": {
+      "request_schema_version": 2,
+      "model": "seedance-2.0-fast",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "generate.text",
+      "operation": "generate",
+      "prompt": "A paper boat floats across calm water.",
+      "settings": {
+        "resolution": "720p",
+        "duration": 4,
+        "aspectRatio": "16:9",
+        "generateAudio": false
+      },
+      "media": []
+    }
+  },
+  {
+    "modelKey": "seedance-2.0-fast",
+    "profile": "generate.first_frame",
+    "settings": {
+      "operation": "generate",
+      "inputMode": "first_frame",
+      "duration": "4s",
+      "generateAudio": false,
+      "resolution": "720p",
+      "aspectRatio": "16:9"
+    },
+    "body": {
+      "request_schema_version": 2,
+      "model": "seedance-2.0-fast",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "generate.first_frame",
+      "operation": "generate",
+      "prompt": "A paper boat floats across calm water.",
+      "settings": {
+        "resolution": "720p",
+        "duration": 4,
+        "aspectRatio": "16:9",
+        "generateAudio": false
+      },
+      "media": [
+        {
+          "slot_id": "firstFrame",
+          "index": 0,
+          "kind": "image",
+          "role": "first_frame",
+          "url": "https://assets.example.test/firstFrame-0.png"
+        }
+      ]
+    }
+  },
+  {
+    "modelKey": "seedance-2.0-fast",
+    "profile": "generate.references",
+    "settings": {
+      "operation": "generate",
+      "inputMode": "references",
+      "duration": "4s",
+      "generateAudio": false,
+      "resolution": "720p",
+      "aspectRatio": "16:9"
+    },
+    "body": {
+      "request_schema_version": 2,
+      "model": "seedance-2.0-fast",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "generate.references",
+      "operation": "generate",
+      "prompt": "A paper boat floats across calm water.",
+      "settings": {
+        "resolution": "720p",
+        "duration": 4,
+        "aspectRatio": "16:9",
+        "generateAudio": false
+      },
+      "media": [
+        {
+          "slot_id": "referenceImage",
+          "index": 0,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/referenceImage-0.png"
+        },
+        {
+          "slot_id": "referenceImage",
+          "index": 1,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/referenceImage-1.png"
+        }
+      ]
+    }
+  },
+  {
+    "modelKey": "seedance-2.0-fast",
+    "profile": "edit.source_video",
+    "settings": {
+      "operation": "edit",
+      "inputMode": "source_video",
+      "duration": "4s",
+      "generateAudio": false
+    },
+    "body": {
+      "request_schema_version": 2,
+      "model": "seedance-2.0-fast",
+      "contract_revision": "video-contract-v2-2026-09-03",
+      "profile_id": "edit.source_video",
+      "operation": "edit",
+      "prompt": "Replace the subject in [Video 1] using [Image 1].",
+      "settings": {
+        "duration": 4,
+        "generateAudio": false
+      },
+      "media": [
+        {
+          "slot_id": "sourceVideo",
+          "index": 0,
+          "kind": "video",
+          "role": "source",
+          "url": "https://assets.example.test/sourceVideo-0.mp4"
+        },
+        {
+          "slot_id": "referenceImage",
+          "index": 0,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/referenceImage-0.png"
+        },
+        {
+          "slot_id": "referenceImage",
+          "index": 1,
+          "kind": "image",
+          "role": "reference",
+          "url": "https://assets.example.test/referenceImage-1.png"
+        }
+      ]
+    }
+  }
+]

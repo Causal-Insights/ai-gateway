@@ -18,6 +18,8 @@ COPY legacy_usage.py /app/legacy_usage.py
 COPY custom_handler_xai.py /app/custom_handler_xai.py
 COPY custom_handler_seedance.py /app/custom_handler_seedance.py
 COPY custom_handler_seedream.py /app/custom_handler_seedream.py
+COPY grok_video_contract.py /app/grok_video_contract.py
+COPY seedance_video_contract.py /app/seedance_video_contract.py
 COPY generation_job_models.py /app/generation_job_models.py
 COPY generation_job_repository.py /app/generation_job_repository.py
 COPY generation_job_adapters.py /app/generation_job_adapters.py

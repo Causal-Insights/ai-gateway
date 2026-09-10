@@ -29,6 +29,9 @@ from generation_job_adapters import (
     provider_for_model,
     route_for,
 )
+from grok_video_contract import validate_grok_video_v2, ADAPTER_REVISION as GROK15_ADAPTER_REVISION
+from seedance_video_contract import MODELS as SEEDANCE20_MODELS, validate_seedance_video_v2, ADAPTER_REVISION as SEEDANCE20_ADAPTER_REVISION
+
 from generation_job_models import (
     GenerationJobCreate,
     GenerationJobCreateV2,
@@ -285,6 +288,16 @@ async def create_generation_job(
 ) -> GenerationJobResponse:
     payload, uploads = await _parse_request(request)
     schema_version = 2 if isinstance(payload, GenerationJobCreateV2) else 1
+    if schema_version == 2 and payload.model == "grok-video-1.5":
+        try:
+            validate_grok_video_v2(payload)
+        except ValueError as exc:
+            raise HTTPException(422, detail={"code": "INVALID_VIDEO_CONTRACT", "message": str(exc)}) from exc
+    if schema_version == 2 and payload.model in SEEDANCE20_MODELS:
+        try:
+            validate_seedance_video_v2(payload)
+        except ValueError as exc:
+            raise HTTPException(422, detail={"code": "INVALID_VIDEO_CONTRACT", "message": str(exc)}) from exc
     try:
         provider = provider_for_model(payload.model)
         provider_route = route_for(payload.model, schema_version)
@@ -346,7 +359,7 @@ async def create_generation_job(
         callback_token_hash=callback_hash,
         request_schema_version=schema_version,
         provider_route=provider_route,
-        adapter_revision=ADAPTER_REVISIONS.get(provider_route, f"{provider_route}@2026-09-03"),
+        adapter_revision=GROK15_ADAPTER_REVISION if schema_version == 2 and payload.model == "grok-video-1.5" else SEEDANCE20_ADAPTER_REVISION if schema_version == 2 and payload.model in SEEDANCE20_MODELS else ADAPTER_REVISIONS.get(provider_route, f"{provider_route}@2026-09-03"),
     )
     if conflict:
         raise HTTPException(

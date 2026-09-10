@@ -53,6 +53,8 @@ services:
       - ./custom_handler_xai.py:/app/custom_handler_xai.py:ro
       - ./custom_handler_seedance.py:/app/custom_handler_seedance.py:ro
       - ./custom_handler_seedream.py:/app/custom_handler_seedream.py:ro
+      - ./grok_video_contract.py:/app/grok_video_contract.py:ro
+      - ./seedance_video_contract.py:/app/seedance_video_contract.py:ro
       - ./generation_job_models.py:/app/generation_job_models.py:ro
       - ./generation_job_repository.py:/app/generation_job_repository.py:ro
       - ./generation_job_adapters.py:/app/generation_job_adapters.py:ro

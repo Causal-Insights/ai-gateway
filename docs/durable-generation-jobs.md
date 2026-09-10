@@ -122,3 +122,60 @@ MagicLens quotes.
 | `vertex_veo_direct` | Implemented Vertex `predictLongRunning` adapter; not the live Veo route |
 | `vertex_omni_interactions` | Gemini Omni Flash |
 
+
+## Grok Video 1.5 registered V2 profiles
+
+The local September 10 correction validates contract revision
+`video-contract-v2-2026-09-03` before a job is created and again before provider
+submission. `grok_video_contract.py` defines the three registered profiles:
+`generate.text`, `generate.first_frame`, and `generate.references`. It rejects
+unknown settings, slot roles, noncontiguous indices, invalid counts and unapproved
+preset voice IDs. Reference images or preset voices cap output at 720p; text and
+first-frame requests without voices also permit 1080p. The registered contract
+fixes generated audio on and produces one video, for an integer 1–15 seconds.
+
+New matching jobs record adapter revision `xai_grok15_v2@2026-09-10` and route
+`xai_videos_v2`. The provider request explicitly includes `generate_audio` and
+keeps first-frame inheritance, reference order and preset voices. No model
+fallback is used. Idempotency hashing, owner-scoped retrieval and retained
+provider identities are unchanged.
+
+`tests/fixtures/generation_jobs_v2/grok_video_15_profiles.json` is the literal
+MagicLens compiler output for these profiles; `tests/test_grok_video_v2.py`
+checks the exact provider request and rejects invalid requests without network
+calls. This source change and its offline tests do not establish deployment or
+paid staging evidence. Release the tested Gateway before verifying it through a
+connected MagicLens Studio.
+
+## Seedance 2.0 registered V2 profiles
+
+`seedance_video_contract.py` validates contract revision
+`video-contract-v2-2026-09-03` for `seedance-2.0` and `seedance-2.0-fast` before
+job creation. A native V2 adapter emits the exact ModelArk body for text, first
+frame, ordered reference images and source-video editing. New matching jobs
+persist adapter revision `byteplus_seedance20_v2@2026-09-10`; their durable route
+remains `byteplus_ark_v3`. Seedance 2.5 is unchanged.
+
+Editing uses the provider-documented `reference_video` role with prompt-directed
+edit intent. The source is safely downloaded and probed before paid submission.
+The adapter sends adaptive aspect ratio and the verified source resolution tier,
+instead of defaulting to square 480p. Source videos must be readable, 2–15 seconds,
+and match a known standard or BytePlus output grid. Unknown frame grids and Fast
+1080p sources are rejected with actionable errors; no output tier is substituted.
+
+Generation settings preserve the registered 4–15 second range and audio boolean.
+Fast and image-reference profiles are limited to 480p/720p; standard text and
+first-frame profiles also permit 1080p. Gateway cost evidence uses the distinct
+standard 1080p token rates, respects deployment overrides and prefers explicit
+provider cost. Customer quotes remain owned by MagicLens's existing registry.
+
+`tests/fixtures/generation_jobs_v2/seedance_20_profiles.json` matches the MagicLens
+compiler goldens for all eight model/profile combinations.
+`tests/test_seedance_video_v2.py` verifies provider requests, rejection, source
+format preservation, retry identity, polling and cost. This is local evidence;
+release and paid dev verification are still pending.
+
+Official sources rechecked September 10, 2026:
+- https://docs.byteplus.com/en/docs/ModelArk/2291680
+- https://docs.byteplus.com/en/docs/ModelArk/1520757
+- https://docs.byteplus.com/en/docs/ModelArk/1544106
