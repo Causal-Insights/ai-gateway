@@ -10,9 +10,6 @@ Pricing: https://docs.byteplus.com/en/docs/ModelArk/1544106
 Env:
     BYTEDANCE_API_KEY                 ModelArk bearer token (required)
     SEEDREAM_ARK_BASE                 override ARK base (default BytePlus ap-southeast)
-    SEEDREAM_5_0_PRICE_PER_IMAGE      USD per output image for seedream-5.0 (ARK seedream-5-0-260128)
-    SEEDREAM_5_0_LITE_PRICE_PER_IMAGE USD per output image for seedream-5.0-lite (ARK seedream-5-0-lite-260128)
-    SEEDREAM_WEB_SEARCH_PRICE_PER_REQUEST  USD when tools includes web_search (default 0.0006)
 """
 
 from __future__ import annotations
@@ -35,14 +32,6 @@ DEFAULT_MODEL_5_0 = "seedream-5-0-260128"
 DEFAULT_MODEL_5_0_LITE = "seedream-5-0-lite-260128"
 DEFAULT_MODEL_5_0_PRO = "dola-seedream-5-0-pro-260628"
 
-# BytePlus ModelArk list price (Seedream 5.0 / 5.0 Lite, 2K & 3K, per generated image).
-DEFAULT_PRICE_PER_IMAGE_5_0 = 0.035
-DEFAULT_PRICE_PER_IMAGE_5_0_LITE = 0.035
-DEFAULT_PRICE_PER_IMAGE_5_0_PRO_1K = 0.045
-DEFAULT_PRICE_PER_IMAGE_5_0_PRO_2K = 0.09
-DEFAULT_PRICE_PER_ADDITIONAL_INPUT_IMAGE_5_0_PRO = 0.003
-# Optional web_search tool surcharge (per request when tools includes web_search).
-DEFAULT_WEB_SEARCH_PRICE_PER_REQUEST = 0.0006
 
 # OpenAI-shaped fields forwarded to ModelArk (everything else is dropped by the handler).
 _ARK_PASSTHROUGH_KEYS = (
@@ -105,31 +94,6 @@ class SeedreamLLM(CustomLLM):
     def _max_reference_images(self, ark_model: str) -> int:
         return self.MAX_REFERENCE_IMAGES_PRO if self._is_pro_model(ark_model) else self.MAX_REFERENCE_IMAGES
 
-    def _price_per_image(self, ark_model: str, *, size: Any = None) -> float:
-        lower = (ark_model or "").lower()
-        if self._is_pro_model(ark_model):
-            raw_size = str(size or "1K").strip().lower()
-            pixel_match = re.fullmatch(r"(\d+)x(\d+)", raw_size)
-            is_high_tier = raw_size == "2k"
-            if pixel_match:
-                width, height = (int(value) for value in pixel_match.groups())
-                is_high_tier = width * height > 2_360_000
-            env_name = (
-                "SEEDREAM_5_0_PRO_2K_PRICE_PER_IMAGE"
-                if is_high_tier
-                else "SEEDREAM_5_0_PRO_1K_PRICE_PER_IMAGE"
-            )
-            default = (
-                DEFAULT_PRICE_PER_IMAGE_5_0_PRO_2K
-                if is_high_tier
-                else DEFAULT_PRICE_PER_IMAGE_5_0_PRO_1K
-            )
-            return self._env_float(env_name, default)
-        if "lite" in lower:
-            return self._env_float(
-                "SEEDREAM_5_0_LITE_PRICE_PER_IMAGE", DEFAULT_PRICE_PER_IMAGE_5_0_LITE
-            )
-        return self._env_float("SEEDREAM_5_0_PRICE_PER_IMAGE", DEFAULT_PRICE_PER_IMAGE_5_0)
 
     @staticmethod
     def _restore_preserved_params(optional_params: dict) -> None:
@@ -176,11 +140,6 @@ class SeedreamLLM(CustomLLM):
         if sequential is not None and sequential is not False and sequential != "disabled":
             raise ValueError("seedream-5.0-pro does not support sequential multi-image generation")
 
-    @staticmethod
-    def _web_search_price() -> float:
-        return SeedreamLLM._env_float(
-            "SEEDREAM_WEB_SEARCH_PRICE_PER_REQUEST", DEFAULT_WEB_SEARCH_PRICE_PER_REQUEST
-        )
 
     @staticmethod
     def _uses_web_search(tools: Any) -> bool:
@@ -283,6 +242,20 @@ class SeedreamLLM(CustomLLM):
             raise SeedreamException("ModelArk response did not include any image url or b64_json")
 
         resp = ImageResponse(created=int(body.get("created") or time.time()), data=out)
+        usage = dict(body.get("usage") or {})
+        usage["output_images"] = len(out)
+        sizes = [item.get("size") for item in data if isinstance(item, dict) and (item.get("url") or item.get("b64_json"))]
+        try:
+            pixels = [int(size.lower().split("x")[0]) * int(size.lower().split("x")[1]) for size in sizes]
+            usage["output_images_small"] = sum(value <= 2610000 for value in pixels)
+            usage["output_images_large"] = sum(value > 2610000 for value in pixels)
+        except (AttributeError, ValueError, IndexError):
+            pass  # Missing actual dimensions remain unresolved for Pro pricing.
+        if body.get("_reference_count") is not None:
+            usage["billable_reference_images"] = max(0, body["_reference_count"] - 1)
+        resp._hidden_params["gateway_usage"] = usage
+        resp._hidden_params["gateway_served_model"] = body.get("model")
+        resp._hidden_params["gateway_provider_request_id"] = body.get("id")
         if response_cost is not None:
             try:
                 resp._hidden_params["response_cost"] = float(response_cost)
@@ -290,44 +263,10 @@ class SeedreamLLM(CustomLLM):
                 pass
         return resp
 
-    def _compute_response_cost(
-        self,
-        *,
-        ark_model: str,
-        body: dict,
-        tools: Any,
-        requested_n: Optional[int],
-    ) -> float:
-        data = body.get("data") or []
-        image_count = len([d for d in data if isinstance(d, dict)])
-        if image_count <= 0:
-            try:
-                image_count = max(1, int(requested_n or 1))
-            except (TypeError, ValueError):
-                image_count = 1
-
-        usage = body.get("usage")
-        if isinstance(usage, dict):
-            for key in ("generated_images", "output_images", "image_count", "total_images"):
-                raw = usage.get(key)
-                if raw is not None:
-                    try:
-                        image_count = max(image_count, int(raw))
-                    except (TypeError, ValueError):
-                        pass
-
-        size = body.get("_requested_size")
-        reference_count = body.get("_reference_count", 0)
-        cost = image_count * self._price_per_image(ark_model, size=size)
-        if self._is_pro_model(ark_model):
-            additional_inputs = max(0, int(reference_count or 0) - 1)
-            cost += additional_inputs * self._env_float(
-                "SEEDREAM_5_0_PRO_ADDITIONAL_INPUT_PRICE",
-                DEFAULT_PRICE_PER_ADDITIONAL_INPUT_IMAGE_5_0_PRO,
-            )
-        if self._uses_web_search(tools):
-            cost += self._web_search_price()
-        return cost
+    def _compute_response_cost(self, *, ark_model, body, tools, requested_n):
+        # Calculated centrally from measured usage and a pinned verified profile.
+        # Enabling a search tool or requesting n images is not billable evidence.
+        return None
 
     def _prepare_request(
         self, prompt: str, model: str, optional_params: dict
@@ -423,7 +362,8 @@ class SeedreamLLM(CustomLLM):
                 tools=tools,
                 requested_n=requested_n,
             )
-            return self._image_response_from_body(body, response_cost=cost)
+            cost_body.setdefault("model", payload["model"])
+            return self._image_response_from_body(cost_body, response_cost=cost)
 
 
 seedream = SeedreamLLM()

@@ -8,6 +8,7 @@ proxy's authenticated /images/generations route without exposing provider keys.
 from __future__ import annotations
 
 import base64
+import asyncio
 import os
 import time
 from typing import Any, Optional, Union
@@ -106,10 +107,29 @@ class AudioStudioLLM(CustomLLM):
                 raise AudioStudioException("ElevenLabs returned an empty audio file")
             if len(response.content) > self.MAX_AUDIO_BYTES:
                 raise AudioStudioException("ElevenLabs audio output exceeds the 100 MB limit")
-            return ImageResponse(
+            result = ImageResponse(
                 created=int(time.time()),
                 data=[ImageObject(b64_json=base64.b64encode(response.content).decode("ascii"))],
             )
+            # Preserve only documented numeric usage headers; a missing header
+            # remains missing. Do not manufacture a charge from requested length.
+            usage = {}
+            from generation_job_adapters import probe_media_bytes
+            probe = await asyncio.to_thread(probe_media_bytes, response.content, ".mp3")
+            duration = (probe.get("format") or {}).get("duration")
+            if duration is not None:
+                usage["audio_seconds"] = duration
+            for header, field in (("character-cost", "billable_characters"),):
+                raw = response.headers.get(header)
+                if raw is not None:
+                    try:
+                        usage[field] = int(raw)
+                    except ValueError:
+                        pass
+            result._hidden_params["gateway_usage"] = usage
+            result._hidden_params["gateway_served_model"] = payload["model_id"]
+            result._hidden_params["gateway_provider_request_id"] = response.headers.get("request-id")
+            return result
 
 
 audio_studio = AudioStudioLLM()

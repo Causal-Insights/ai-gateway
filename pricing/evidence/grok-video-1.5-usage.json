@@ -1,0 +1,10 @@
+{
+  "model": "grok-video-1.5",
+  "usage": {
+    "cost_in_usd_ticks": 7100000000
+  },
+  "created_at": "2026-09-16T11:56:05.381506+00:00",
+  "upstream_model": "grok-imagine-video-1.5",
+  "evidence_origin": "Read-only retained provider usage in gateway_generation_jobs, retrieved 2026-09-16. No new provider request.",
+  "verified_reported_cost_usd": "0.71"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Price Verification"
+  short_description: "Verify AI model prices using official evidence"
+  default_prompt: "Use $price-verification to verify the exact model prices, reproduce usage costs, and report registry discrepancies."

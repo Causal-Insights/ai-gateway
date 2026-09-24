@@ -20,7 +20,7 @@ def safe_client_metadata(metadata: dict[str, str]) -> dict[str, str]:
 class MediaInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["image", "video"]
+    type: Literal["image", "video", "audio"]
     role: Literal["first_frame", "last_frame", "reference", "source"] = "reference"
     url: Optional[str] = None
     upload_field: Optional[str] = None
@@ -214,6 +214,12 @@ class GenerationJobResponse(BaseModel):
     result: Optional[JobResult] = None
     usage: Optional[dict[str, Any]] = None
     cost_usd: Optional[float] = None
+    accounting_id: Optional[str] = None
+    cost_status: Literal["pending", "priced", "unresolved"] = "pending"
+    cost_source: Optional[str] = None
+    pricing_version: Any = None
+    breakdown: list[dict[str, Any]] = Field(default_factory=list)
+    billing_eligible: bool = False
     error: Optional[JobError] = None
 
 
@@ -228,6 +234,7 @@ class ProviderStatus(BaseModel):
     error_retryable: bool = False
     usage: Optional[dict[str, Any]] = None
     cost_usd: Optional[float] = None
+    served_model: Optional[str] = None
 
 
 class ProviderSubmission(BaseModel):

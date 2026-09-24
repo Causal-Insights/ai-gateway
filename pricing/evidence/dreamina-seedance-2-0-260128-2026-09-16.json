@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "byteplus",
+    "api_product": "ModelArk standard online inference",
+    "upstream_model": "dreamina-seedance-2-0-260128",
+    "aliases": [
+      "seedance-2.0"
+    ],
+    "account_context": null,
+    "region": "ap-southeast-1",
+    "routes": [
+      "generation_job"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.byteplus.com/en/docs/ModelArk/1544106",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "pricing",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "7.0",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "480p",
+          "720p"
+        ],
+        "input_video": false
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "4.3",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "480p",
+          "720p"
+        ],
+        "input_video": true
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "7.7",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "1080p"
+        ],
+        "input_video": false
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "4.7",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "1080p"
+        ],
+        "input_video": true
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "4.0",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "4k"
+        ],
+        "input_video": false
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "2.4",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "4k"
+        ],
+        "input_video": true
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "completion_tokens": "40594"
+    },
+    "formula": "40594 * 7.0 / 1000000",
+    "calculated_cost": "0.284158",
+    "provider_reported_cost": null,
+    "evidence_kind": "provider_response"
+  },
+  "differences": [],
+  "limitations": [
+    "Account terms unconfirmed. Acceptance must include actual served resolution and source-video classification.",
+    "Completion tokens include minimum consumption; do not recompute from requested duration.",
+    "Displayed promotional examples can show undiscounted prices; explicit dated rate terms govern."
+  ]
+}

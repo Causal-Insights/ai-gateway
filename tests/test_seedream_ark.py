@@ -137,7 +137,8 @@ class TestSeedreamHandler(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(out.data[0].url, "https://cdn.example/seedream.png")
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.035, places=6)
+        self.assertNotIn("response_cost", out._hidden_params)
+        self.assertIn("gateway_usage", out._hidden_params)
 
     async def test_image_urls_mapped_to_image_array(self):
         """Handler uses ModelArk id for seedream-5.0 gateway alias."""
@@ -181,7 +182,7 @@ class TestSeedreamHandler(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(captured["json"]["model"], ARK_MODEL_5_0)
 
-    async def test_web_search_adds_surcharge(self):
+    async def test_configured_search_tool_does_not_invent_a_surcharge(self):
         response = MagicMock()
         response.raise_for_status = MagicMock()
         response.json = MagicMock(
@@ -209,9 +210,10 @@ class TestSeedreamHandler(unittest.IsolatedAsyncioTestCase):
             )
 
         # 2 images × $0.035 + $0.0006 web search
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.0706, places=6)
+        self.assertNotIn("response_cost", out._hidden_params)
+        self.assertIn("gateway_usage", out._hidden_params)
 
-    async def test_pro_restores_private_params_and_prices_additional_inputs(self):
+    async def test_pro_restores_private_params_without_guessing_reference_charges(self):
         captured = {}
 
         async def fake_post(url, headers=None, json=None):
@@ -256,7 +258,8 @@ class TestSeedreamHandler(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(captured["json"]["response_format"], "url")
         self.assertEqual(captured["json"]["output_format"], "png")
         # 2K output ($0.09) + two inputs after the first ($0.006).
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.096, places=6)
+        self.assertNotIn("response_cost", out._hidden_params)
+        self.assertIn("gateway_usage", out._hidden_params)
 
     async def test_pro_rejects_unsupported_tier_count_stream_and_reference_limit(self):
         llm = SeedreamLLM()

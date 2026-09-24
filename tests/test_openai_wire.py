@@ -7,6 +7,14 @@ from test_litellm_compatibility import _litellm_is_installed
 
 @unittest.skipUnless(_litellm_is_installed(), 'requires pinned application image')
 class OpenAIWireTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        # These tests isolate provider wire contracts. Gateway admission and
+        # persistence are exercised with authenticated intents in runtime tests.
+        import litellm
+        self.callbacks = patch.object(litellm, "callbacks", [])
+        self.callbacks.start()
+        self.addCleanup(self.callbacks.stop)
+
     async def asyncSetUp(self):
         from openai_model_contracts import install_image_adapters
         from openai_usage import install_openai_accounting

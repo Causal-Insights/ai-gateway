@@ -1,0 +1,1315 @@
+{
+  "litellm_version": "1.95.0",
+  "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+  "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+  "method": "LiteLLM get_model_info with captured live model map; no network or provider calls",
+  "limitations": [
+    "Model/rate resolution is not an end-to-end usage, persistence or every-option test.",
+    "Provider mappings retain the same upstream model ID; similar-model prices were not substituted."
+  ],
+  "counts": {
+    "resolved": 38,
+    "unresolved": 12,
+    "resolved_with_provider_mapping": 6
+  },
+  "models": [
+    {
+      "alias": "gpt-latest",
+      "deployed_model": "openai/gpt-6-astra",
+      "upstream_model": "openai/gpt-6-astra",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-6-astra",
+      "catalog_key": "gpt-6-astra",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 1e-05,
+        "input_cost_per_token_flex": 5e-06,
+        "input_cost_per_token_priority": 2e-05,
+        "cache_creation_input_token_cost": 1.25e-05,
+        "cache_read_input_token_cost": 1e-06,
+        "cache_read_input_token_cost_above_272k_tokens": 2e-06,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 4e-06,
+        "cache_read_input_token_cost_flex": 5e-07,
+        "cache_read_input_token_cost_priority": 2e-06,
+        "input_cost_per_token_above_272k_tokens": 2e-05,
+        "input_cost_per_token_above_272k_tokens_priority": 4e-05,
+        "input_cost_per_token_batches": 5e-06,
+        "output_cost_per_token_batches": 2.5e-05,
+        "output_cost_per_token": 5e-05,
+        "output_cost_per_token_flex": 2.5e-05,
+        "output_cost_per_token_priority": 0.0001,
+        "output_cost_per_token_above_272k_tokens": 7.5e-05,
+        "output_cost_per_token_above_272k_tokens_priority": 0.00015,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        },
+        "cache_creation_input_token_cost_above_272k_tokens": 2.5e-05
+      }
+    },
+    {
+      "alias": "gpt-5.5",
+      "deployed_model": "openai/gpt-5.5",
+      "upstream_model": "openai/gpt-5.5",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-5.5",
+      "catalog_key": "gpt-5.5",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 5e-06,
+        "input_cost_per_token_flex": 2.5e-06,
+        "input_cost_per_token_priority": 1.25e-05,
+        "cache_read_input_token_cost": 5e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 1e-06,
+        "cache_read_input_token_cost_flex": 2.5e-07,
+        "cache_read_input_token_cost_priority": 1.25e-06,
+        "input_cost_per_token_above_272k_tokens": 1e-05,
+        "input_cost_per_token_batches": 2.5e-06,
+        "output_cost_per_token_batches": 1.5e-05,
+        "output_cost_per_token": 3e-05,
+        "output_cost_per_token_flex": 1.5e-05,
+        "output_cost_per_token_priority": 7.5e-05,
+        "output_cost_per_token_above_272k_tokens": 4.5e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-5.5-thinking",
+      "deployed_model": "openai/gpt-5.5",
+      "upstream_model": "openai/gpt-5.5",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-5.5",
+      "catalog_key": "gpt-5.5",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 5e-06,
+        "input_cost_per_token_flex": 2.5e-06,
+        "input_cost_per_token_priority": 1.25e-05,
+        "cache_read_input_token_cost": 5e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 1e-06,
+        "cache_read_input_token_cost_flex": 2.5e-07,
+        "cache_read_input_token_cost_priority": 1.25e-06,
+        "input_cost_per_token_above_272k_tokens": 1e-05,
+        "input_cost_per_token_batches": 2.5e-06,
+        "output_cost_per_token_batches": 1.5e-05,
+        "output_cost_per_token": 3e-05,
+        "output_cost_per_token_flex": 1.5e-05,
+        "output_cost_per_token_priority": 7.5e-05,
+        "output_cost_per_token_above_272k_tokens": 4.5e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-6-astra",
+      "deployed_model": "openai/gpt-6-astra",
+      "upstream_model": "openai/gpt-6-astra",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-6-astra",
+      "catalog_key": "gpt-6-astra",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 1e-05,
+        "input_cost_per_token_flex": 5e-06,
+        "input_cost_per_token_priority": 2e-05,
+        "cache_creation_input_token_cost": 1.25e-05,
+        "cache_read_input_token_cost": 1e-06,
+        "cache_read_input_token_cost_above_272k_tokens": 2e-06,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 4e-06,
+        "cache_read_input_token_cost_flex": 5e-07,
+        "cache_read_input_token_cost_priority": 2e-06,
+        "input_cost_per_token_above_272k_tokens": 2e-05,
+        "input_cost_per_token_above_272k_tokens_priority": 4e-05,
+        "input_cost_per_token_batches": 5e-06,
+        "output_cost_per_token_batches": 2.5e-05,
+        "output_cost_per_token": 5e-05,
+        "output_cost_per_token_flex": 2.5e-05,
+        "output_cost_per_token_priority": 0.0001,
+        "output_cost_per_token_above_272k_tokens": 7.5e-05,
+        "output_cost_per_token_above_272k_tokens_priority": 0.00015,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        },
+        "cache_creation_input_token_cost_above_272k_tokens": 2.5e-05
+      }
+    },
+    {
+      "alias": "gpt-5.6-sol-medium",
+      "deployed_model": "openai/gpt-5.6-sol",
+      "upstream_model": "openai/gpt-5.6-sol",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-5.6-sol",
+      "catalog_key": "gpt-5.6-sol",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 4e-06,
+        "input_cost_per_token_flex": 2e-06,
+        "input_cost_per_token_priority": 8e-06,
+        "cache_creation_input_token_cost": 5e-06,
+        "cache_read_input_token_cost": 4e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 8e-07,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 1.6e-06,
+        "cache_read_input_token_cost_flex": 2e-07,
+        "cache_read_input_token_cost_priority": 8e-07,
+        "input_cost_per_token_above_272k_tokens": 8e-06,
+        "input_cost_per_token_above_272k_tokens_priority": 1.6e-05,
+        "input_cost_per_token_batches": 2e-06,
+        "output_cost_per_token_batches": 1e-05,
+        "output_cost_per_token": 2e-05,
+        "output_cost_per_token_flex": 1e-05,
+        "output_cost_per_token_priority": 4e-05,
+        "output_cost_per_token_above_272k_tokens": 3e-05,
+        "output_cost_per_token_above_272k_tokens_priority": 6e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        },
+        "cache_creation_input_token_cost_above_272k_tokens": 1e-05
+      }
+    },
+    {
+      "alias": "gpt-5.6-terra-medium",
+      "deployed_model": "openai/gpt-5.6-terra",
+      "upstream_model": "openai/gpt-5.6-terra",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-5.6-terra",
+      "catalog_key": "gpt-5.6-terra",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_flex": 1e-06,
+        "input_cost_per_token_priority": 4e-06,
+        "cache_creation_input_token_cost": 2.5e-06,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 4e-07,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 8e-07,
+        "cache_read_input_token_cost_flex": 1e-07,
+        "cache_read_input_token_cost_priority": 4e-07,
+        "input_cost_per_token_above_272k_tokens": 4e-06,
+        "input_cost_per_token_above_272k_tokens_priority": 8e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_flex": 6e-06,
+        "output_cost_per_token_priority": 2.4e-05,
+        "output_cost_per_token_above_272k_tokens": 1.8e-05,
+        "output_cost_per_token_above_272k_tokens_priority": 3.6e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        },
+        "cache_creation_input_token_cost_above_272k_tokens": 5e-06
+      }
+    },
+    {
+      "alias": "gpt-5.6-luna-medium",
+      "deployed_model": "openai/gpt-5.6-luna",
+      "upstream_model": "openai/gpt-5.6-luna",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-5.6-luna",
+      "catalog_key": "gpt-5.6-luna",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 2e-07,
+        "input_cost_per_token_flex": 1e-07,
+        "input_cost_per_token_priority": 4e-07,
+        "cache_creation_input_token_cost": 2.5e-07,
+        "cache_read_input_token_cost": 2e-08,
+        "cache_read_input_token_cost_above_272k_tokens": 4e-08,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 8e-08,
+        "cache_read_input_token_cost_flex": 1e-08,
+        "cache_read_input_token_cost_priority": 4e-08,
+        "input_cost_per_token_above_272k_tokens": 4e-07,
+        "input_cost_per_token_above_272k_tokens_priority": 8e-07,
+        "input_cost_per_token_batches": 1e-07,
+        "output_cost_per_token_batches": 6e-07,
+        "output_cost_per_token": 1.2e-06,
+        "output_cost_per_token_flex": 6e-07,
+        "output_cost_per_token_priority": 2.4e-06,
+        "output_cost_per_token_above_272k_tokens": 1.8e-06,
+        "output_cost_per_token_above_272k_tokens_priority": 3.6e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        },
+        "cache_creation_input_token_cost_above_272k_tokens": 5e-07
+      }
+    },
+    {
+      "alias": "gpt-5.6-luna-high",
+      "deployed_model": "openai/gpt-5.6-luna",
+      "upstream_model": "openai/gpt-5.6-luna",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-5.6-luna",
+      "catalog_key": "gpt-5.6-luna",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 2e-07,
+        "input_cost_per_token_flex": 1e-07,
+        "input_cost_per_token_priority": 4e-07,
+        "cache_creation_input_token_cost": 2.5e-07,
+        "cache_read_input_token_cost": 2e-08,
+        "cache_read_input_token_cost_above_272k_tokens": 4e-08,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 8e-08,
+        "cache_read_input_token_cost_flex": 1e-08,
+        "cache_read_input_token_cost_priority": 4e-08,
+        "input_cost_per_token_above_272k_tokens": 4e-07,
+        "input_cost_per_token_above_272k_tokens_priority": 8e-07,
+        "input_cost_per_token_batches": 1e-07,
+        "output_cost_per_token_batches": 6e-07,
+        "output_cost_per_token": 1.2e-06,
+        "output_cost_per_token_flex": 6e-07,
+        "output_cost_per_token_priority": 2.4e-06,
+        "output_cost_per_token_above_272k_tokens": 1.8e-06,
+        "output_cost_per_token_above_272k_tokens_priority": 3.6e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        },
+        "cache_creation_input_token_cost_above_272k_tokens": 5e-07
+      }
+    },
+    {
+      "alias": "gpt-5.4",
+      "deployed_model": "openai/gpt-5.4",
+      "upstream_model": "openai/gpt-5.4",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-5.4",
+      "catalog_key": "gpt-5.4",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 2.5e-06,
+        "input_cost_per_token_flex": 1.25e-06,
+        "input_cost_per_token_priority": 5e-06,
+        "cache_read_input_token_cost": 2.5e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 5e-07,
+        "cache_read_input_token_cost_flex": 1.3e-07,
+        "cache_read_input_token_cost_priority": 5e-07,
+        "input_cost_per_token_above_272k_tokens": 5e-06,
+        "input_cost_per_token_batches": 1.25e-06,
+        "output_cost_per_token_batches": 7.5e-06,
+        "output_cost_per_token": 1.5e-05,
+        "output_cost_per_token_flex": 7.5e-06,
+        "output_cost_per_token_priority": 3e-05,
+        "output_cost_per_token_above_272k_tokens": 2.25e-05
+      }
+    },
+    {
+      "alias": "gpt-5.4-mini",
+      "deployed_model": "openai/gpt-5.4-mini",
+      "upstream_model": "openai/gpt-5.4-mini",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-5.4-mini",
+      "catalog_key": "gpt-5.4-mini",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 7.5e-07,
+        "input_cost_per_token_flex": 3.75e-07,
+        "input_cost_per_token_priority": 1.5e-06,
+        "cache_read_input_token_cost": 7.5e-08,
+        "cache_read_input_token_cost_flex": 3.75e-08,
+        "cache_read_input_token_cost_priority": 1.5e-07,
+        "input_cost_per_token_batches": 3.75e-07,
+        "output_cost_per_token_batches": 2.25e-06,
+        "output_cost_per_token": 4.5e-06,
+        "output_cost_per_token_flex": 2.25e-06,
+        "output_cost_per_token_priority": 9e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-5.4-nano",
+      "deployed_model": "openai/gpt-5.4-nano",
+      "upstream_model": "openai/gpt-5.4-nano",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-5.4-nano",
+      "catalog_key": "gpt-5.4-nano",
+      "provider": "openai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 2e-07,
+        "input_cost_per_token_flex": 1e-07,
+        "cache_read_input_token_cost": 2e-08,
+        "cache_read_input_token_cost_flex": 1e-08,
+        "input_cost_per_token_batches": 1e-07,
+        "output_cost_per_token_batches": 6.25e-07,
+        "output_cost_per_token": 1.25e-06,
+        "output_cost_per_token_flex": 6.25e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-image-1.5",
+      "deployed_model": "openai/gpt-image-1.5",
+      "upstream_model": "openai/gpt-image-1.5",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-image-1.5",
+      "catalog_key": "gpt-image-1.5",
+      "provider": "openai",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 5e-06,
+        "cache_read_input_token_cost": 1.25e-06,
+        "input_cost_per_image_token": 8e-06,
+        "input_cost_per_token_batches": 2.5e-06,
+        "output_cost_per_token_batches": 5e-06,
+        "output_cost_per_token": 1e-05,
+        "output_cost_per_image_token": 3.2e-05
+      }
+    },
+    {
+      "alias": "gpt-image-2",
+      "deployed_model": "openai/gpt-image-2",
+      "upstream_model": "openai/gpt-image-2",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-image-2",
+      "catalog_key": "gpt-image-2",
+      "provider": "openai",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 5e-06,
+        "cache_read_input_token_cost": 1.25e-06,
+        "input_cost_per_image_token": 8e-06,
+        "input_cost_per_token_batches": 2.5e-06,
+        "output_cost_per_token": 0,
+        "output_cost_per_image_token": 3e-05
+      }
+    },
+    {
+      "alias": "gpt-image-2.5-sunburst",
+      "deployed_model": "openai/gpt-image-2.5-sunburst-2026-09-08",
+      "upstream_model": "openai/gpt-image-2.5-sunburst-2026-09-08",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-image-2.5-sunburst-2026-09-08",
+      "catalog_key": "gpt-image-2.5-sunburst-2026-09-08",
+      "provider": "openai",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 5e-06,
+        "cache_read_input_token_cost": 1.25e-06,
+        "input_cost_per_image_token": 8e-06,
+        "output_cost_per_token": 0,
+        "output_cost_per_image_token": 3e-05
+      }
+    },
+    {
+      "alias": "gpt-image-2.5-flare",
+      "deployed_model": "openai/gpt-image-2.5-flare-2026-09-08",
+      "upstream_model": "openai/gpt-image-2.5-flare-2026-09-08",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "openai/gpt-image-2.5-flare-2026-09-08",
+      "catalog_key": "gpt-image-2.5-flare-2026-09-08",
+      "provider": "openai",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 5e-06,
+        "cache_read_input_token_cost": 1.25e-06,
+        "input_cost_per_image_token": 8e-06,
+        "output_cost_per_token": 0,
+        "output_cost_per_image_token": 3e-05
+      }
+    },
+    {
+      "alias": "gemini-latest",
+      "deployed_model": "vertex_ai/gemini-3.1-pro-preview",
+      "upstream_model": "vertex_ai/gemini-3.1-pro-preview",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.1-pro-preview",
+      "catalog_key": "gemini-3.1-pro-preview",
+      "provider": "vertex_ai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_flex": 1e-06,
+        "input_cost_per_token_priority": 3.6e-06,
+        "cache_creation_input_token_cost_above_200k_tokens": 2.5e-07,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "cache_read_input_token_cost_flex": 2e-07,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_flex": 6e-06,
+        "output_cost_per_token_priority": 2.16e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "output_cost_per_image": 0.00012,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "gemini-3.1-pro",
+      "deployed_model": "vertex_ai/gemini-3.1-pro-preview",
+      "upstream_model": "vertex_ai/gemini-3.1-pro-preview",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.1-pro-preview",
+      "catalog_key": "gemini-3.1-pro-preview",
+      "provider": "vertex_ai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_flex": 1e-06,
+        "input_cost_per_token_priority": 3.6e-06,
+        "cache_creation_input_token_cost_above_200k_tokens": 2.5e-07,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "cache_read_input_token_cost_flex": 2e-07,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_flex": 6e-06,
+        "output_cost_per_token_priority": 2.16e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "output_cost_per_image": 0.00012,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "gemini-3.1-pro-customtools",
+      "deployed_model": "vertex_ai/gemini-3.1-pro-preview-customtools",
+      "upstream_model": "vertex_ai/gemini-3.1-pro-preview-customtools",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.1-pro-preview-customtools",
+      "catalog_key": "gemini-3.1-pro-preview-customtools",
+      "provider": "vertex_ai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_priority": 3.6e-06,
+        "cache_creation_input_token_cost_above_200k_tokens": 2.5e-07,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_priority": 2.16e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "output_cost_per_image": 0.00012,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "gemini-3.5-flash",
+      "deployed_model": "vertex_ai/gemini-3.5-flash",
+      "upstream_model": "vertex_ai/gemini-3.5-flash",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.5-flash",
+      "catalog_key": "vertex_ai/gemini-3.5-flash",
+      "provider": "vertex_ai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 1.5e-06,
+        "input_cost_per_token_flex": 7.5e-07,
+        "input_cost_per_token_priority": 2.7e-06,
+        "cache_read_input_token_cost": 1.5e-07,
+        "cache_read_input_token_cost_flex": 7.5e-08,
+        "cache_read_input_token_cost_priority": 2.7e-07,
+        "input_cost_per_audio_token": 1.5e-06,
+        "input_cost_per_token_batches": 7.5e-07,
+        "output_cost_per_token_batches": 4.5e-06,
+        "output_cost_per_token": 9e-06,
+        "output_cost_per_token_flex": 4.5e-06,
+        "output_cost_per_token_priority": 1.62e-05,
+        "output_cost_per_reasoning_token": 9e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "gemini-3.8-flash",
+      "deployed_model": "vertex_ai/gemini-3.8-flash",
+      "upstream_model": "vertex_ai/gemini-3.8-flash",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.8-flash",
+      "catalog_key": "vertex_ai/gemini-3.8-flash",
+      "provider": "vertex_ai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 7.5e-07,
+        "input_cost_per_token_flex": 3.75e-07,
+        "input_cost_per_token_priority": 1.35e-06,
+        "cache_read_input_token_cost": 7.5e-08,
+        "cache_read_input_token_cost_flex": 3.75e-08,
+        "cache_read_input_token_cost_priority": 1.35e-07,
+        "input_cost_per_token_batches": 3.75e-07,
+        "output_cost_per_token_batches": 1.875e-06,
+        "output_cost_per_token": 3.75e-06,
+        "output_cost_per_token_flex": 1.875e-06,
+        "output_cost_per_token_priority": 6.75e-06,
+        "output_cost_per_reasoning_token": 3.75e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "gemini-3.5-flash-lite",
+      "deployed_model": "vertex_ai/gemini-3.5-flash-lite",
+      "upstream_model": "vertex_ai/gemini-3.5-flash-lite",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.5-flash-lite",
+      "catalog_key": "gemini-3.5-flash-lite",
+      "provider": "vertex_ai-language-models",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 3e-07,
+        "input_cost_per_token_flex": 1.5e-07,
+        "input_cost_per_token_priority": 5.4e-07,
+        "cache_read_input_token_cost": 3e-08,
+        "cache_read_input_token_cost_flex": 1.5e-08,
+        "cache_read_input_token_cost_priority": 5.4e-08,
+        "input_cost_per_token_batches": 1.5e-07,
+        "output_cost_per_token_batches": 1.25e-06,
+        "output_cost_per_token": 2.5e-06,
+        "output_cost_per_token_flex": 1.25e-06,
+        "output_cost_per_token_priority": 4.5e-06,
+        "output_cost_per_reasoning_token": 2.5e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "gemini-3-flash-preview",
+      "deployed_model": "vertex_ai/gemini-3-flash-preview",
+      "upstream_model": "vertex_ai/gemini-3-flash-preview",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3-flash-preview",
+      "catalog_key": "vertex_ai/gemini-3-flash-preview",
+      "provider": "vertex_ai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 5e-07,
+        "input_cost_per_token_flex": 2.5e-07,
+        "input_cost_per_token_priority": 9e-07,
+        "cache_read_input_token_cost": 5e-08,
+        "cache_read_input_token_cost_flex": 5e-08,
+        "cache_read_input_token_cost_priority": 9e-08,
+        "input_cost_per_audio_token": 1e-06,
+        "input_cost_per_token_batches": 2.5e-07,
+        "output_cost_per_token_batches": 1.5e-06,
+        "output_cost_per_token": 3e-06,
+        "output_cost_per_token_flex": 1.5e-06,
+        "output_cost_per_token_priority": 5.4e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "gemini-3.1-flash-lite-preview",
+      "deployed_model": "vertex_ai/gemini-3.1-flash-lite-preview",
+      "upstream_model": "vertex_ai/gemini-3.1-flash-lite-preview",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.1-flash-lite-preview",
+      "catalog_key": "gemini-3.1-flash-lite-preview",
+      "provider": "vertex_ai-language-models",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 2.5e-07,
+        "cache_read_input_token_cost": 2.5e-08,
+        "input_cost_per_audio_token": 5e-07,
+        "output_cost_per_token": 1.5e-06,
+        "output_cost_per_reasoning_token": 1.5e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "nano-banana",
+      "deployed_model": "vertex_ai/gemini-3.1-flash-image",
+      "upstream_model": "vertex_ai/gemini-3.1-flash-image",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.1-flash-image",
+      "catalog_key": "gemini-3.1-flash-image",
+      "provider": "vertex_ai-language-models",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 5e-07,
+        "input_cost_per_token_flex": 2.5e-07,
+        "cache_read_input_token_cost": 5e-08,
+        "cache_read_input_token_cost_flex": 2.5e-08,
+        "input_cost_per_image": 0.00056,
+        "input_cost_per_token_batches": 2.5e-07,
+        "output_cost_per_token_batches": 1.5e-06,
+        "output_cost_per_token": 3e-06,
+        "output_cost_per_token_flex": 1.5e-06,
+        "output_cost_per_image": 0.0672,
+        "output_cost_per_image_token": 6e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "nano-banana-2",
+      "deployed_model": "vertex_ai/gemini-3.1-flash-image",
+      "upstream_model": "vertex_ai/gemini-3.1-flash-image",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.1-flash-image",
+      "catalog_key": "gemini-3.1-flash-image",
+      "provider": "vertex_ai-language-models",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 5e-07,
+        "input_cost_per_token_flex": 2.5e-07,
+        "cache_read_input_token_cost": 5e-08,
+        "cache_read_input_token_cost_flex": 2.5e-08,
+        "input_cost_per_image": 0.00056,
+        "input_cost_per_token_batches": 2.5e-07,
+        "output_cost_per_token_batches": 1.5e-06,
+        "output_cost_per_token": 3e-06,
+        "output_cost_per_token_flex": 1.5e-06,
+        "output_cost_per_image": 0.0672,
+        "output_cost_per_image_token": 6e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "nano-banana-pro",
+      "deployed_model": "vertex_ai/gemini-3-pro-image",
+      "upstream_model": "vertex_ai/gemini-3-pro-image",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3-pro-image",
+      "catalog_key": "gemini-3-pro-image",
+      "provider": "vertex_ai-language-models",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_flex": 1e-06,
+        "input_cost_per_token_priority": 3.6e-06,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "cache_read_input_token_cost_flex": 1e-07,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "input_cost_per_image": 0.0011,
+        "input_cost_per_token_batches": 1e-06,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_flex": 6e-06,
+        "output_cost_per_token_priority": 2.16e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "output_cost_per_image": 0.134,
+        "output_cost_per_image_token": 0.00012,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        }
+      }
+    },
+    {
+      "alias": "nano-banana-2-lite",
+      "deployed_model": "vertex_ai/gemini-3.1-flash-lite-image",
+      "upstream_model": "vertex_ai/gemini-3.1-flash-lite-image",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/gemini-3.1-flash-lite-image",
+      "catalog_key": "gemini-3.1-flash-lite-image",
+      "provider": "vertex_ai-language-models",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 2.5e-07,
+        "input_cost_per_token_flex": 1.25e-07,
+        "cache_read_input_token_cost": 2.5e-08,
+        "cache_read_input_token_cost_flex": 1.25e-08,
+        "input_cost_per_image": 0.00028,
+        "input_cost_per_token_batches": 1.25e-07,
+        "output_cost_per_token_batches": 7.5e-07,
+        "output_cost_per_token": 1.5e-06,
+        "output_cost_per_token_flex": 7.5e-07,
+        "output_cost_per_image": 0.0336,
+        "output_cost_per_image_token": 3e-05
+      }
+    },
+    {
+      "alias": "veo-3.1",
+      "deployed_model": "vertex_ai/veo-3.1-generate-001",
+      "upstream_model": "vertex_ai/veo-3.1-generate-001",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/veo-3.1-generate-001",
+      "catalog_key": "vertex_ai/veo-3.1-generate-001",
+      "provider": "vertex_ai-video-models",
+      "mode": "video_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "output_cost_per_token": 0,
+        "output_cost_per_second": 0.4
+      }
+    },
+    {
+      "alias": "veo-3.1-fast",
+      "deployed_model": "vertex_ai/veo-3.1-fast-generate-001",
+      "upstream_model": "vertex_ai/veo-3.1-fast-generate-001",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/veo-3.1-fast-generate-001",
+      "catalog_key": "vertex_ai/veo-3.1-fast-generate-001",
+      "provider": "vertex_ai-video-models",
+      "mode": "video_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "output_cost_per_token": 0,
+        "output_cost_per_second": 0.1,
+        "output_cost_per_second_1080p": 0.12
+      }
+    },
+    {
+      "alias": "veo-3.1-lite",
+      "deployed_model": "vertex_ai/veo-3.1-lite-generate-001",
+      "upstream_model": "vertex_ai/veo-3.1-lite-generate-001",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/veo-3.1-lite-generate-001",
+      "catalog_key": "vertex_ai/veo-3.1-lite-generate-001",
+      "provider": "vertex_ai-video-models",
+      "mode": "video_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "output_cost_per_token": 0,
+        "output_cost_per_second": 0.05,
+        "output_cost_per_second_1080p": 0.08
+      }
+    },
+    {
+      "alias": "gemini-omni-flash",
+      "deployed_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "vertex_ai/gemini-omni-1.1-flash-preview",
+          "error": "This model isn't mapped yet. model=vertex_ai/gemini-omni-1.1-flash-preview, custom_llm_provider=vertex_ai. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "gemini-omni-flash-preview",
+      "deployed_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "vertex_ai/gemini-omni-1.1-flash-preview",
+          "error": "This model isn't mapped yet. model=vertex_ai/gemini-omni-1.1-flash-preview, custom_llm_provider=vertex_ai. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "gemini-omni-1.1-flash",
+      "deployed_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "vertex_ai/gemini-omni-1.1-flash-preview",
+          "error": "This model isn't mapped yet. model=vertex_ai/gemini-omni-1.1-flash-preview, custom_llm_provider=vertex_ai. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "gemini-omni-1.1-flash-preview",
+      "deployed_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "vertex_ai/gemini-omni-1.1-flash-preview",
+          "error": "This model isn't mapped yet. model=vertex_ai/gemini-omni-1.1-flash-preview, custom_llm_provider=vertex_ai. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "imagen-4.0",
+      "deployed_model": "vertex_ai/imagen-4.0-generate-001",
+      "upstream_model": "vertex_ai/imagen-4.0-generate-001",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/imagen-4.0-generate-001",
+      "catalog_key": "vertex_ai/imagen-4.0-generate-001",
+      "provider": "vertex_ai-image-models",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "output_cost_per_token": 0,
+        "output_cost_per_image": 0.04
+      }
+    },
+    {
+      "alias": "imagen-4.0-fast",
+      "deployed_model": "vertex_ai/imagen-4.0-fast-generate-001",
+      "upstream_model": "vertex_ai/imagen-4.0-fast-generate-001",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/imagen-4.0-fast-generate-001",
+      "catalog_key": "vertex_ai/imagen-4.0-fast-generate-001",
+      "provider": "vertex_ai-image-models",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "output_cost_per_token": 0,
+        "output_cost_per_image": 0.02
+      }
+    },
+    {
+      "alias": "imagen-4.0-ultra",
+      "deployed_model": "vertex_ai/imagen-4.0-ultra-generate-001",
+      "upstream_model": "vertex_ai/imagen-4.0-ultra-generate-001",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "vertex_ai/imagen-4.0-ultra-generate-001",
+      "catalog_key": "vertex_ai/imagen-4.0-ultra-generate-001",
+      "provider": "vertex_ai-image-models",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "output_cost_per_token": 0,
+        "output_cost_per_image": 0.06
+      }
+    },
+    {
+      "alias": "grok-video",
+      "deployed_model": "grok-video/grok-imagine-video",
+      "upstream_model": "grok-video/grok-imagine-video",
+      "intentionally_disabled": false,
+      "status": "resolved_with_provider_mapping",
+      "resolver_model": "xai/grok-imagine-video",
+      "catalog_key": "xai/grok-imagine-video",
+      "provider": "xai",
+      "mode": "video_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "input_cost_per_image": 0.002,
+        "output_cost_per_token": 0,
+        "output_cost_per_second": 0.05
+      }
+    },
+    {
+      "alias": "grok-video-1.5",
+      "deployed_model": "grok-video/grok-imagine-video-1.5",
+      "upstream_model": "grok-video/grok-imagine-video-1.5",
+      "intentionally_disabled": false,
+      "status": "resolved_with_provider_mapping",
+      "resolver_model": "xai/grok-imagine-video-1.5",
+      "catalog_key": "xai/grok-imagine-video-1.5",
+      "provider": "xai",
+      "mode": "video_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "input_cost_per_image": 0.01,
+        "output_cost_per_token": 0,
+        "output_cost_per_second": 0.08,
+        "output_cost_per_second_1080p": 0.25
+      }
+    },
+    {
+      "alias": "grok-imagine-video-1.5-2026-05-30",
+      "deployed_model": "grok-video/grok-imagine-video-1.5-2026-05-30",
+      "upstream_model": "grok-video/grok-imagine-video-1.5-2026-05-30",
+      "intentionally_disabled": false,
+      "status": "resolved_with_provider_mapping",
+      "resolver_model": "xai/grok-imagine-video-1.5-2026-05-30",
+      "catalog_key": "xai/grok-imagine-video-1.5-2026-05-30",
+      "provider": "xai",
+      "mode": "video_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "input_cost_per_image": 0.01,
+        "output_cost_per_token": 0,
+        "output_cost_per_second": 0.08,
+        "output_cost_per_second_1080p": 0.25
+      }
+    },
+    {
+      "alias": "grok-image",
+      "deployed_model": "grok-image/grok-imagine-image-quality",
+      "upstream_model": "grok-image/grok-imagine-image-quality",
+      "intentionally_disabled": false,
+      "status": "resolved_with_provider_mapping",
+      "resolver_model": "xai/grok-imagine-image-quality",
+      "catalog_key": "xai/grok-imagine-image-quality",
+      "provider": "xai",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "input_cost_per_image": 0.05,
+        "output_cost_per_token": 0
+      }
+    },
+    {
+      "alias": "grok-imagine-image-quality",
+      "deployed_model": "grok-image/grok-imagine-image-quality",
+      "upstream_model": "grok-image/grok-imagine-image-quality",
+      "intentionally_disabled": false,
+      "status": "resolved_with_provider_mapping",
+      "resolver_model": "xai/grok-imagine-image-quality",
+      "catalog_key": "xai/grok-imagine-image-quality",
+      "provider": "xai",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "input_cost_per_image": 0.05,
+        "output_cost_per_token": 0
+      }
+    },
+    {
+      "alias": "grok-imagine-image-2.0",
+      "deployed_model": "grok-image/grok-imagine-image-2.0",
+      "upstream_model": "grok-image/grok-imagine-image-2.0",
+      "intentionally_disabled": false,
+      "status": "resolved_with_provider_mapping",
+      "resolver_model": "xai/grok-imagine-image-2.0",
+      "catalog_key": "xai/grok-imagine-image-2.0",
+      "provider": "xai",
+      "mode": "image_generation",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "input_cost_per_image": 0.06,
+        "output_cost_per_token": 0
+      }
+    },
+    {
+      "alias": "seedance-2.0",
+      "deployed_model": "seedance/dreamina-seedance-2-0-260128",
+      "upstream_model": "seedance/dreamina-seedance-2-0-260128",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "seedance/dreamina-seedance-2-0-260128",
+          "error": "This model isn't mapped yet. model=seedance/dreamina-seedance-2-0-260128, custom_llm_provider=None. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "seedance-2.0-fast",
+      "deployed_model": "seedance/dreamina-seedance-2-0-fast-260128",
+      "upstream_model": "seedance/dreamina-seedance-2-0-fast-260128",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "seedance/dreamina-seedance-2-0-fast-260128",
+          "error": "This model isn't mapped yet. model=seedance/dreamina-seedance-2-0-fast-260128, custom_llm_provider=None. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "seedance-2.5",
+      "deployed_model": "seedance/dreamina-seedance-2-5-260628",
+      "upstream_model": "seedance/dreamina-seedance-2-5-260628",
+      "intentionally_disabled": true,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "seedance/dreamina-seedance-2-5-260628",
+          "error": "This model isn't mapped yet. model=seedance/dreamina-seedance-2-5-260628, custom_llm_provider=None. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "seedream-5.0",
+      "deployed_model": "seedream/seedream-5-0-260128",
+      "upstream_model": "seedream/seedream-5-0-260128",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "seedream/seedream-5-0-260128",
+          "error": "This model isn't mapped yet. model=seedream/seedream-5-0-260128, custom_llm_provider=None. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "seedream-5.0-lite",
+      "deployed_model": "seedream/seedream-5-0-lite-260128",
+      "upstream_model": "seedream/seedream-5-0-lite-260128",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "seedream/seedream-5-0-lite-260128",
+          "error": "This model isn't mapped yet. model=seedream/seedream-5-0-lite-260128, custom_llm_provider=None. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "seedream-5.0-pro",
+      "deployed_model": "seedream/dola-seedream-5-0-pro-260628",
+      "upstream_model": "seedream/dola-seedream-5-0-pro-260628",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "seedream/dola-seedream-5-0-pro-260628",
+          "error": "This model isn't mapped yet. model=seedream/dola-seedream-5-0-pro-260628, custom_llm_provider=None. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "grok-latest",
+      "deployed_model": "xai/grok-4.20-non-reasoning-latest",
+      "upstream_model": "xai/grok-4.20-non-reasoning-latest",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "xai/grok-4.20-non-reasoning-latest",
+      "catalog_key": "xai/grok-4.20-non-reasoning-latest",
+      "provider": "xai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 1.25e-06,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "input_cost_per_token_above_200k_tokens": 2.5e-06,
+        "output_cost_per_token": 2.5e-06,
+        "output_cost_per_token_above_200k_tokens": 5e-06
+      }
+    },
+    {
+      "alias": "grok-4.20-reasoning",
+      "deployed_model": "xai/grok-4.20-reasoning-latest",
+      "upstream_model": "xai/grok-4.20-reasoning-latest",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "xai/grok-4.20-reasoning-latest",
+      "catalog_key": "xai/grok-4.20-reasoning-latest",
+      "provider": "xai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 1.25e-06,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "input_cost_per_token_above_200k_tokens": 2.5e-06,
+        "output_cost_per_token": 2.5e-06,
+        "output_cost_per_token_above_200k_tokens": 5e-06
+      }
+    },
+    {
+      "alias": "grok-4.20",
+      "deployed_model": "xai/grok-4.20-non-reasoning-latest",
+      "upstream_model": "xai/grok-4.20-non-reasoning-latest",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "xai/grok-4.20-non-reasoning-latest",
+      "catalog_key": "xai/grok-4.20-non-reasoning-latest",
+      "provider": "xai",
+      "mode": "chat",
+      "pricing_fields": {
+        "input_cost_per_token": 1.25e-06,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "input_cost_per_token_above_200k_tokens": 2.5e-06,
+        "output_cost_per_token": 2.5e-06,
+        "output_cost_per_token_above_200k_tokens": 5e-06
+      }
+    },
+    {
+      "alias": "elevenlabs-v3-tts",
+      "deployed_model": "elevenlabs/eleven_v3",
+      "upstream_model": "elevenlabs/eleven_v3",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "elevenlabs/eleven_v3",
+      "catalog_key": "elevenlabs/eleven_v3",
+      "provider": "elevenlabs",
+      "mode": "audio_speech",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "input_cost_per_character": 0.00018,
+        "output_cost_per_token": 0
+      }
+    },
+    {
+      "alias": "elevenlabs-multilingual-v2",
+      "deployed_model": "elevenlabs/eleven_multilingual_v2",
+      "upstream_model": "elevenlabs/eleven_multilingual_v2",
+      "intentionally_disabled": false,
+      "status": "resolved",
+      "resolver_model": "elevenlabs/eleven_multilingual_v2",
+      "catalog_key": "elevenlabs/eleven_multilingual_v2",
+      "provider": "elevenlabs",
+      "mode": "audio_speech",
+      "pricing_fields": {
+        "input_cost_per_token": 0,
+        "input_cost_per_character": 0.00018,
+        "output_cost_per_token": 0
+      }
+    },
+    {
+      "alias": "elevenlabs-sfx",
+      "deployed_model": "audio-studio/elevenlabs-sfx",
+      "upstream_model": "elevenlabs/eleven_text_to_sound_v2",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "audio-studio/elevenlabs-sfx",
+          "error": "This model isn't mapped yet. model=audio-studio/elevenlabs-sfx, custom_llm_provider=None. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        },
+        {
+          "model": "elevenlabs/eleven_text_to_sound_v2",
+          "error": "This model isn't mapped yet. model=elevenlabs/eleven_text_to_sound_v2, custom_llm_provider=elevenlabs. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    },
+    {
+      "alias": "elevenlabs-music",
+      "deployed_model": "audio-studio/elevenlabs-music",
+      "upstream_model": "elevenlabs/music_v1",
+      "intentionally_disabled": false,
+      "status": "unresolved",
+      "attempts": [
+        {
+          "model": "audio-studio/elevenlabs-music",
+          "error": "This model isn't mapped yet. model=audio-studio/elevenlabs-music, custom_llm_provider=None. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        },
+        {
+          "model": "elevenlabs/music_v1",
+          "error": "This model isn't mapped yet. model=elevenlabs/music_v1, custom_llm_provider=elevenlabs. Add it here - https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json."
+        }
+      ],
+      "exact_name_catalog_keys": []
+    }
+  ],
+  "audit_at": "2026-09-16T20:39:14.849817+00:00",
+  "blocked_alias_counts": {
+    "total": 50,
+    "catalog_resolved": 43,
+    "not_catalog_resolved": 7
+  },
+  "blocked_aliases_without_catalog_resolution": [
+    "seedance-2.0",
+    "seedance-2.0-fast",
+    "seedream-5.0",
+    "seedream-5.0-lite",
+    "seedream-5.0-pro",
+    "elevenlabs-sfx",
+    "elevenlabs-music"
+  ],
+  "separately_verified_seedance_aliases": [
+    "seedance-2.0",
+    "seedance-2.0-fast"
+  ]
+}

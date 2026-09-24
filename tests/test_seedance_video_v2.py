@@ -98,7 +98,8 @@ class SeedanceV2Tests(unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ,{"BYTEDANCE_API_KEY":"test-only"}), patch("generation_job_adapters._json_request",new_callable=AsyncMock,side_effect=responses) as get:
             statuses=[await BytePlusAdapter().retrieve(job) for _ in responses]
             self.assertEqual([s.status for s in statuses],["queued","in_progress","completed","failed"])
-            self.assertAlmostEqual(statuses[2].cost_usd,.77)
+            self.assertIsNone(statuses[2].cost_usd)
+            self.assertEqual(statuses[2].usage, {"completion_tokens":100000})
             self.assertEqual(statuses[2].result_url,"https://assets.example.test/result.mp4")
             self.assertEqual(statuses[3].error_code,"InvalidParameter")
             self.assertTrue(all(call.args[0]=="GET" and call.args[1].endswith("/original-task") for call in get.await_args_list))

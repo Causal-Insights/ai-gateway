@@ -28,7 +28,9 @@ logger = logging.getLogger("ai_gateway.xai")
 class GrokVideoException(Exception):
     """Raised when xAI Grok video generation submission or polling fails."""
 
-    pass
+    def __init__(self, message, *, body=None):
+        super().__init__(message)
+        self.body = body
 
 
 class GrokImageException(Exception):
@@ -46,8 +48,8 @@ class GrokVideoLLM(CustomLLM):
       - https://api.x.ai/v1/videos/edits
     Auth: GROK_API_KEY
 
-    Billing: prefers ``usage.cost_in_usd_ticks`` from xAI poll responses; falls back to
-    duration × per-second rate by resolution (see ``litellm_config.yaml`` / env overrides).
+    Billing: retain explicit ``usage.cost_in_usd_ticks`` only. Missing charges are
+    unknown. The gateway journal owns pricing and durable accounting.
     """
 
     XAI_BASE = "https://api.x.ai/v1"
@@ -59,14 +61,6 @@ class GrokVideoLLM(CustomLLM):
 
     # xAI: 1 USD = 10_000_000_000 ticks (see GET /v1/videos/{request_id} usage)
     USD_TICKS_PER_DOLLAR = 10_000_000_000
-    DEFAULT_PRICE_PER_SECOND_480P = 0.05
-    DEFAULT_PRICE_PER_SECOND_720P = 0.07
-    DEFAULT_PRICE_PER_SECOND_1080P = 0.07
-    DEFAULT_PRICE_PER_REFERENCE_IMAGE = 0.002
-    DEFAULT_PRICE_PER_SECOND_480P_15 = 0.08
-    DEFAULT_PRICE_PER_SECOND_720P_15 = 0.14
-    DEFAULT_PRICE_PER_SECOND_1080P_15 = 0.25
-    DEFAULT_PRICE_PER_REFERENCE_IMAGE_15 = 0.01
 
     @staticmethod
     def _strip_provider_prefix(model: str) -> str:
@@ -159,34 +153,7 @@ class GrokVideoLLM(CustomLLM):
         except (TypeError, ValueError):
             return None
 
-    def _price_per_second(self, resolution: Optional[str], upstream_model: str) -> float:
-        res = (resolution or "480p").strip().lower()
-        if self._is_video_15_model(upstream_model):
-            if res == "720p":
-                return self._env_float(
-                    "GROK_VIDEO_15_PRICE_PER_SECOND_720P", self.DEFAULT_PRICE_PER_SECOND_720P_15
-                )
-            if res == "1080p":
-                return self._env_float(
-                    "GROK_VIDEO_15_PRICE_PER_SECOND_1080P", self.DEFAULT_PRICE_PER_SECOND_1080P_15
-                )
-            return self._env_float(
-                "GROK_VIDEO_15_PRICE_PER_SECOND_480P", self.DEFAULT_PRICE_PER_SECOND_480P_15
-            )
-        if res == "720p":
-            return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_720P", self.DEFAULT_PRICE_PER_SECOND_720P)
-        if res == "1080p":
-            return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_1080P", self.DEFAULT_PRICE_PER_SECOND_1080P)
-        return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_480P", self.DEFAULT_PRICE_PER_SECOND_480P)
 
-    def _reference_image_price(self, upstream_model: str) -> float:
-        if self._is_video_15_model(upstream_model):
-            return self._env_float(
-                "GROK_VIDEO_15_PRICE_PER_REFERENCE_IMAGE", self.DEFAULT_PRICE_PER_REFERENCE_IMAGE_15
-            )
-        return self._env_float(
-            "GROK_VIDEO_PRICE_PER_REFERENCE_IMAGE", self.DEFAULT_PRICE_PER_REFERENCE_IMAGE
-        )
 
     def _estimate_cost(
         self,
@@ -198,17 +165,8 @@ class GrokVideoLLM(CustomLLM):
         has_video_input: bool,
         upstream_model: str,
     ) -> float:
-        """Fallback when xAI does not return usage.cost_in_usd_ticks."""
-        seconds = max(0, int(duration_seconds))
-        cost = seconds * self._price_per_second(resolution, upstream_model)
-        ref_price = self._reference_image_price(upstream_model)
-        if reference_image_count > 0:
-            cost += reference_image_count * ref_price
-        elif has_image_input:
-            cost += ref_price
-        if has_video_input:
-            cost += seconds * self._env_float("GROK_VIDEO_INPUT_VIDEO_PER_SECOND", 0.01)
-        return cost
+        """Deprecated: unverified quantity/rate guesses cannot be billed."""
+        return None
 
     @staticmethod
     def _video_response(video_url: str, *, response_cost: Optional[float] = None) -> ImageResponse:
@@ -232,27 +190,7 @@ class GrokVideoLLM(CustomLLM):
         has_video_input: bool,
         upstream_model: str,
     ) -> Optional[float]:
-        usage_cost = self._cost_from_usd_ticks(status_data.get("usage"))
-        if usage_cost is not None:
-            return usage_cost
-
-        video_meta = status_data.get("video") or {}
-        billed_seconds = video_meta.get("duration")
-        if billed_seconds is None:
-            billed_seconds = requested_duration if requested_duration is not None else 8
-        try:
-            billed_seconds = int(billed_seconds)
-        except (TypeError, ValueError):
-            billed_seconds = requested_duration or 8
-
-        return self._estimate_cost(
-            duration_seconds=billed_seconds,
-            resolution=resolution,
-            reference_image_count=reference_image_count,
-            has_image_input=has_image_input,
-            has_video_input=has_video_input,
-            upstream_model=upstream_model,
-        )
+        return self._cost_from_usd_ticks(status_data.get("usage"))
 
     async def aimage_generation(
         self,
@@ -461,7 +399,7 @@ class GrokVideoLLM(CustomLLM):
             returned_model = data.get("model")
             if returned_model and returned_model != upstream_model:
                 raise GrokVideoException(
-                    f"xAI returned model {returned_model!r}; expected {upstream_model!r}"
+                    f"xAI returned model {returned_model!r}; expected {upstream_model!r}", body=data,
                 )
 
             direct_video_url = (data.get("video") or {}).get("url")
@@ -475,7 +413,10 @@ class GrokVideoLLM(CustomLLM):
                     has_video_input=has_video_input,
                     upstream_model=upstream_model,
                 )
-                return self._video_response(direct_video_url, response_cost=cost)
+                result = self._video_response(direct_video_url, response_cost=cost)
+                result._hidden_params.update(gateway_usage=data.get("usage") or {},
+                    gateway_provider_request_id=request_id, gateway_served_model=returned_model or upstream_model)
+                return result
 
             if not request_id:
                 raise GrokVideoException(normalize_error(data.get("error", {}).get("message", data)))
@@ -502,13 +443,13 @@ class GrokVideoLLM(CustomLLM):
                 returned_model = status_data.get("model")
                 if returned_model and returned_model != upstream_model:
                     raise GrokVideoException(
-                        f"xAI returned model {returned_model!r}; expected {upstream_model!r}"
+                        f"xAI returned model {returned_model!r}; expected {upstream_model!r}", body=status_data,
                     )
 
                 if status == "done":
                     video_url = (status_data.get("video") or {}).get("url")
                     if not video_url:
-                        raise GrokVideoException("missing video url in completed Grok request")
+                        raise GrokVideoException("missing video url in completed Grok request", body=status_data)
                     cost = self._resolve_response_cost(
                         status_data=status_data,
                         requested_duration=duration,
@@ -518,16 +459,19 @@ class GrokVideoLLM(CustomLLM):
                         has_video_input=has_video_input,
                         upstream_model=upstream_model,
                     )
-                    return self._video_response(video_url, response_cost=cost)
+                    response = self._video_response(video_url, response_cost=cost)
+                    response._hidden_params.update(gateway_usage=status_data.get("usage") or {},
+                        gateway_provider_request_id=request_id, gateway_served_model=returned_model or upstream_model)
+                    return response
                 if status in {"failed", "expired"}:
                     err = status_data.get("error") or {}
                     err_code = err.get("code")
                     err_msg = normalize_error(err.get("message", status))
                     if err_code:
                         raise GrokVideoException(
-                            f"Grok request {request_id} failed ({err_code}): {err_msg}"
+                            f"Grok request {request_id} failed ({err_code}): {err_msg}", body=status_data,
                         )
-                    raise GrokVideoException(f"Grok request {request_id} failed: {err_msg}")
+                    raise GrokVideoException(f"Grok request {request_id} failed: {err_msg}", body=status_data)
 
         raise GrokVideoException(f"Grok request {request_id} timed out after {self.POLL_TIMEOUT}s")
 
@@ -551,17 +495,7 @@ class GrokImageLLM(CustomLLM):
     XAI_BASE = "https://api.x.ai/v1"
     DEFAULT_XAI_MODEL = "grok-imagine-image-quality"
     USD_TICKS_PER_DOLLAR = 10_000_000_000
-    INPUT_IMAGE_PRICE = 0.01
-    OUTPUT_IMAGE_PRICE_1K = 0.05
-    OUTPUT_IMAGE_PRICE_2K = 0.07
     IMAGE_2_MODEL = "grok-imagine-image-2.0"
-    IMAGE_2_INPUT_IMAGE_PRICE = 0.01
-    IMAGE_2_OUTPUT_PRICES = {
-        ("1K", "low"): 0.04,
-        ("2K", "low"): 0.06,
-        ("1K", "medium"): 0.06,
-        ("2K", "medium"): 0.08,
-    }
     MAX_BASE64_IMAGE_BYTES = 25 * 1024 * 1024
 
     @staticmethod
@@ -700,19 +634,6 @@ class GrokImageLLM(CustomLLM):
     def _max_input_images(cls, model: Any) -> int:
         return 5 if cls._is_image_2_model(model) else 3
 
-    @classmethod
-    def _fallback_image_cost(cls, request_payload: dict[str, Any], output_count: int) -> float:
-        input_count = len(request_payload.get("images") or ([] if not request_payload.get("image") else [1]))
-        resolution = str(request_payload.get("resolution") or request_payload.get("size") or "1K").upper()
-        if cls._is_image_2_model(request_payload.get("model")):
-            render_quality = str(request_payload.get("quality") or "medium").strip().lower()
-            output_price = cls.IMAGE_2_OUTPUT_PRICES.get(
-                (resolution, render_quality),
-                cls.IMAGE_2_OUTPUT_PRICES[("1K", "medium")],
-            )
-            return input_count * cls.IMAGE_2_INPUT_IMAGE_PRICE + output_count * output_price
-        output_price = cls.OUTPUT_IMAGE_PRICE_2K if resolution == "2K" else cls.OUTPUT_IMAGE_PRICE_1K
-        return input_count * cls.INPUT_IMAGE_PRICE + output_count * output_price
 
     @staticmethod
     def _requests_base64(request_payload: dict[str, Any]) -> bool:
@@ -816,12 +737,12 @@ class GrokImageLLM(CustomLLM):
                 cost = int(usage["cost_in_usd_ticks"]) / cls.USD_TICKS_PER_DOLLAR
             except (TypeError, ValueError):
                 pass
-        if cost is None:
-            output_count = len(data) or int(request_payload.get("n") or 1)
-            cost = cls._fallback_image_cost(request_payload, output_count)
-        hidden["response_cost"] = float(cost)
+        if cost is not None:
+            hidden["response_cost"] = float(cost)
+        hidden["gateway_served_model"] = body.get("model") or request_payload.get("model")
         if usage:
             hidden["xai_usage"] = usage
+            hidden["gateway_usage"] = usage
         if any(passthrough):
             hidden["xai_image_outputs"] = passthrough
         return response

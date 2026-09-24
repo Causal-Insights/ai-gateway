@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "xai",
+    "api_product": "xAI direct API",
+    "upstream_model": "grok-imagine-video-1.5",
+    "aliases": [
+      "grok-video-1.5"
+    ],
+    "account_context": null,
+    "region": null,
+    "routes": [
+      "generation_job"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.x.ai/developers/cost-tracking",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "usage_schema",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "provider_reported",
+  "dimensions": [
+    {
+      "name": "reported_charge",
+      "unit": "USD tick",
+      "rate": "1",
+      "per": "10000000000",
+      "conditions": {
+        "scope": "inclusive actual request charge"
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "cost_in_usd_ticks": "7100000000"
+    },
+    "formula": "7100000000 / 10000000000",
+    "calculated_cost": "0.71",
+    "provider_reported_cost": "0.71",
+    "evidence_kind": "provider_response"
+  },
+  "differences": [],
+  "limitations": [
+    "Unit verified on retrieval date; earlier historical applicability must be assessed separately.",
+    "Other model/route acceptance is not established by this video fixture."
+  ]
+}

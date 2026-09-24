@@ -106,7 +106,7 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(submit_url, "https://api.x.ai/v1/images/generations")
         self.assertEqual(submit_body["model"], "grok-imagine-image-quality")
 
-    async def test_image_2_generation_preserves_model_quality_and_fallback_cost(self):
+    async def test_image_2_generation_preserves_model_quality_without_guessed_cost(self):
         response = MagicMock()
         response.raise_for_status = MagicMock()
         response.json = MagicMock(
@@ -131,7 +131,7 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(submit_body["quality"], "medium")
         self.assertEqual(submit_body["response_format"], "b64_json")
         self.assertEqual(out.data[0].b64_json, "ZmFrZS1pbWFnZQ==")
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.08)
+        self.assertNotIn("response_cost", out._hidden_params)
 
     async def test_image_2_restores_request_policy_private_fields(self):
         response = MagicMock()
@@ -159,7 +159,7 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(submit_body["n"], 1)
         self.assertEqual(submit_body["quality"], "low")
         self.assertEqual(submit_body["response_format"], "b64_json")
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.04)
+        self.assertNotIn("response_cost", out._hidden_params)
 
     async def test_image_2_materializes_ignored_base64_request_from_temporary_url(self):
         response = MagicMock()
@@ -206,7 +206,7 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
                 logging_obj=None,
             )
         self.assertEqual(len(client_instance.post.call_args.kwargs["json"]["images"]), 5)
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.09)
+        self.assertNotIn("response_cost", out._hidden_params)
 
         with self.assertRaisesRegex(ValueError, "one to 5 images"):
             await GrokImageLLM().aimage_edit(
@@ -449,7 +449,7 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(out.data[0].revised_prompt, "revised")
         self.assertAlmostEqual(out._hidden_params["response_cost"], 0.09)
 
-    async def test_two_k_fallback_cost_counts_inputs_and_outputs(self):
+    async def test_two_k_without_provider_usage_has_no_cost(self):
         response = MagicMock()
         response.raise_for_status = MagicMock()
         response.json = MagicMock(
@@ -468,4 +468,4 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
                 logging_obj=None,
             )
         self.assertEqual(client_instance.post.call_args.kwargs["json"]["resolution"], "2k")
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.15)
+        self.assertNotIn("response_cost", out._hidden_params)

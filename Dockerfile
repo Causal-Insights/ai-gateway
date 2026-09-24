@@ -9,6 +9,11 @@ RUN apk add --no-cache ffmpeg
 COPY requirements.txt /app/requirements.txt
 RUN python -m ensurepip && python -m pip install --no-cache-dir -r /app/requirements.txt
 
+# Keep the generated ORM consistent with migration 004. Unknown spend must be
+# readable by the stock LiteLLM Logs API without coercing it to zero.
+COPY scripts/patch_execution_log_schema.py /app/patch_execution_log_schema.py
+RUN python /app/patch_execution_log_schema.py /app/schema.prisma && prisma generate --schema=/app/schema.prisma
+
 # Copy configuration and custom handlers into the image
 COPY litellm_config.yaml /app/litellm_config.yaml
 COPY custom_handler.py /app/custom_handler.py
@@ -31,6 +36,9 @@ COPY openai_usage.py /app/openai_usage.py
 COPY gateway_logging.py /app/gateway_logging.py
 COPY gateway_healthcheck.py /app/gateway_healthcheck.py
 COPY gateway_server.py /app/gateway_server.py
+COPY decision_contract.py decision_routes.py /app/
+COPY pricing_registry.py litellm_pricing.py accounting_usage.py cost_accounting.py gateway_accounting.py cost_repairs.py /app/
+COPY pricing /app/pricing
 COPY gateway_entrypoint.sh /app/gateway_entrypoint.sh
 COPY callback_server.py /app/callback_server.py
 COPY migrations /app/migrations

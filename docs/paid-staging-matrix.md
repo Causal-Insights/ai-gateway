@@ -1,5 +1,8 @@
 # Paid staging matrix
 
+> These historical capability results do not attest to the new accounting writer.
+> Current billing admission is listed in [pricing coverage](pricing-coverage.md).
+
 Release candidate: `8635ecdb92d371f3047e56ab8574f7aa5c82badc`
 
 Immutable application image:
@@ -83,3 +86,13 @@ separate operational change.
 | --- | --- | --- |
 | Studio Pro with `gemini-3.5-flash` | PASS | A connected Text → AI Model workflow returned exactly `studio-gemini-ok`; the production spend log recorded a successful `vertex_ai/gemini-3.5-flash` request costing `$0.000789`. |
 | Studio Pro with `grok-video-1.5` | PASS | A connected Text → Video Gen workflow completed as job `gen_997bb1d5172444dcbae5178d03c32a83`; the in-app player reached ready state 4 with a 1280x720, 4.041667-second video; gateway cost `$0.56`. Studio's initial `operation:auto` capability probe was rejected without spend, then its explicit `operation:generate` retry succeeded. No Magic Lens code changes were made. |
+# Accounting evidence correction (2026-09-16)
+
+Historical `PASS` entries below describe the capability/rollout observations made
+at the time. They do **not** establish accurate durable-job cost accounting.
+The read-only September 16 audit found 68 retained completed video jobs without
+matching LiteLLM spend rows, including Veo jobs whose stored zero cost lacked usage
+evidence. A job-level cost or unchanged zero is insufficient accounting acceptance.
+See [the current accounting release gates](cost-accounting-rollout.md) and
+[pricing coverage](pricing-coverage.md). Preserve the historical observations above
+as evidence; do not reuse them as proof that the accounting release passed.

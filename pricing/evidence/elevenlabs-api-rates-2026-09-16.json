@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "status": "mismatch",
+  "identity": {
+    "vendor": "elevenlabs",
+    "api_product": "ElevenAPI",
+    "upstream_model": "eleven_v3",
+    "aliases": [
+      "elevenlabs-tts",
+      "elevenlabs-tts-v3"
+    ],
+    "account_context": null,
+    "region": null,
+    "routes": [
+      "speech"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://elevenlabs.io/pricing/api",
+      "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+      "scope": "pricing",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "input_characters",
+      "unit": "character",
+      "rate": "0.10",
+      "per": "1000",
+      "conditions": {
+        "models": [
+          "eleven_v3",
+          "eleven_multilingual_v2"
+        ]
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "input_characters": "1000"
+    },
+    "formula": "1000 * 0.10 / 1000",
+    "calculated_cost": "0.10",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [
+    {
+      "field": "input_cost_per_character",
+      "configured": "0.00018",
+      "verified": "0.0001"
+    }
+  ],
+  "limitations": [
+    "Current API pricing lists Multilingual v2/v3 at $0.10 per 1000 characters. This overrides the captured LiteLLM rate; account invoice reconciliation remains separate."
+  ]
+}

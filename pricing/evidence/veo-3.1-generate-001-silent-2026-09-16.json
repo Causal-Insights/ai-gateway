@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "status": "mismatch",
+  "identity": {
+    "vendor": "google",
+    "api_product": "Vertex AI",
+    "upstream_model": "veo-3.1-generate-001",
+    "aliases": [
+      "veo-3.1"
+    ],
+    "account_context": null,
+    "region": "us-central1",
+    "routes": [
+      "generation_job"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://cloud.google.com/vertex-ai/generative-ai/pricing",
+      "retrieved_at": "2026-09-16T21:29:36.492232+00:00",
+      "scope": "pricing",
+      "excerpt": ""
+    },
+    {
+      "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/provisioned-throughput/supported-models",
+      "retrieved_at": "2026-09-16T21:29:36.492232+00:00",
+      "scope": "usage_schema",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T21:29:36.492232+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "output_video_seconds",
+      "unit": "second",
+      "rate": "0.20",
+      "per": "1",
+      "conditions": {
+        "resolution": "720p",
+        "generate_audio": false
+      }
+    },
+    {
+      "name": "output_video_seconds",
+      "unit": "second",
+      "rate": "0.20",
+      "per": "1",
+      "conditions": {
+        "resolution": "1080p",
+        "generate_audio": false
+      }
+    },
+    {
+      "name": "output_video_seconds",
+      "unit": "second",
+      "rate": "0.40",
+      "per": "1",
+      "conditions": {
+        "resolution": "4k",
+        "generate_audio": false
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "output_video_seconds": "4"
+    },
+    "formula": "4 * 0.20",
+    "calculated_cost": "0.80",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [
+    {
+      "field": "silent video per-second rates",
+      "configured": {
+        "output_cost_per_second": 0.4,
+        "output_cost_per_second_4k": 0.6
+      },
+      "verified": {
+        "720p": "0.20",
+        "1080p": "0.20",
+        "4k": "0.40"
+      }
+    }
+  ],
+  "limitations": [
+    "LiteLLM supplies output-second usage semantics and audio-output rates; the official Google pricing table distinguishes lower silent-output rates.",
+    "Applied only when the actual request selects generate_audio=false. Actual output duration is required."
+  ]
+}

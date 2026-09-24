@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "byteplus",
+    "api_product": "ModelArk",
+    "upstream_model": "seedream-5-0-260128",
+    "aliases": [
+      "seedream-5.0"
+    ],
+    "account_context": null,
+    "region": "ap-southeast-1",
+    "routes": [
+      "image_generation",
+      "image_edit"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.byteplus.com/en/docs/ModelArk/1544106",
+      "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+      "scope": "pricing",
+      "excerpt": ""
+    },
+    {
+      "url": "https://docs.byteplus.com/en/docs/ModelArk/1824121",
+      "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+      "scope": "pricing",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "output_images",
+      "unit": "image",
+      "rate": "0.035",
+      "per": "1",
+      "conditions": {}
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "output_images": "1"
+    },
+    "formula": "1 * 0.035 / 1",
+    "calculated_cost": "0.035",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "The official model capability table lists seedream-5-0-260128 and seedream-5-0-lite-260128 as IDs of the same Lite model. Input images are free.",
+    "Search tool surcharge is not established by the available Seedream table; only search-enabled requests remain excluded."
+  ]
+}

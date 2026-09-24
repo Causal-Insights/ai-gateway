@@ -5,7 +5,7 @@ This repo packages a LiteLLM Proxy plus custom handlers for:
 - **Grok video** (`grok-video` / `grok-imagine-video`; **1.5** via `grok-video-1.5` → `grok-imagine-video-1.5`)
 - **Gemini Omni Flash 1.1** durable audiovisual video generation, editing, interpolation, and extension
 - **Grok Imagine Image Quality** generation and up-to-three-image editing
-- **Seedance 2.0** plus disabled durable **Seedance 2.5** onboarding (BytePlus video)
+- **Seedance 2.0, Fast and 2.5** with shared ModelArk credentials (BytePlus video)
 - **Seedream 5** including **Seedream 5.0 Pro** (BytePlus ModelArk image)
 
 The [September 2026 OpenAI Gateway contract](docs/openai-september-2026.md) adds
@@ -120,15 +120,14 @@ Then configure environment variables (via `gcloud run services update` or the co
 - `OPENAI_API_KEY`
 - `GROK_API_KEY`
 - `BYTEDANCE_API_KEY` (Seedance 2.0 / Seedream 5 / BytePlus ModelArk)
-- `SEEDANCE_2_5_API_KEY` (separate disabled Seedance 2.5 LAS durable-job credential)
-- Optional Seedance 2.5 settings: `SEEDANCE_2_5_BASE_URL`, `SEEDANCE_2_5_PRICE_PER_SECOND_480P`, `SEEDANCE_2_5_PRICE_PER_SECOND_720P`.
+- Seedance 2.0, Fast and 2.5 share `BYTEDANCE_API_KEY` and the ModelArk endpoint.
 - Optional Seedance legacy tuning: `SEEDANCE_ARK_BASE`, `SEEDANCE_ARK_MODEL`, `SEEDANCE_POLL_INTERVAL_S`, `SEEDANCE_POLL_TIMEOUT_S`. These settings only support deprecated blocking calls; new consumers should use durable jobs.
 - `ELEVENLABS_API_KEY`
 - **Vertex (`vertex_ai/*` models in `litellm_config.yaml`)**: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` (e.g. `us-central1`). On Cloud Run, attach a service account with Vertex permissions; local Docker may need `GOOGLE_APPLICATION_CREDENTIALS` (or `VERTEXAI_CREDENTIALS`) pointing at a key file.
 - Any optional `VERTEXAI_*` / `ELEVENLABS_*` vars you still use elsewhere
 
 `./deploy_cloud_run.sh` binds required secrets explicitly with `--set-secrets`
-(including `SEEDANCE_2_5_API_KEY`)
+(including `BYTEDANCE_API_KEY`)
 and fails before build/deploy if `.env` contains the same database URL as the
 production `DATABASE_URL` secret.
 
@@ -180,3 +179,28 @@ Replace `<cloud-run-url>` with the HTTPS URL shown by `gcloud run deploy`.
   - `imagen-4.0`, `grok-video`, `grok-video-1.5`, `grok-imagine-image-quality`, `seedance-2.0`, `seedream-5.0`, `seedream-5.0-lite`
 
 Clients **never** send provider API keys or upstream URLs; only the proxy holds those in its environment.
+# Provider cost accounting
+
+**Every billable provider execution must appear in LiteLLM Logs with its known
+cost. Attribution may be unresolved; execution logging must never be withheld.**
+Unknown costs remain visible as null. Budgets and reconciliation run separately.
+See the [architectural invariant and audit](docs/execution-logging-invariant.md).
+
+The gateway now has a versioned pricing registry and a durable cost journal.
+LiteLLM supplies standard model prices; explicit corrections and custom-provider
+rates cover its gaps. Missing usage stays unresolved instead
+of becoming a zero-dollar charge. See [cost accounting](docs/cost-accounting.md),
+[pricing coverage](docs/pricing-coverage.md), [model onboarding](docs/model-onboarding.md)
+and the [accounting rollout gates](docs/cost-accounting-rollout.md).
+
+The [model-unblocking plan](docs/model-unblocking-plan.md) records the revised
+policy and implementation order: reuse supported LiteLLM pricing, separate review
+warnings from actual blockers, and resolve all 50 newly blocked aliases. All 56 configured aliases now have enabled pricing profiles.
+
+Use `$price-verification` to collect official vendor evidence. Its canonical source
+is `skills/price-verification/`; run `python scripts/sync_price_verification.py`
+after changing it to refresh the personal skill.
+
+## Typed decisions
+
+Authenticated `/v1/decisions` supports pinned Jev System One questions with durable vendor cost accounting. Configure `JEV_API_KEY` on the Gateway server. See [the decision contract and activation status](docs/decisions.md); Jev is separate from generation models and its initial pricing profile is disabled.

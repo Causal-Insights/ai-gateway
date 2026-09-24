@@ -11,20 +11,24 @@ from litellm.proxy._types import LiteLLMRoutes
 from litellm.proxy.proxy_server import app
 
 from generation_job_routes import router as generation_jobs_router
+from decision_routes import router as decisions_router
 from generation_job_repository import repository
 from generation_job_scheduler import start_local_scheduler, stop_local_scheduler
 from gateway_request_policy import GatewayRequestPolicyMiddleware
 from openai_model_contracts import install_image_adapters
-from openai_usage import install_openai_accounting
+from gateway_accounting import AccountingMiddleware, install as install_accounting, router as cost_router
 
 install_image_adapters()
-install_openai_accounting()
+install_accounting()
 
 
 GENERATION_JOB_LLM_ROUTES = (
+    "/v1/decisions",
+    "/v1/decisions/models",
     "/v1/generation-jobs",
     "/v1/generation-jobs/{job_id}",
     "/v1/generation-jobs/{job_id}/content",
+    "/v1/costs/{accounting_id}",
 )
 
 
@@ -46,7 +50,10 @@ def register_generation_job_llm_routes() -> None:
 
 register_generation_job_llm_routes()
 app.include_router(generation_jobs_router)
+app.include_router(decisions_router)
+app.include_router(cost_router)
 app.add_middleware(GatewayRequestPolicyMiddleware)
+app.add_middleware(AccountingMiddleware)
 
 _litellm_lifespan = app.router.lifespan_context
 
@@ -55,6 +62,8 @@ _litellm_lifespan = app.router.lifespan_context
 async def _gateway_lifespan(application):
     async with _litellm_lifespan(application):
         await repository.pool()
+        # LiteLLM loads configured callbacks during its lifespan.
+        install_accounting()
         await start_local_scheduler()
         try:
             yield

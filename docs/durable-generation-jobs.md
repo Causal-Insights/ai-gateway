@@ -97,7 +97,8 @@ triples. Changing that string is a schema-version bump.
 
 V2 submissions are accepted for models with a V2 route (Grok, Seedance 2.0/fast,
 and Veo). Gemini Omni Flash has no V2 route. Seedance 2.5 has no V2 route.
-Seedance 2.5 has no V2 route until its exact LAS routes are certified.
+Seedance 2.5 uses ModelArk with BYTEDANCE_API_KEY on the V1 durable-job route.
+Its media_inputs accept image, video and audio references. No LAS key is needed.
 
 Each job row stores `request_schema_version`, `provider_route`, and `adapter_revision`.
 Retrieve and content dispatch on the persisted `provider_route`, never on the current
@@ -107,8 +108,8 @@ same LiteLLM Vertex adapter after a V2-to-V1 translation so generation keeps wor
 `VEO_OUTPUT_GCS_PREFIX`) is implemented and unit-tested; it is not the live Veo
 route. Apply a GCS object lifecycle of 30 days or less (ADR-001) and
 grant the Gateway service account `storage.objects.create` and `storage.objects.get` on
-that prefix before pointing any job at `vertex_veo_direct`. Gateway `SEEDANCE_2_5_PRICE_PER_SECOND_*` values are cost evidence, not
-MagicLens quotes.
+that prefix before pointing any job at `vertex_veo_direct`. Legacy price environment
+variables are not billing evidence; verified registry profiles control admission.
 
 ## Provider routes
 
@@ -116,8 +117,7 @@ MagicLens quotes.
 |---|---|
 | `xai_videos_v1` | V1 Grok jobs |
 | `xai_videos_v2` | V2 Grok jobs |
-| `byteplus_ark_v3` | Seedance 2.0 / 2.0-fast |
-| `byteplus_las_v1` | Seedance 2.5 (disabled contract) |
+| `byteplus_ark_v3` | Seedance 2.0, Fast and 2.5 (shared ModelArk key) |
 | `vertex_litellm_video` | V1 and live V2 Veo via LiteLLM |
 | `vertex_veo_direct` | Implemented Vertex `predictLongRunning` adapter; not the live Veo route |
 | `vertex_omni_interactions` | Gemini Omni Flash |
@@ -169,9 +169,10 @@ and match a known standard or BytePlus output grid. Unknown frame grids and Fast
 
 Generation settings preserve the registered 4–15 second range and audio boolean.
 Fast and image-reference profiles are limited to 480p/720p; standard text and
-first-frame profiles also permit 1080p. Gateway cost evidence uses the distinct
-standard 1080p token rates, respects deployment overrides and prefers explicit
-provider cost. Customer quotes remain owned by MagicLens's existing registry.
+first-frame profiles also permit 1080p. Billing admission additionally requires a
+verified registry profile for the exact served options and actual usage. Public
+rates alone do not complete that acceptance check. Customer quotes remain owned
+by MagicLens's existing registry.
 
 `tests/fixtures/generation_jobs_v2/seedance_20_profiles.json` matches the MagicLens
 compiler goldens for all eight model/profile combinations.
@@ -184,3 +185,19 @@ Official sources rechecked September 10, 2026:
 - https://docs.byteplus.com/en/docs/ModelArk/2291680
 - https://docs.byteplus.com/en/docs/ModelArk/1520757
 - https://docs.byteplus.com/en/docs/ModelArk/1544106
+# Accounting contract update
+
+Job responses now include `accounting_id`, `cost_status`, `cost_source`,
+`pricing_version`, `breakdown` and `billing_eligible`. The existing `cost_usd` field
+is populated only from committed journal accounting. Legacy stored estimates do
+not establish a verified amount. Use `GET /v1/costs/{accounting_id}` with the
+originating key for the exact decimal cost and per-attempt evidence.
+
+**Every provider execution is logged regardless of attribution.** Spend completion
+means its execution row and journal are persisted; daily aggregates and budgets
+have a separate retryable projection status. A pending/unknown cost remains a
+visible null amount. Older retained jobs missing logs are imported as unverified
+evidence, without repricing history or adjusting customer charges. Repeated polls/callbacks do not charge twice.
+Existing owner hashes stay compatible while billing uses the canonical LiteLLM
+key hash. Unknown provider outcomes are never automatically resubmitted.
+See [cost accounting](cost-accounting.md) for pricing and historical-repair policy.

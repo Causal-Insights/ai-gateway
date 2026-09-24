@@ -63,20 +63,18 @@ A caller must reconcile an ambiguous submission before attempting another call.
 
 ## Accounting
 
-`openai_usage.py` owns the dated token-rate schedule and integrates with
-LiteLLM's existing spend/header/log pipeline for these exact models only.
-Astra partitions ordinary input, cache reads, cache writes, and output; requests
-above 272,000 input tokens apply the long-context multipliers to the whole
-request. Reasoning output is already included in the output-token total.
-The served service tier determines its multiplier.
+The versioned pricing registry now owns token rates and service-tier/context
+conditions; `openai_usage.py` delegates compatibility calculations to it.
+Accounting partitions ordinary input, cache reads, cache writes and output using
+actual usage. Reasoning output is already included in the output-token total.
+Served model and service tier must match the accepted profile.
 
 Image accounting separates text input, cached text input, image input, cached
-image input, and output. Final output-token totals already include paid preview
-frames. A Responses request adds separately reported image-tool usage to parent
-usage exactly once. Missing or incomplete usage remains an unknown cost, rather
-than a zero-cost success or an invented per-image price. Requests with other
-hosted tools currently retain unknown total cost until all their charges can be
-accounted for. Full billing/media proof awaits entitled provider access.
+image input and output. Missing modality breakdowns remain unresolved. Hosted
+image-tool billing requires separate verification of parent and tool usage to
+prevent double counting. Unsupported tools and profiles without provider-backed
+acceptance are blocked before submission. See [pricing coverage](pricing-coverage.md)
+and the [accounting guide](cost-accounting.md) for the current release state.
 
 ## Verification
 
@@ -84,7 +82,7 @@ Run unit tests in the pinned application image with networking disabled. The
 wire tests mock the HTTP client beneath both the OpenAI SDK and native LiteLLM
 adapters, assert exact upstream bodies, usage preservation, and error/no-retry
 behavior. The remaining database integration tests require an isolated database.
-They are not a production migration gate for this configuration-only release.
+They are required before promoting the accounting candidate; this document's earlier capability evidence does not establish accounting acceptance.
 
 Source evidence, accessed 2026-09-09:
 

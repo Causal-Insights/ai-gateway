@@ -51,8 +51,10 @@ class ProviderAdapterError(Exception):
         retryable: bool = False,
         outcome_unknown: bool = False,
         status_code: Optional[int] = None,
+        usage: Optional[dict[str, Any]] = None,
     ) -> None:
         super().__init__(message)
+        self.usage = usage
         self.code = code
         self.retryable = retryable
         self.outcome_unknown = outcome_unknown
@@ -219,6 +221,7 @@ async def _json_request(
             retryable=retryable and (not submission or rate_limited_submission),
             outcome_unknown=submission and retryable and not rate_limited_submission,
             status_code=response.status_code,
+            usage=data.get("usage") if isinstance(data, dict) and isinstance(data.get("usage"), dict) else None,
         )
     if not isinstance(data, dict):
         raise ProviderAdapterError(
@@ -455,23 +458,6 @@ class XAIAdapter(BaseAdapter):
             },
         )
 
-    @staticmethod
-    def _fallback_cost(metadata: dict[str, Any], body: dict[str, Any]) -> Optional[float]:
-        duration = ((body.get("video") or {}).get("duration") or metadata.get("duration_seconds") or 8)
-        try:
-            seconds = int(duration)
-        except (TypeError, ValueError):
-            return None
-        resolution = str(metadata.get("resolution") or "480p").lower()
-        model = str(metadata.get("upstream_model") or "")
-        price = 0.08 if "1.5" in model else 0.05
-        if resolution == "720p":
-            price = 0.14 if "1.5" in model else 0.07
-        elif resolution == "1080p":
-            price = 0.25 if "1.5" in model else 0.07
-        image_price = 0.01 if "1.5" in model else 0.002
-        input_video_cost = seconds * 0.01 if metadata.get("has_input_video") else 0
-        return seconds * price + int(metadata.get("image_count") or 0) * image_price + input_video_cost
 
     async def retrieve(self, job: dict[str, Any]) -> ProviderStatus:
         api_key = os.environ.get("GROK_API_KEY")
@@ -483,12 +469,15 @@ class XAIAdapter(BaseAdapter):
         raw = str(data.get("status") or "pending").lower()
         expected_model = str((job.get("request_metadata") or {}).get("upstream_model") or "")
         returned_model = str(data.get("model") or "")
+        usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
         if returned_model and expected_model and returned_model != expected_model:
             return ProviderStatus(
                 status="failed",
                 provider_status=raw,
                 error_code="PROVIDER_MODEL_MISMATCH",
                 error_message=f"xAI returned model {returned_model!r}; expected {expected_model!r}.",
+                usage=usage,
+                served_model=returned_model,
             )
         usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
         cost: Optional[float] = None
@@ -502,11 +491,11 @@ class XAIAdapter(BaseAdapter):
             if not video_url:
                 return ProviderStatus(
                     status="failed", provider_status=raw, error_code="PROVIDER_MALFORMED_RESULT",
-                    error_message="xAI completed without a video URL."
+                    error_message="xAI completed without a video URL.", usage=usage, cost_usd=cost, served_model=returned_model or None,
                 )
             return ProviderStatus(
                 status="completed", provider_status=raw, progress=100, result_url=video_url,
-                usage=usage, cost_usd=cost if cost is not None else self._fallback_cost(job.get("request_metadata") or {}, data),
+                usage=usage, cost_usd=cost, served_model=returned_model or None,
             )
         if raw in {"failed", "expired", "cancelled"}:
             error = data.get("error") or {}
@@ -515,6 +504,7 @@ class XAIAdapter(BaseAdapter):
                 provider_status=raw,
                 error_code=str(error.get("code") or f"XAI_{raw.upper()}"),
                 error_message=_clean_error(error or raw),
+                usage=usage,
             )
         return ProviderStatus(status="in_progress" if raw not in {"queued", "pending"} else "queued", provider_status=raw, progress=data.get("progress"))
 
@@ -523,8 +513,7 @@ class BytePlusAdapter(BaseAdapter):
     provider = "byteplus"
     adapter_revision = "byteplus_ark_v3@2026-09-03"
     default_base = "https://ark.ap-southeast.bytepluses.com/api/v3"
-    seedance_2_5_default_base = "https://operator.las.ap-southeast-1.bytepluses.com/api/v1"
-    seedance_2_5_rates = {"480p": 0.2055855, "720p": 0.462075}
+    seedance_2_5_resolutions = {"480p", "720p", "1080p"}
 
     @staticmethod
     def upstream_model(model: str) -> str:
@@ -542,42 +531,18 @@ class BytePlusAdapter(BaseAdapter):
         return "seedance-2-5" in (model or "").lower() or (model or "").lower() == "seedance-2.5"
 
     def _base(self, model: str) -> str:
-        if self._is_2_5_model(model):
-            return (
-                os.environ.get("SEEDANCE_2_5_BASE_URL") or self.seedance_2_5_default_base
-            ).rstrip("/")
         return (os.environ.get("SEEDANCE_ARK_BASE") or self.default_base).rstrip("/")
 
     def _headers(self, model: str) -> dict[str, str]:
-        api_key = (
-            os.environ.get("SEEDANCE_2_5_API_KEY")
-            if self._is_2_5_model(model)
-            else os.environ.get("BYTEDANCE_API_KEY")
-        )
+        api_key = os.environ.get("BYTEDANCE_API_KEY")
         if not api_key:
-            key_name = "SEEDANCE_2_5_API_KEY" if self._is_2_5_model(model) else "BYTEDANCE_API_KEY"
-            raise ProviderAdapterError(f"{key_name} is not configured.", code="PROVIDER_NOT_CONFIGURED")
+            raise ProviderAdapterError("BYTEDANCE_API_KEY is not configured.", code="PROVIDER_NOT_CONFIGURED")
         return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     def _validate_request(self, request: GenerationJobCreate, *, upstream_model: str) -> None:
         images = [media for media in request.media_inputs if media.type == "image"]
         videos = [media for media in request.media_inputs if media.type == "video"]
         if self._is_2_5_model(upstream_model):
-            if request.operation in {"edit", "extend"}:
-                raise ProviderAdapterError(
-                    "Seedance 2.5 editing and extension are not enabled.",
-                    code="CAPABILITY_NOT_SUPPORTED",
-                )
-            if videos:
-                raise ProviderAdapterError(
-                    "Seedance 2.5 video inputs are not enabled.",
-                    code="CAPABILITY_NOT_SUPPORTED",
-                )
-            if any(media.role in {"last_frame", "source"} for media in images):
-                raise ProviderAdapterError(
-                    "Seedance 2.5 currently supports first-frame or reference-image generation only.",
-                    code="CAPABILITY_NOT_SUPPORTED",
-                )
             first_frames = [media for media in images if media.role == "first_frame"]
             references = [media for media in images if media.role == "reference"]
             if len(first_frames) > 1 or (first_frames and references):
@@ -597,9 +562,9 @@ class BytePlusAdapter(BaseAdapter):
                     code="INVALID_REQUEST",
                 )
             resolution = (request.resolution or "720p").lower()
-            if resolution not in self.seedance_2_5_rates:
+            if resolution not in self.seedance_2_5_resolutions:
                 raise ProviderAdapterError(
-                    "Seedance 2.5 resolution must be 480p or 720p.",
+                    "Seedance 2.5 resolution must be 480p, 720p or 1080p.",
                     code="INVALID_REQUEST",
                 )
             return
@@ -674,11 +639,12 @@ class BytePlusAdapter(BaseAdapter):
                     raise ProviderAdapterError(
                         "Seedance input videos must use an HTTPS URL.", code="INVALID_MEDIA_INPUT"
                     )
-                content.append({"type": "video_url", "video_url": {"url": media_url}, "role": "reference_video"})
+                kind = "audio" if media.type == "audio" else "video"
+                content.append({"type": kind + "_url", kind + "_url": {"url": media_url}, "role": "reference_" + kind})
         body: dict[str, Any] = {
             "model": upstream_model,
             "content": content,
-            "resolution": request.resolution or "480p",
+            "resolution": request.resolution or ("720p" if self._is_2_5_model(upstream_model) else "480p"),
             "ratio": request.aspect_ratio or "1:1",
             "duration": request.duration_seconds or 4,
             "generate_audio": request.generate_audio,
@@ -714,44 +680,9 @@ class BytePlusAdapter(BaseAdapter):
 
     @staticmethod
     def _cost(job: dict[str, Any], data: dict[str, Any]) -> Optional[float]:
-        usage = data.get("usage") or {}
-        for value in (usage.get("cost_usd"), usage.get("cost"), data.get("cost_usd")):
-            try:
-                parsed = float(value)
-            except (TypeError, ValueError):
-                continue
-            if parsed >= 0:
-                return parsed
-        metadata = job.get("request_metadata") or {}
-        upstream_model = str(data.get("model") or metadata.get("upstream_model") or "")
-        if BytePlusAdapter._is_2_5_model(upstream_model):
-            resolution = str(metadata.get("resolution") or "720p").lower()
-            env_name = f"SEEDANCE_2_5_PRICE_PER_SECOND_{resolution.upper()}"
-            fallback = BytePlusAdapter.seedance_2_5_rates.get(resolution)
-            if fallback is None:
-                return None
-            try:
-                rate = float(os.environ.get(env_name, str(fallback)))
-                duration = int(metadata.get("duration_seconds") or 0)
-            except (TypeError, ValueError):
-                return None
-            return duration * rate if duration > 0 else None
-        try:
-            tokens = int(usage.get("completion_tokens") or usage.get("total_tokens") or 0)
-        except (TypeError, ValueError):
-            return None
-        if tokens <= 0:
-            return None
-        is_fast = "fast" in str(data.get("model") or metadata.get("upstream_model") or "").lower()
-        has_video = bool(metadata.get("has_input_video"))
-        if is_fast:
-            rate = float(os.environ.get("SEEDANCE_PRICE_PER_MTOK_FAST_VIDEO" if has_video else "SEEDANCE_PRICE_PER_MTOK_FAST", "3.30" if has_video else "5.60"))
-        else:
-            resolution = str(data.get("resolution") or metadata.get("resolution") or "480p").lower()
-            suffix = "_1080P" if resolution == "1080p" else ""
-            rate = float(os.environ.get(("SEEDANCE_PRICE_PER_MTOK_VIDEO" if has_video else "SEEDANCE_PRICE_PER_MTOK") + suffix,
-                                        ("4.70" if has_video else "7.70") if suffix else ("4.30" if has_video else "7.00")))
-        return tokens * rate / 1_000_000.0
+        # Canonical pricing uses the job's pinned journal profile and measured
+        # usage. No environment/default fallback is authoritative.
+        return None
 
     async def retrieve(self, job: dict[str, Any]) -> ProviderStatus:
         metadata = job.get("request_metadata") or {}
@@ -763,18 +694,20 @@ class BytePlusAdapter(BaseAdapter):
             headers=self._headers(model),
         )
         raw = str(data.get("status") or "running").lower()
+        usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
         if raw == "succeeded":
             video_url = (data.get("content") or {}).get("video_url")
             if not video_url:
-                return ProviderStatus(status="failed", provider_status=raw, error_code="PROVIDER_MALFORMED_RESULT", error_message="BytePlus completed without a video URL.")
-            usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
-            return ProviderStatus(status="completed", provider_status=raw, progress=100, result_url=video_url, usage=usage, cost_usd=self._cost(job, data))
+                return ProviderStatus(status="failed", provider_status=raw, error_code="PROVIDER_MALFORMED_RESULT", error_message="BytePlus completed without a video URL.", usage=usage)
+            usage = dict(data.get("usage") or {})
+            return ProviderStatus(status="completed", provider_status=raw, progress=100, result_url=video_url, usage=usage, cost_usd=self._cost(job, data), served_model=data.get("model"))
         if raw in {"failed", "expired", "cancelled"}:
             error = data.get("error") or {}
             return ProviderStatus(
                 status=raw, provider_status=raw,
                 error_code=str(error.get("code") or f"BYTEPLUS_{raw.upper()}"),
                 error_message=_clean_error(error or raw),
+                usage=usage,
             )
         return ProviderStatus(status="queued" if raw in {"queued", "submitted"} else "in_progress", provider_status=raw, progress=data.get("progress"))
 
@@ -927,50 +860,14 @@ class VertexAdapter(BaseAdapter):
 
     @staticmethod
     def _omni_cost(usage: Any) -> Optional[float]:
-        if not isinstance(usage, dict):
-            return None
+        from pricing_registry import registry, PricingError
+        from accounting_usage import extract
         try:
-            input_tokens = int(usage.get("total_input_tokens") or 0)
-            output_tokens = int(usage.get("total_output_tokens") or 0)
-            thought_tokens = int(usage.get("total_thought_tokens") or 0)
-        except (TypeError, ValueError):
+            prices = registry()
+            profile = prices.select("gemini-omni-1.1-flash", "generation_job", admission=False)
+            return float(prices.calculate(profile, extract("omni", usage))["cost_usd"])
+        except PricingError:
             return None
-        video_tokens = 0
-        for item in usage.get("output_tokens_by_modality") or []:
-            if isinstance(item, dict) and str(item.get("modality") or "").lower() == "video":
-                try:
-                    video_tokens += int(item.get("tokens") or 0)
-                except (TypeError, ValueError):
-                    return None
-        video_tokens = min(max(0, video_tokens), max(0, output_tokens))
-        try:
-            from litellm import get_model_info
-
-            model_info = get_model_info(
-                model=GEMINI_OMNI_UPSTREAM_MODEL, custom_llm_provider="vertex_ai"
-            )
-        except Exception:
-            model_info = {}
-        try:
-            input_rate = float(
-                model_info.get("input_cost_per_token")
-                or os.environ.get("GEMINI_OMNI_INPUT_COST_PER_TOKEN")
-                or VertexAdapter.omni_input_cost_per_token
-            )
-            output_rate = float(
-                model_info.get("output_cost_per_token")
-                or os.environ.get("GEMINI_OMNI_OUTPUT_COST_PER_TOKEN")
-                or VertexAdapter.omni_output_cost_per_token
-            )
-            video_rate = float(
-                model_info.get("output_cost_per_video_token")
-                or os.environ.get("GEMINI_OMNI_OUTPUT_VIDEO_COST_PER_TOKEN")
-                or VertexAdapter.omni_output_video_cost_per_token
-            )
-        except (TypeError, ValueError):
-            return None
-        text_and_thought_tokens = max(0, output_tokens - video_tokens) + max(0, thought_tokens)
-        return input_tokens * input_rate + text_and_thought_tokens * output_rate + video_tokens * video_rate
 
     async def _submit_omni(self, request: GenerationJobCreate, upload_bytes=None) -> ProviderSubmission:
         images = [item for item in request.media_inputs if item.type == "image"]
@@ -1165,6 +1062,7 @@ class VertexAdapter(BaseAdapter):
                     provider_status=raw,
                     error_code="PROVIDER_MALFORMED_RESULT",
                     error_message="Gemini Omni completed without video content.",
+                    usage=usage,
                 )
             return ProviderStatus(
                 status="completed",
@@ -1185,6 +1083,7 @@ class VertexAdapter(BaseAdapter):
                 provider_status=raw,
                 error_code=str(error.get("code") or f"OMNI_{raw.upper()}"),
                 error_message=_clean_error(error or raw),
+                usage=usage,
             )
         if raw == "requires_action":
             return ProviderStatus(
@@ -1192,6 +1091,7 @@ class VertexAdapter(BaseAdapter):
                 provider_status=raw,
                 error_code="OMNI_REQUIRES_ACTION",
                 error_message="Gemini Omni returned an unsupported requires_action state.",
+                usage=usage,
             )
         return ProviderStatus(
             status="queued" if raw == "queued" else "in_progress",
@@ -1330,7 +1230,8 @@ class VertexAdapter(BaseAdapter):
             provider_request_id=str(data["id"]),
             provider_status=str(data.get("status") or "queued"),
             progress=data.get("progress"),
-            request_metadata={"upstream_model": data.get("model") or request.model},
+            request_metadata={"upstream_model": VertexVeoDirectAdapter.upstream_model(request.model),
+                              "resolution": request.resolution, "generate_audio": request.generate_audio},
         )
 
     async def retrieve(self, job: dict[str, Any]) -> ProviderStatus:
@@ -1343,17 +1244,18 @@ class VertexAdapter(BaseAdapter):
         data = response.model_dump() if hasattr(response, "model_dump") else dict(response)
         raw = str(data.get("status") or "in_progress").lower()
         if raw in {"completed", "succeeded"}:
-            usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
-            cost = None
-            hidden = getattr(response, "_hidden_params", {}) or {}
-            try:
-                cost = float(hidden["response_cost"]) if hidden.get("response_cost") is not None else None
-            except (TypeError, ValueError):
-                pass
-            return ProviderStatus(status="completed", provider_status=raw, progress=100, usage=usage, cost_usd=cost)
+            usage = dict(data.get("usage") or {})
+            if data.get("seconds") is not None:
+                usage["output_video_seconds"] = data["seconds"]
+            else:
+                source = await self.content(job)
+                probe = await asyncio.to_thread(probe_media_bytes, source.content, ".mp4")
+                if (probe.get("format") or {}).get("duration") is not None:
+                    usage["output_video_seconds"] = probe["format"]["duration"]
+            return ProviderStatus(status="completed", provider_status=raw, progress=100, usage=usage, cost_usd=None)
         if raw in {"failed", "expired", "cancelled"}:
             error = data.get("error") or {}
-            return ProviderStatus(status=raw, provider_status=raw, error_code=str(error.get("code") or f"VEO_{raw.upper()}"), error_message=_clean_error(error or raw))
+            return ProviderStatus(status=raw, provider_status=raw, error_code=str(error.get("code") or f"VEO_{raw.upper()}"), error_message=_clean_error(error or raw), usage=data.get("usage"))
         return ProviderStatus(status="queued" if raw == "queued" else "in_progress", provider_status=raw, progress=data.get("progress"))
 
     async def content(self, job: dict[str, Any]) -> ContentSource:
@@ -1512,7 +1414,8 @@ class VertexVeoDirectAdapter(BaseAdapter):
         return ProviderSubmission(
             provider_request_id=str(operation),
             provider_status="queued",
-            request_metadata={"upstream_model": upstream, "gcs_prefix": parameters["storageUri"]},
+            request_metadata={"upstream_model": upstream, "gcs_prefix": parameters["storageUri"],
+                              "resolution": parameters.get("resolution"), "generate_audio": parameters.get("generateAudio")},
         )
 
     @staticmethod
@@ -1539,6 +1442,7 @@ class VertexVeoDirectAdapter(BaseAdapter):
                 provider_status="failed",
                 error_code="VEO_FAILED",
                 error_message=_clean_error(data.get("error")),
+                usage=data.get("usage") or (data.get("response") or {}).get("usage"),
             )
         if not data.get("done"):
             return ProviderStatus(status="in_progress", provider_status="in_progress", progress=data.get("progress"))
@@ -1549,13 +1453,31 @@ class VertexVeoDirectAdapter(BaseAdapter):
                 provider_status="done",
                 error_code="PROVIDER_MALFORMED_RESULT",
                 error_message="Veo completed without a video URI.",
+                usage=data.get("usage") or (data.get("response") or {}).get("usage"),
             )
+        from decimal import Decimal
+        total_seconds = Decimal(0)
+        samples = (data.get("response") or {}).get("generatedSamples") or (data.get("response") or {}).get("videos") or []
+        uris = []
+        for sample in samples:
+            video = sample.get("video") or sample
+            value = video.get("uri") or video.get("gcsUri") or video.get("gcs_uri")
+            if value:
+                uris.append(value)
+        for output_uri in uris or [uri]:
+            source = await self.content({**job, "result_url": output_uri})
+            probe = await asyncio.to_thread(probe_media_bytes, source.content, ".mp4")
+            duration = (probe.get("format") or {}).get("duration")
+            if duration is None:
+                raise ProviderAdapterError("Completed Veo output duration is not yet readable.", code="USAGE_RETRIEVAL_PENDING", retryable=True)
+            total_seconds += Decimal(str(duration))
         return ProviderStatus(
             status="completed",
             provider_status="succeeded",
             progress=100,
             result_url=str(uri),
             result_mime_type="video/mp4",
+            usage={"output_video_seconds": str(total_seconds)},
         )
 
     @staticmethod
@@ -1633,8 +1555,6 @@ def legacy_route_for_model(model: str) -> str:
     normalized = model.strip().lower()
     if normalized.startswith(("grok-video", "grok-imagine-video")):
         return "xai_videos_v1"
-    if normalized.startswith(("seedance-2.5", "dreamina-seedance-2-5")):
-        return "byteplus_las_v1"
     if normalized.startswith(("seedance", "dreamina-seedance")):
         return "byteplus_ark_v3"
     if normalized.startswith("veo-") or normalized.startswith("vertex_ai/veo-"):

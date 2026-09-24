@@ -76,3 +76,9 @@ callback failures, and content retrieval errors. Stop promotion on any regressio
   cheapest text, first-frame, reference, source-video edit, and stateful edit jobs.
 - Run cheapest-setting regression jobs for legacy Grok video, Grok Image Quality,
   Seedance, Seedream, and Veo before production promotion.
+# Accounting follow-up
+
+The durable accounting candidate has additional release gates in
+[cost-accounting-rollout.md](cost-accounting-rollout.md). Earlier tests that checked
+only a job's stored cost did not prove detailed spend, aggregate or budget parity.
+Use the new registry coverage and PostgreSQL accounting tests before promotion.

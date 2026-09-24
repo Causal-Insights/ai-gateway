@@ -66,7 +66,7 @@ class GenerationJobModelTests(unittest.TestCase):
         self.assertEqual(provider_for_model("seedance-2.5"), "byteplus")
         self.assertEqual(provider_for_model("veo-3.1-fast"), "vertex")
         self.assertEqual(route_for("grok-video-1.5", 1), "xai_videos_v1")
-        self.assertEqual(route_for("seedance-2.5", 1), "byteplus_las_v1")
+        self.assertEqual(route_for("seedance-2.5", 1), "byteplus_ark_v3")
         self.assertEqual(route_for("seedance-2.0", 1), "byteplus_ark_v3")
         self.assertEqual(route_for("veo-3.1-fast", 1), "vertex_litellm_video")
         self.assertEqual(route_for("gemini-omni-flash", 1), "vertex_omni_interactions")
@@ -274,7 +274,7 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
             "total_input_tokens": 10,
             "total_output_tokens": 100,
             "total_thought_tokens": 2,
-            "output_tokens_by_modality": [{"modality": "video", "tokens": 80}],
+            "output_tokens_by_modality": [{"modality": "video", "tokens": 80}, {"modality": "text", "tokens": 20}],
         }
         with patch.dict("sys.modules", {"litellm": None}):
             cost = VertexAdapter._omni_cost(usage)
@@ -471,7 +471,7 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.request_metadata["has_input_video"])
         self.assertEqual(mocked.await_args.kwargs["body"]["callback_url"], "https://callbacks.example/callback?token=secret")
 
-    async def test_byteplus_terminal_cost_uses_persisted_video_rate(self):
+    async def test_byteplus_preserves_usage_without_unverified_price(self):
         job = {
             "provider_request_id": "task_123",
             "request_metadata": {"has_input_video": True, "upstream_model": "dreamina-seedance-2-0-260128"},
@@ -487,7 +487,8 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
         ):
             result = await BytePlusAdapter().retrieve(job)
         self.assertEqual(result.status, "completed")
-        self.assertAlmostEqual(result.cost_usd, 4.30)
+        self.assertIsNone(result.cost_usd)
+        self.assertEqual(result.usage, {"completion_tokens": 1_000_000})
 
     async def test_byteplus_accepts_multipart_image_without_persisting_media(self):
         request = GenerationJobCreate(
@@ -570,8 +571,8 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
         with patch.dict(
             os.environ,
             {
-                "SEEDANCE_2_5_API_KEY": "test-key",
-                "SEEDANCE_2_5_BASE_URL": "https://las.example/api/v1",
+                "BYTEDANCE_API_KEY": "test-key",
+                "SEEDANCE_ARK_BASE": "https://ark.example/api/v3",
             },
         ), patch("generation_job_adapters._json_request", new=mocked):
             result = await BytePlusAdapter().submit(
@@ -580,7 +581,7 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
         body = mocked.await_args.kwargs["body"]
         self.assertEqual(
             mocked.await_args.args[1],
-            "https://las.example/api/v1/contents/generations/tasks",
+            "https://ark.example/api/v3/contents/generations/tasks",
         )
         self.assertEqual(body["model"], "dreamina-seedance-2-5-260628")
         self.assertEqual(body["resolution"], "480p")
@@ -591,27 +592,19 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
     async def test_seedance_2_5_rejects_unpublished_modes_and_settings(self):
         cases = (
             GenerationJobCreate(
-                model="seedance-2.5",
-                prompt="edit",
-                operation="edit",
-                media_inputs=[
-                    {"type": "video", "role": "source", "url": "https://example.com/source.mp4"}
-                ],
-            ),
-            GenerationJobCreate(
                 model="seedance-2.5", prompt="too long", duration_seconds=31
             ),
             GenerationJobCreate(
-                model="seedance-2.5", prompt="too large", resolution="1080p"
+                model="seedance-2.5", prompt="too large", resolution="4k"
             ),
         )
         for request in cases:
             with self.subTest(request=request), patch.dict(
-                os.environ, {"SEEDANCE_2_5_API_KEY": "test-key"}
+                os.environ, {"BYTEDANCE_API_KEY": "test-key"}
             ), self.assertRaises(ProviderAdapterError):
                 await BytePlusAdapter().submit(request, job_id="gen_invalid", callback_url=None)
 
-    async def test_seedance_2_5_terminal_cost_uses_resolution_and_duration(self):
+    async def test_seedance_2_5_does_not_price_requested_duration(self):
         job = {
             "model": "seedance-2.5",
             "provider_request_id": "task_25",
@@ -628,12 +621,12 @@ class ProviderAdapterTests(unittest.IsolatedAsyncioTestCase):
             "content": {"video_url": "https://example.com/output.mp4"},
             "usage": {},
         }
-        with patch.dict(os.environ, {"SEEDANCE_2_5_API_KEY": "test-key"}), patch(
+        with patch.dict(os.environ, {"BYTEDANCE_API_KEY": "test-key"}), patch(
             "generation_job_adapters._json_request", new=AsyncMock(return_value=data)
         ):
             result = await BytePlusAdapter().retrieve(job)
         self.assertEqual(result.status, "completed")
-        self.assertAlmostEqual(result.cost_usd, 4 * 0.462075)
+        self.assertIsNone(result.cost_usd)
 
     async def test_omni_submission_maps_first_frame_and_references(self):
         request = GenerationJobCreate(
@@ -1000,3 +993,24 @@ class CallbackTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class ExecutionEvidenceAdapterTests(unittest.IsolatedAsyncioTestCase):
+    async def test_malformed_completed_media_keeps_billable_usage(self):
+        for adapter, status in ((XAIAdapter(), 'done'), (BytePlusAdapter(), 'succeeded'), (VertexAdapter(), 'completed')):
+            job = {'model': 'gemini-omni-1.1-flash', 'provider_request_id': 'fixture',
+                   'request_metadata': {'upstream_model': 'dreamina-seedance-2-0-260128'}}
+            usage = {'cost_in_usd_ticks': 7100000000}
+            with self.subTest(adapter=type(adapter).__name__), \
+                 patch('generation_job_adapters._json_request', new=AsyncMock(return_value={'status': status, 'usage': usage})), \
+                 patch.object(VertexAdapter, '_vertex_headers', new=AsyncMock(return_value={})), \
+                 patch.dict(os.environ, {'BYTEDANCE_API_KEY': 'offline', 'GROK_API_KEY': 'offline', 'GOOGLE_CLOUD_PROJECT': 'offline'}):
+                result = await adapter.retrieve(job)
+            self.assertEqual(result.status, 'failed')
+            self.assertEqual(result.usage, usage)
+
+    async def test_model_mismatch_preserves_actual_model_and_charge(self):
+        with patch('generation_job_adapters._json_request', new=AsyncMock(return_value={
+            'status': 'done', 'model': 'actual-other-model', 'usage': {'cost_in_usd_ticks': 7100000000}})):
+            result = await XAIAdapter().retrieve({'provider_request_id': 'fixture', 'request_metadata': {'upstream_model': 'expected-model'}})
+        self.assertEqual(result.served_model, 'actual-other-model')
+        self.assertEqual(result.usage['cost_in_usd_ticks'], 7100000000)

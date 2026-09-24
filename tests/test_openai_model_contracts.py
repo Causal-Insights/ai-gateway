@@ -60,7 +60,7 @@ class OpenAIAccountingTests(unittest.TestCase):
         expected = ((269001 * 10 + 1000 + 2000 * 12.5) * 2 + 100 * 75) / 1000000
         self.assertAlmostEqual(astra_cost(usage), expected)
         self.assertAlmostEqual(astra_cost(usage, 'priority'), expected * 2)
-        self.assertIsNone(astra_cost(dict(input_tokens=3, output_tokens=1)))
+        self.assertAlmostEqual(astra_cost(dict(input_tokens=3, output_tokens=1)), 0.00008)
 
     def test_image_tokens_and_cached_modalities(self):
         from openai_usage import image_cost, response_cost
@@ -72,7 +72,7 @@ class OpenAIAccountingTests(unittest.TestCase):
         parent = dict(input_tokens=100, output_tokens=50, input_tokens_details=dict(cached_tokens=0, cache_write_tokens=0))
         response = dict(usage=parent, output=[dict(type='image_generation_call', usage=usage)])
         params = dict(tools=[dict(type='image_generation', model='gpt-image-2.5-flare')])
-        self.assertAlmostEqual(response_cost('gpt-6-astra', response, params), cost + .0035)
+        self.assertIsNone(response_cost('gpt-6-astra', response, params))
         del response['output'][0]['usage']
         self.assertIsNone(response_cost('gpt-6-astra', response, params))
 

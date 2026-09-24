@@ -179,7 +179,7 @@ class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
                 logging_obj=None,
             )
 
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.28, places=6)
+        self.assertNotIn("response_cost", out._hidden_params)
 
     async def test_upstream_model_from_litellm_model_string(self):
         submit_resp = MagicMock()
@@ -244,7 +244,7 @@ class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
                 logging_obj=None,
             )
 
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.56, places=6)
+        self.assertNotIn("response_cost", out._hidden_params)
 
     async def test_failed_internal_error_raises_grok_exception(self):
         submit_resp = MagicMock()
@@ -470,8 +470,8 @@ class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
             "grok-imagine-video-1.5",
         )
 
-    def test_video_15_1080p_fallback_rate(self):
-        self.assertAlmostEqual(
+    def test_video_15_missing_charge_has_no_fallback(self):
+        self.assertIsNone(
             GrokVideoLLM()._estimate_cost(
                 duration_seconds=4,
                 resolution="1080p",
@@ -479,6 +479,5 @@ class TestGrokVideoHandler(unittest.IsolatedAsyncioTestCase):
                 has_image_input=False,
                 has_video_input=False,
                 upstream_model="grok-imagine-video-1.5",
-            ),
-            1.0,
+            )
         )

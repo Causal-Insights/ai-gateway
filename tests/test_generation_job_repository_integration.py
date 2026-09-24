@@ -32,6 +32,8 @@ class GenerationJobRepositoryIntegrationTests(unittest.IsolatedAsyncioTestCase):
             request_metadata={},
             deadline_at=datetime.now(timezone.utc) + timedelta(hours=2),
             callback_token_hash=None,
+            provider_route="test",
+            adapter_revision="test-v1",
         )
         import asyncio
 
@@ -57,6 +59,8 @@ class GenerationJobRepositoryIntegrationTests(unittest.IsolatedAsyncioTestCase):
             request_metadata={},
             deadline_at=datetime.now(timezone.utc) + timedelta(hours=2),
             callback_token_hash=None,
+            provider_route="test",
+            adapter_revision="test-v1",
         )
         row, created, conflict = await self.repository.create_or_get(**arguments)
         self.assertTrue(created)
@@ -104,9 +108,10 @@ class GenerationJobRepositoryIntegrationTests(unittest.IsolatedAsyncioTestCase):
             nonlocal calls
             calls += 1
 
-        self.assertTrue(await self.repository.log_spend_once(self.job_id, log_once))
-        self.assertFalse(await self.repository.log_spend_once(self.job_id, log_once))
-        self.assertEqual(calls, 1)
+        with self.assertRaisesRegex(RuntimeError, "durable spend receipt"):
+            await self.repository.log_spend_once(self.job_id, log_once)
+        self.assertEqual(calls, 0)
+        self.assertIsNone((await self.repository.get(self.job_id))["spend_logged_at"])
 
     async def test_submission_failure_persists_retryability(self):
         await self.repository.create_or_get(
@@ -121,6 +126,8 @@ class GenerationJobRepositoryIntegrationTests(unittest.IsolatedAsyncioTestCase):
             request_metadata={},
             deadline_at=datetime.now(timezone.utc) + timedelta(hours=2),
             callback_token_hash=None,
+            provider_route="test",
+            adapter_revision="test-v1",
         )
         failed = await self.repository.mark_submission_failed(
             self.job_id,

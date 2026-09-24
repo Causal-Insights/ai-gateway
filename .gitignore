@@ -39,3 +39,7 @@ test_outputs/
 
 # Reviewed deterministic request fixtures are part of the test contract.
 !tests/fixtures/**/*.json
+!pricing/registry.json
+!pricing/litellm_catalog.json
+!pricing/evidence/*.json
+!skills/price-verification/references/evidence.schema.json

@@ -1,3 +1,4 @@
+# Billing authority: pricing/registry.json. No unversioned price overrides belong here.
 model_list:
   # ── OpenAI ───────────────────────────────────────────────────────────────
   - model_name: gpt-latest
@@ -248,8 +249,7 @@ model_list:
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   # ── xAI (custom: video) ─────────────────────────────────────────────────
-  # grok-imagine-video: output billed per generated second (480p $0.05/s, 720p $0.07/s).
-  # Handler prefers xAI usage.cost_in_usd_ticks from poll responses; rates below are fallback.
+  # The journal uses verified xAI usage.cost_in_usd_ticks; missing charges stay unknown.
   - model_name: grok-video
     litellm_params:
       model: grok-video/grok-imagine-video
@@ -278,19 +278,11 @@ model_list:
         - output
         - storage_options
         - user
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      output_cost_per_second: 0.05
-      output_cost_per_second_720p: 0.07
-      output_cost_per_second_1080p: 0.07
       metadata:
         grok_imagine_video_upstream: grok-imagine-video
-        grok_video_price_per_second_480p: 0.05
-        grok_video_price_per_second_720p: 0.07
         grok_video_reference_image_usd: 0.002
         grok_video_input_video_per_second_usd: 0.01
 
-  # grok-imagine-video-1.5-preview (alias grok-imagine-video-1.5-2026-05-30): 480p $0.08/s, 720p $0.14/s; input image $0.01.
   - model_name: grok-video-1.5
     litellm_params:
       model: grok-video/grok-imagine-video-1.5
@@ -319,16 +311,8 @@ model_list:
         - output
         - storage_options
         - user
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      output_cost_per_second: 0.08
-      output_cost_per_second_720p: 0.14
-      output_cost_per_second_1080p: 0.25
       metadata:
         grok_imagine_video_upstream: grok-imagine-video-1.5
-        grok_video_price_per_second_480p: 0.08
-        grok_video_price_per_second_720p: 0.14
-        grok_video_price_per_second_1080p: 0.25
         grok_video_reference_image_usd: 0.01
         grok_video_input_video_per_second_usd: 0.01
 
@@ -360,16 +344,8 @@ model_list:
         - output
         - storage_options
         - user
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      output_cost_per_second: 0.08
-      output_cost_per_second_720p: 0.14
-      output_cost_per_second_1080p: 0.25
       metadata:
         grok_imagine_video_upstream: grok-imagine-video-1.5-2026-05-30
-        grok_video_price_per_second_480p: 0.08
-        grok_video_price_per_second_720p: 0.14
-        grok_video_price_per_second_1080p: 0.25
         grok_video_reference_image_usd: 0.01
         grok_video_input_video_per_second_usd: 0.01
 
@@ -398,13 +374,6 @@ model_list:
         - style
         - background
         - user
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      # xAI Grok Imagine Image Quality input/output fallback rates:
-      # $0.01 input image + $0.05 output image. Text/thinking pricing is not published separately.
-      # Text-only generation is $0.05/image; 2K output with one input image is $0.08/image.
-      input_cost_per_image: 0.01
-      output_cost_per_image: 0.05
 
   - model_name: grok-imagine-image-quality
     litellm_params:
@@ -430,13 +399,6 @@ model_list:
         - style
         - background
         - user
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      # xAI Grok Imagine Image Quality input/output fallback rates:
-      # $0.01 input image + $0.05 output image. Text/thinking pricing is not published separately.
-      # Text-only generation is $0.05/image; 2K output with one input image is $0.08/image.
-      input_cost_per_image: 0.01
-      output_cost_per_image: 0.05
 
   - model_name: grok-imagine-image-2.0
     litellm_params:
@@ -467,12 +429,7 @@ model_list:
         - xai_output_count
         - xai_render_quality
         - xai_response_format
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      # xAI Image 2.0 fallback rates. The custom handler refines output cost by
       # resolution and quality and prefers exact xAI usage when it is returned.
-      input_cost_per_image: 0.01
-      output_cost_per_image: 0.06
 
   # ── Seedance 2.0 (BytePlus ARK) ───────────────────────────────────────────
   # The custom handler submits an ARK task, then waits up to SEEDANCE_SYNC_WAIT_S
@@ -505,14 +462,6 @@ model_list:
         - resolution
         - ratio
         - duration
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      # BytePlus ARK rate for Seedance 2.0 (480p/720p, no input video):
-      # $7.00 per 1M output tokens. tokens ≈ width × height × fps × seconds / 1024.
-      # The handler computes the actual response cost from the upstream usage block.
-      metadata:
-        seedance_price_per_mtok: 7.00
-        seedance_price_per_mtok_with_input_video: 4.30
 
   - model_name: seedance-2.0-fast
     litellm_params:
@@ -537,30 +486,19 @@ model_list:
         - resolution
         - ratio
         - duration
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      # BytePlus ARK rate for Seedance 2.0 Fast (480p/720p, no input video):
-      # $5.60 per 1M output tokens. Handler computes per-response cost.
-      metadata:
-        seedance_price_per_mtok: 5.60
-        seedance_price_per_mtok_with_input_video: 3.30
 
   # Catalog/discovery alias only for the retained Images surface. Request
   # policy rejects legacy submission; Magic Lens uses /v1/generation-jobs.
   - model_name: seedance-2.5
     litellm_params:
       model: seedance/dreamina-seedance-2-5-260628
-      api_key: os.environ/SEEDANCE_2_5_API_KEY
+      api_key: os.environ/BYTEDANCE_API_KEY
       timeout: 1800
     model_info:
       mode: image_generation
       supported_openai_params: []
-      input_cost_per_token: 0
-      output_cost_per_token: 0
       metadata:
         durable_jobs_only: true
-        seedance_price_per_second_480p: 0.2055855
-        seedance_price_per_second_720p: 0.462075
 
   # ── Seedream 5 (BytePlus ModelArk) ───────────────────────────────────────
   # Sync POST /images/generations — handler sets x-litellm-response-cost from
@@ -597,12 +535,6 @@ model_list:
         - seedream_response_format
         - seedream_output_format
         - seedream_stream
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      input_cost_per_image: 0.035
-      metadata:
-        seedream_price_per_image: 0.035
-        seedream_web_search_price_per_request: 0.0006
 
   - model_name: seedream-5.0-lite
     litellm_params:
@@ -633,12 +565,6 @@ model_list:
         - seedream_response_format
         - seedream_output_format
         - seedream_stream
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      input_cost_per_image: 0.035
-      metadata:
-        seedream_price_per_image: 0.035
-        seedream_web_search_price_per_request: 0.0006
 
   - model_name: seedream-5.0-pro
     litellm_params:
@@ -664,13 +590,7 @@ model_list:
         - seedream_response_format
         - seedream_output_format
         - seedream_stream
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      input_cost_per_image: 0.003
-      output_cost_per_image: 0.045
       metadata:
-        seedream_price_per_image_1k: 0.045
-        seedream_price_per_image_2k: 0.09
         seedream_additional_input_price: 0.003
 
   # ── xAI ──────────────────────────────────────────────────────────────────
@@ -733,6 +653,8 @@ general_settings:
   # disable_health_check: true
 
 litellm_settings:
+  # gateway_server installs the awaited accounting integration exactly once.
+  # Listing it here as well duplicates request hooks during proxy startup.
   drop_params: true
   # Upper bound on a single proxy request; Seedance submit+poll is bounded by
   # SEEDANCE_SYNC_WAIT_S in the handler (default 240s) to avoid hitting 300s

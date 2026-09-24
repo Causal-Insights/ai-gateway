@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "openai",
+    "api_product": "OpenAI direct API Standard",
+    "upstream_model": "gpt-image-2.5-sunburst-2026-09-08",
+    "aliases": [
+      "gpt-image-2.5-sunburst"
+    ],
+    "account_context": null,
+    "region": "global",
+    "routes": [
+      "image_generation",
+      "image_edit"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "pricing",
+      "excerpt": ""
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "usage_schema",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "text_input_tokens",
+      "unit": "token",
+      "rate": "5",
+      "per": "1000000",
+      "conditions": {
+        "service_tier": "default"
+      }
+    },
+    {
+      "name": "cached_text_tokens",
+      "unit": "token",
+      "rate": "1.25",
+      "per": "1000000",
+      "conditions": {
+        "service_tier": "default"
+      }
+    },
+    {
+      "name": "image_input_tokens",
+      "unit": "token",
+      "rate": "8",
+      "per": "1000000",
+      "conditions": {
+        "service_tier": "default"
+      }
+    },
+    {
+      "name": "cached_image_tokens",
+      "unit": "token",
+      "rate": "2",
+      "per": "1000000",
+      "conditions": {
+        "service_tier": "default"
+      }
+    },
+    {
+      "name": "output_tokens",
+      "unit": "token",
+      "rate": "30",
+      "per": "1000000",
+      "conditions": {
+        "service_tier": "default"
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "text_input_tokens": "1000",
+      "cached_text_tokens": "0",
+      "image_input_tokens": "0",
+      "cached_image_tokens": "0",
+      "output_tokens": "0"
+    },
+    "formula": "1000 * 5 / 1000000",
+    "calculated_cost": "0.005",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "Public Standard pricing only; account contract and provider-backed route fixtures remain outstanding.",
+    "Hosted tool costs, Batch, Flex, Fast and regional premiums are separate profiles and not admitted by this profile.",
+    "Current verification does not authorize historical repricing."
+  ]
+}

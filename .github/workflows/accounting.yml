@@ -1,0 +1,22 @@
+name: Accounting contracts
+on: [push, pull_request]
+jobs:
+  accounting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t gateway-accounting-test .
+      - name: Registry, skill evidence and offline regression suite
+        run: |
+          docker run --rm --network none -v "$PWD:/workspace:ro" -w /workspace -e PYTHONPATH=/workspace -e LITELLM_LOCAL_MODEL_COST_MAP=True --entrypoint sh gateway-accounting-test -c 'python scripts/pricing_coverage.py && python scripts/validate_price_evidence.py && python -m unittest discover -s tests'
+      - name: Isolated PostgreSQL
+        run: |
+          docker network create accounting-tests
+          docker run -d --name accounting-postgres --network accounting-tests -e POSTGRES_USER=accounting -e POSTGRES_PASSWORD=accounting_test -e POSTGRES_DB=accounting postgres:16-alpine
+          for i in $(seq 1 30); do docker exec accounting-postgres pg_isready -U accounting && break; sleep 1; done
+          docker run --rm --network accounting-tests -e DATABASE_URL=postgresql://accounting:accounting_test@accounting-postgres:5432/accounting --entrypoint sh gateway-accounting-test -c 'prisma db push --schema=/app/schema.prisma --skip-generate'
+      - name: Journal atomicity and native hooks
+        run: |
+          docker run --rm --network accounting-tests -v "$PWD:/workspace:ro" -w /workspace -e PYTHONPATH=/workspace -e LITELLM_LOCAL_MODEL_COST_MAP=True -e RUN_COST_DB_TESTS=1 -e RUN_GENERATION_DB_TESTS=1 -e GATEWAY_DATABASE_URL=postgresql://accounting:accounting_test@accounting-postgres:5432/accounting --entrypoint python gateway-accounting-test -m unittest discover -s tests -p 'test_*accounting*.py'
+          docker run --rm --network accounting-tests -v "$PWD:/workspace:ro" -w /workspace -e PYTHONPATH=/workspace -e LITELLM_LOCAL_MODEL_COST_MAP=True -e RUN_COST_DB_TESTS=1 -e RUN_GENERATION_DB_TESTS=1 -e GATEWAY_DATABASE_URL=postgresql://accounting:accounting_test@accounting-postgres:5432/accounting --entrypoint python gateway-accounting-test -m unittest discover -s tests -p 'test_execution_logging.py'
+          docker run --rm --network accounting-tests -v "$PWD:/workspace:ro" -w /workspace -e PYTHONPATH=/workspace -e LITELLM_LOCAL_MODEL_COST_MAP=True -e RUN_GENERATION_DB_TESTS=1 -e GATEWAY_DATABASE_URL=postgresql://accounting:accounting_test@accounting-postgres:5432/accounting --entrypoint python gateway-accounting-test -m unittest discover -s tests -p 'test_generation_job_repository_integration.py'

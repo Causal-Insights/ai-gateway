@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "byteplus",
+    "api_product": "ModelArk standard online inference",
+    "upstream_model": "dreamina-seedance-2-5-260628",
+    "aliases": [
+      "seedance-2.5"
+    ],
+    "account_context": null,
+    "region": "ap-southeast-1",
+    "routes": [
+      "generation_job"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.byteplus.com/en/docs/ModelArk/1544106",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "pricing",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "10.7",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "480p",
+          "720p"
+        ],
+        "input_video": false,
+        "effective_from": "2026-09-16T00:00:00Z",
+        "effective_to": null
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "8.424",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "1080p"
+        ],
+        "input_video": false,
+        "effective_from": "2026-09-16T00:00:00Z",
+        "effective_to": "2026-09-17T06:00:00Z"
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "11.7",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "1080p"
+        ],
+        "input_video": false,
+        "effective_from": "2026-09-17T06:00:00Z",
+        "effective_to": null
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "6.4",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "480p",
+          "720p"
+        ],
+        "input_video": true,
+        "effective_from": "2026-09-16T00:00:00Z",
+        "effective_to": null
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "5.04",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "1080p"
+        ],
+        "input_video": true,
+        "effective_from": "2026-09-16T00:00:00Z",
+        "effective_to": "2026-09-17T06:00:00Z"
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "7.0",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "1080p"
+        ],
+        "input_video": true,
+        "effective_from": "2026-09-17T06:00:00Z",
+        "effective_to": null
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "completion_tokens": "100000"
+    },
+    "formula": "100000 * 10.70 / 1000000",
+    "calculated_cost": "1.07",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "ModelArk uses the shared BYTEDANCE_API_KEY and actual usage.completion_tokens, including provider minimum consumption.",
+    "1080p promotional rates end at 2026-09-17 06:00 UTC; published list-price successor profiles activate automatically.",
+    "Video inputs select the video-input rate; audio references do not select that rate by themselves."
+  ]
+}

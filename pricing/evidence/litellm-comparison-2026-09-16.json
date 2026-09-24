@@ -1,0 +1,2548 @@
+{
+  "captured_comparison_at": "2026-09-16T20:04:16.636125+00:00",
+  "source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+  "map_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+  "limitations": [
+    "Comparison is not automatic price verification or production acceptance.",
+    "Exact-key lookup does not exhaust LiteLLM provider-specific alias resolution.",
+    "This capture does not establish which map a running production revision loaded."
+  ],
+  "models": [
+    {
+      "alias": "gpt-latest",
+      "upstream_model": "openai/gpt-6-astra",
+      "exact_keys": [
+        "gpt-6-astra"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "input_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "2e-05",
+          "verified_rate_per_token": "0.00002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "1e-06",
+          "verified_rate_per_token": "0.000001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "cache_read_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "2e-06",
+          "verified_rate_per_token": "0.000002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "cache_creation_input_token_cost",
+          "litellm_rate_per_token": "1.25e-05",
+          "verified_rate_per_token": "0.0000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "cache_creation_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "2.5e-05",
+          "verified_rate_per_token": "0.000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "5e-05",
+          "verified_rate_per_token": "0.00005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "output_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "7.5e-05",
+          "verified_rate_per_token": "0.000075",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "input_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "1e-06",
+          "verified_rate_per_token": "0.000001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_flex",
+          "litellm_rate_per_token": "6.25e-06",
+          "verified_rate_per_token": "0.00000625",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "1.25e-05",
+          "verified_rate_per_token": "0.0000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "2.5e-05",
+          "verified_rate_per_token": "0.000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "output_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "3.75e-05",
+          "verified_rate_per_token": "0.0000375",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "2e-05",
+          "verified_rate_per_token": "0.00002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "input_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "4e-05",
+          "verified_rate_per_token": "0.00004",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "2e-06",
+          "verified_rate_per_token": "0.000002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "4e-06",
+          "verified_rate_per_token": "0.000004",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_priority",
+          "litellm_rate_per_token": "2.5e-05",
+          "verified_rate_per_token": "0.000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "5e-05",
+          "verified_rate_per_token": "0.00005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "0.0001",
+          "verified_rate_per_token": "0.0001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "output_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "0.00015",
+          "verified_rate_per_token": "0.00015",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_creation_input_token_cost": 1.25e-05,
+        "cache_creation_input_token_cost_above_272k_tokens": 2.5e-05,
+        "cache_creation_input_token_cost_above_272k_tokens_flex": 1.25e-05,
+        "cache_creation_input_token_cost_above_272k_tokens_priority": 5e-05,
+        "cache_creation_input_token_cost_flex": 6.25e-06,
+        "cache_creation_input_token_cost_priority": 2.5e-05,
+        "cache_read_input_token_cost": 1e-06,
+        "cache_read_input_token_cost_above_272k_tokens": 2e-06,
+        "cache_read_input_token_cost_above_272k_tokens_flex": 1e-06,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 4e-06,
+        "cache_read_input_token_cost_flex": 5e-07,
+        "cache_read_input_token_cost_priority": 2e-06,
+        "input_cost_per_token": 1e-05,
+        "input_cost_per_token_above_272k_tokens": 2e-05,
+        "input_cost_per_token_above_272k_tokens_flex": 1e-05,
+        "input_cost_per_token_above_272k_tokens_priority": 4e-05,
+        "input_cost_per_token_batches": 5e-06,
+        "input_cost_per_token_flex": 5e-06,
+        "input_cost_per_token_priority": 2e-05,
+        "output_cost_per_token": 5e-05,
+        "output_cost_per_token_above_272k_tokens": 7.5e-05,
+        "output_cost_per_token_above_272k_tokens_flex": 3.75e-05,
+        "output_cost_per_token_above_272k_tokens_priority": 0.00015,
+        "output_cost_per_token_batches": 2.5e-05,
+        "output_cost_per_token_flex": 2.5e-05,
+        "output_cost_per_token_priority": 0.0001,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-5.5",
+      "upstream_model": "openai/gpt-5.5",
+      "exact_keys": [
+        "gpt-5.5"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "input_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "cache_read_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "1e-06",
+          "verified_rate_per_token": "0.000001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "3e-05",
+          "verified_rate_per_token": "0.00003",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "output_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "4.5e-05",
+          "verified_rate_per_token": "0.000045",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "2.5e-06",
+          "verified_rate_per_token": "0.0000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "input_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "2.5e-07",
+          "verified_rate_per_token": "2.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "1.5e-05",
+          "verified_rate_per_token": "0.000015",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "output_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2.25e-05",
+          "verified_rate_per_token": "0.0000225",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "1.25e-05",
+          "verified_rate_per_token": "0.0000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "1.25e-06",
+          "verified_rate_per_token": "0.00000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "7.5e-05",
+          "verified_rate_per_token": "0.000075",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 5e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 1e-06,
+        "cache_read_input_token_cost_flex": 2.5e-07,
+        "cache_read_input_token_cost_priority": 1.25e-06,
+        "input_cost_per_token": 5e-06,
+        "input_cost_per_token_above_272k_tokens": 1e-05,
+        "input_cost_per_token_flex": 2.5e-06,
+        "input_cost_per_token_batches": 2.5e-06,
+        "input_cost_per_token_priority": 1.25e-05,
+        "output_cost_per_token": 3e-05,
+        "output_cost_per_token_above_272k_tokens": 4.5e-05,
+        "output_cost_per_token_flex": 1.5e-05,
+        "output_cost_per_token_batches": 1.5e-05,
+        "output_cost_per_token_priority": 7.5e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        },
+        "input_cost_per_token_above_272k_tokens_flex": 5e-06,
+        "output_cost_per_token_above_272k_tokens_flex": 2.25e-05,
+        "cache_read_input_token_cost_above_272k_tokens_flex": 5e-07
+      }
+    },
+    {
+      "alias": "gpt-5.5-thinking",
+      "upstream_model": "openai/gpt-5.5",
+      "exact_keys": [
+        "gpt-5.5"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "input_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "cache_read_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "1e-06",
+          "verified_rate_per_token": "0.000001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "3e-05",
+          "verified_rate_per_token": "0.00003",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16",
+          "field": "output_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "4.5e-05",
+          "verified_rate_per_token": "0.000045",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "2.5e-06",
+          "verified_rate_per_token": "0.0000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "input_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "2.5e-07",
+          "verified_rate_per_token": "2.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "1.5e-05",
+          "verified_rate_per_token": "0.000015",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-flex",
+          "field": "output_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2.25e-05",
+          "verified_rate_per_token": "0.0000225",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "1.25e-05",
+          "verified_rate_per_token": "0.0000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "1.25e-06",
+          "verified_rate_per_token": "0.00000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.5@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "7.5e-05",
+          "verified_rate_per_token": "0.000075",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 5e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 1e-06,
+        "cache_read_input_token_cost_flex": 2.5e-07,
+        "cache_read_input_token_cost_priority": 1.25e-06,
+        "input_cost_per_token": 5e-06,
+        "input_cost_per_token_above_272k_tokens": 1e-05,
+        "input_cost_per_token_flex": 2.5e-06,
+        "input_cost_per_token_batches": 2.5e-06,
+        "input_cost_per_token_priority": 1.25e-05,
+        "output_cost_per_token": 3e-05,
+        "output_cost_per_token_above_272k_tokens": 4.5e-05,
+        "output_cost_per_token_flex": 1.5e-05,
+        "output_cost_per_token_batches": 1.5e-05,
+        "output_cost_per_token_priority": 7.5e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        },
+        "input_cost_per_token_above_272k_tokens_flex": 5e-06,
+        "output_cost_per_token_above_272k_tokens_flex": 2.25e-05,
+        "cache_read_input_token_cost_above_272k_tokens_flex": 5e-07
+      }
+    },
+    {
+      "alias": "gpt-6-astra",
+      "upstream_model": "openai/gpt-6-astra",
+      "exact_keys": [
+        "gpt-6-astra"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "input_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "2e-05",
+          "verified_rate_per_token": "0.00002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "1e-06",
+          "verified_rate_per_token": "0.000001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "cache_read_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "2e-06",
+          "verified_rate_per_token": "0.000002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "cache_creation_input_token_cost",
+          "litellm_rate_per_token": "1.25e-05",
+          "verified_rate_per_token": "0.0000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "cache_creation_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "2.5e-05",
+          "verified_rate_per_token": "0.000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "5e-05",
+          "verified_rate_per_token": "0.00005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16",
+          "field": "output_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "7.5e-05",
+          "verified_rate_per_token": "0.000075",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "input_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "1e-06",
+          "verified_rate_per_token": "0.000001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_flex",
+          "litellm_rate_per_token": "6.25e-06",
+          "verified_rate_per_token": "0.00000625",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "1.25e-05",
+          "verified_rate_per_token": "0.0000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "2.5e-05",
+          "verified_rate_per_token": "0.000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-flex",
+          "field": "output_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "3.75e-05",
+          "verified_rate_per_token": "0.0000375",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "2e-05",
+          "verified_rate_per_token": "0.00002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "input_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "4e-05",
+          "verified_rate_per_token": "0.00004",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "2e-06",
+          "verified_rate_per_token": "0.000002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "4e-06",
+          "verified_rate_per_token": "0.000004",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_priority",
+          "litellm_rate_per_token": "2.5e-05",
+          "verified_rate_per_token": "0.000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "5e-05",
+          "verified_rate_per_token": "0.00005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "0.0001",
+          "verified_rate_per_token": "0.0001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-6-astra@2026-09-16-fast",
+          "field": "output_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "0.00015",
+          "verified_rate_per_token": "0.00015",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_creation_input_token_cost": 1.25e-05,
+        "cache_creation_input_token_cost_above_272k_tokens": 2.5e-05,
+        "cache_creation_input_token_cost_above_272k_tokens_flex": 1.25e-05,
+        "cache_creation_input_token_cost_above_272k_tokens_priority": 5e-05,
+        "cache_creation_input_token_cost_flex": 6.25e-06,
+        "cache_creation_input_token_cost_priority": 2.5e-05,
+        "cache_read_input_token_cost": 1e-06,
+        "cache_read_input_token_cost_above_272k_tokens": 2e-06,
+        "cache_read_input_token_cost_above_272k_tokens_flex": 1e-06,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 4e-06,
+        "cache_read_input_token_cost_flex": 5e-07,
+        "cache_read_input_token_cost_priority": 2e-06,
+        "input_cost_per_token": 1e-05,
+        "input_cost_per_token_above_272k_tokens": 2e-05,
+        "input_cost_per_token_above_272k_tokens_flex": 1e-05,
+        "input_cost_per_token_above_272k_tokens_priority": 4e-05,
+        "input_cost_per_token_batches": 5e-06,
+        "input_cost_per_token_flex": 5e-06,
+        "input_cost_per_token_priority": 2e-05,
+        "output_cost_per_token": 5e-05,
+        "output_cost_per_token_above_272k_tokens": 7.5e-05,
+        "output_cost_per_token_above_272k_tokens_flex": 3.75e-05,
+        "output_cost_per_token_above_272k_tokens_priority": 0.00015,
+        "output_cost_per_token_batches": 2.5e-05,
+        "output_cost_per_token_flex": 2.5e-05,
+        "output_cost_per_token_priority": 0.0001,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-5.6-sol-medium",
+      "upstream_model": "openai/gpt-5.6-sol",
+      "exact_keys": [
+        "gpt-5.6-sol"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "4e-06",
+          "verified_rate_per_token": "0.000004",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16",
+          "field": "input_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "8e-06",
+          "verified_rate_per_token": "0.000008",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "4e-07",
+          "verified_rate_per_token": "4E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16",
+          "field": "cache_read_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "8e-07",
+          "verified_rate_per_token": "8E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16",
+          "field": "cache_creation_input_token_cost",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16",
+          "field": "cache_creation_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "2e-05",
+          "verified_rate_per_token": "0.00002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16",
+          "field": "output_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "3e-05",
+          "verified_rate_per_token": "0.00003",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "2e-06",
+          "verified_rate_per_token": "0.000002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-flex",
+          "field": "input_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "4e-06",
+          "verified_rate_per_token": "0.000004",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "2e-07",
+          "verified_rate_per_token": "2E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "4e-07",
+          "verified_rate_per_token": "4E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_flex",
+          "litellm_rate_per_token": "2.5e-06",
+          "verified_rate_per_token": "0.0000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-flex",
+          "field": "output_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "1.5e-05",
+          "verified_rate_per_token": "0.000015",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "8e-06",
+          "verified_rate_per_token": "0.000008",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-fast",
+          "field": "input_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "1.6e-05",
+          "verified_rate_per_token": "0.000016",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "8e-07",
+          "verified_rate_per_token": "8E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "1.6e-06",
+          "verified_rate_per_token": "0.0000016",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_priority",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "2e-05",
+          "verified_rate_per_token": "0.00002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "4e-05",
+          "verified_rate_per_token": "0.00004",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-sol@2026-09-16-fast",
+          "field": "output_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "6e-05",
+          "verified_rate_per_token": "0.00006",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_creation_input_token_cost": 5e-06,
+        "cache_creation_input_token_cost_above_272k_tokens": 1e-05,
+        "cache_creation_input_token_cost_above_272k_tokens_flex": 5e-06,
+        "cache_creation_input_token_cost_above_272k_tokens_priority": 2e-05,
+        "cache_creation_input_token_cost_flex": 2.5e-06,
+        "cache_creation_input_token_cost_priority": 1e-05,
+        "cache_read_input_token_cost": 4e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 8e-07,
+        "cache_read_input_token_cost_above_272k_tokens_flex": 4e-07,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 1.6e-06,
+        "cache_read_input_token_cost_flex": 2e-07,
+        "cache_read_input_token_cost_priority": 8e-07,
+        "input_cost_per_token": 4e-06,
+        "input_cost_per_token_above_272k_tokens": 8e-06,
+        "input_cost_per_token_above_272k_tokens_flex": 4e-06,
+        "input_cost_per_token_above_272k_tokens_priority": 1.6e-05,
+        "input_cost_per_token_batches": 2e-06,
+        "input_cost_per_token_flex": 2e-06,
+        "input_cost_per_token_priority": 8e-06,
+        "output_cost_per_token": 2e-05,
+        "output_cost_per_token_above_272k_tokens": 3e-05,
+        "output_cost_per_token_above_272k_tokens_flex": 1.5e-05,
+        "output_cost_per_token_above_272k_tokens_priority": 6e-05,
+        "output_cost_per_token_batches": 1e-05,
+        "output_cost_per_token_flex": 1e-05,
+        "output_cost_per_token_priority": 4e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-5.6-terra-medium",
+      "upstream_model": "openai/gpt-5.6-terra",
+      "exact_keys": [
+        "gpt-5.6-terra"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "2e-06",
+          "verified_rate_per_token": "0.000002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16",
+          "field": "input_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "4e-06",
+          "verified_rate_per_token": "0.000004",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "2e-07",
+          "verified_rate_per_token": "2E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16",
+          "field": "cache_read_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "4e-07",
+          "verified_rate_per_token": "4E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16",
+          "field": "cache_creation_input_token_cost",
+          "litellm_rate_per_token": "2.5e-06",
+          "verified_rate_per_token": "0.0000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16",
+          "field": "cache_creation_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "1.2e-05",
+          "verified_rate_per_token": "0.000012",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16",
+          "field": "output_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "1.8e-05",
+          "verified_rate_per_token": "0.000018",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "1e-06",
+          "verified_rate_per_token": "0.000001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-flex",
+          "field": "input_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2e-06",
+          "verified_rate_per_token": "0.000002",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "1e-07",
+          "verified_rate_per_token": "1E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2e-07",
+          "verified_rate_per_token": "2E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_flex",
+          "litellm_rate_per_token": "1.25e-06",
+          "verified_rate_per_token": "0.00000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2.5e-06",
+          "verified_rate_per_token": "0.0000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "6e-06",
+          "verified_rate_per_token": "0.000006",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-flex",
+          "field": "output_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "9e-06",
+          "verified_rate_per_token": "0.000009",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "4e-06",
+          "verified_rate_per_token": "0.000004",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-fast",
+          "field": "input_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "8e-06",
+          "verified_rate_per_token": "0.000008",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "4e-07",
+          "verified_rate_per_token": "4E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "8e-07",
+          "verified_rate_per_token": "8E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_priority",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "1e-05",
+          "verified_rate_per_token": "0.00001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "2.4e-05",
+          "verified_rate_per_token": "0.000024",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-terra@2026-09-16-fast",
+          "field": "output_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "3.6e-05",
+          "verified_rate_per_token": "0.000036",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_creation_input_token_cost": 2.5e-06,
+        "cache_creation_input_token_cost_above_272k_tokens": 5e-06,
+        "cache_creation_input_token_cost_above_272k_tokens_flex": 2.5e-06,
+        "cache_creation_input_token_cost_above_272k_tokens_priority": 1e-05,
+        "cache_creation_input_token_cost_flex": 1.25e-06,
+        "cache_creation_input_token_cost_priority": 5e-06,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 4e-07,
+        "cache_read_input_token_cost_above_272k_tokens_flex": 2e-07,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 8e-07,
+        "cache_read_input_token_cost_flex": 1e-07,
+        "cache_read_input_token_cost_priority": 4e-07,
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_above_272k_tokens": 4e-06,
+        "input_cost_per_token_above_272k_tokens_flex": 2e-06,
+        "input_cost_per_token_above_272k_tokens_priority": 8e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "input_cost_per_token_flex": 1e-06,
+        "input_cost_per_token_priority": 4e-06,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_above_272k_tokens": 1.8e-05,
+        "output_cost_per_token_above_272k_tokens_flex": 9e-06,
+        "output_cost_per_token_above_272k_tokens_priority": 3.6e-05,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_token_flex": 6e-06,
+        "output_cost_per_token_priority": 2.4e-05,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-5.6-luna-medium",
+      "upstream_model": "openai/gpt-5.6-luna",
+      "exact_keys": [
+        "gpt-5.6-luna"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "2e-07",
+          "verified_rate_per_token": "2E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "input_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "4e-07",
+          "verified_rate_per_token": "4E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "2e-08",
+          "verified_rate_per_token": "2E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "cache_read_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "4e-08",
+          "verified_rate_per_token": "4E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "cache_creation_input_token_cost",
+          "litellm_rate_per_token": "2.5e-07",
+          "verified_rate_per_token": "2.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "cache_creation_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "1.2e-06",
+          "verified_rate_per_token": "0.0000012",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "output_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "1.8e-06",
+          "verified_rate_per_token": "0.0000018",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "1e-07",
+          "verified_rate_per_token": "1E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "input_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2e-07",
+          "verified_rate_per_token": "2E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "1e-08",
+          "verified_rate_per_token": "1E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2e-08",
+          "verified_rate_per_token": "2E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_flex",
+          "litellm_rate_per_token": "1.25e-07",
+          "verified_rate_per_token": "1.25E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2.5e-07",
+          "verified_rate_per_token": "2.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "6e-07",
+          "verified_rate_per_token": "6E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "output_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "9e-07",
+          "verified_rate_per_token": "9E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "4e-07",
+          "verified_rate_per_token": "4E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "input_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "8e-07",
+          "verified_rate_per_token": "8E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "4e-08",
+          "verified_rate_per_token": "4E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "8e-08",
+          "verified_rate_per_token": "8E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_priority",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "1e-06",
+          "verified_rate_per_token": "0.000001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "2.4e-06",
+          "verified_rate_per_token": "0.0000024",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "output_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "3.6e-06",
+          "verified_rate_per_token": "0.0000036",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_creation_input_token_cost": 2.5e-07,
+        "cache_creation_input_token_cost_above_272k_tokens": 5e-07,
+        "cache_creation_input_token_cost_above_272k_tokens_flex": 2.5e-07,
+        "cache_creation_input_token_cost_above_272k_tokens_priority": 1e-06,
+        "cache_creation_input_token_cost_flex": 1.25e-07,
+        "cache_creation_input_token_cost_priority": 5e-07,
+        "cache_read_input_token_cost": 2e-08,
+        "cache_read_input_token_cost_above_272k_tokens": 4e-08,
+        "cache_read_input_token_cost_above_272k_tokens_flex": 2e-08,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 8e-08,
+        "cache_read_input_token_cost_flex": 1e-08,
+        "cache_read_input_token_cost_priority": 4e-08,
+        "input_cost_per_token": 2e-07,
+        "input_cost_per_token_above_272k_tokens": 4e-07,
+        "input_cost_per_token_above_272k_tokens_flex": 2e-07,
+        "input_cost_per_token_above_272k_tokens_priority": 8e-07,
+        "input_cost_per_token_batches": 1e-07,
+        "input_cost_per_token_flex": 1e-07,
+        "input_cost_per_token_priority": 4e-07,
+        "output_cost_per_token": 1.2e-06,
+        "output_cost_per_token_above_272k_tokens": 1.8e-06,
+        "output_cost_per_token_above_272k_tokens_flex": 9e-07,
+        "output_cost_per_token_above_272k_tokens_priority": 3.6e-06,
+        "output_cost_per_token_batches": 6e-07,
+        "output_cost_per_token_flex": 6e-07,
+        "output_cost_per_token_priority": 2.4e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-5.6-luna-high",
+      "upstream_model": "openai/gpt-5.6-luna",
+      "exact_keys": [
+        "gpt-5.6-luna"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "2e-07",
+          "verified_rate_per_token": "2E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "input_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "4e-07",
+          "verified_rate_per_token": "4E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "2e-08",
+          "verified_rate_per_token": "2E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "cache_read_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "4e-08",
+          "verified_rate_per_token": "4E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "cache_creation_input_token_cost",
+          "litellm_rate_per_token": "2.5e-07",
+          "verified_rate_per_token": "2.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "cache_creation_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "1.2e-06",
+          "verified_rate_per_token": "0.0000012",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16",
+          "field": "output_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "1.8e-06",
+          "verified_rate_per_token": "0.0000018",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "1e-07",
+          "verified_rate_per_token": "1E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "input_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2e-07",
+          "verified_rate_per_token": "2E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "1e-08",
+          "verified_rate_per_token": "1E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2e-08",
+          "verified_rate_per_token": "2E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_flex",
+          "litellm_rate_per_token": "1.25e-07",
+          "verified_rate_per_token": "1.25E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2.5e-07",
+          "verified_rate_per_token": "2.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "6e-07",
+          "verified_rate_per_token": "6E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-flex",
+          "field": "output_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "9e-07",
+          "verified_rate_per_token": "9E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "4e-07",
+          "verified_rate_per_token": "4E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "input_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "8e-07",
+          "verified_rate_per_token": "8E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "4e-08",
+          "verified_rate_per_token": "4E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "8e-08",
+          "verified_rate_per_token": "8E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_priority",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "cache_creation_input_token_cost_above_272k_tokens_priority",
+          "litellm_rate_per_token": "1e-06",
+          "verified_rate_per_token": "0.000001",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "2.4e-06",
+          "verified_rate_per_token": "0.0000024",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.6-luna@2026-09-16-fast",
+          "field": "output_cost_per_token_above_272k_tokens_priority",
+          "litellm_rate_per_token": "3.6e-06",
+          "verified_rate_per_token": "0.0000036",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_creation_input_token_cost": 2.5e-07,
+        "cache_creation_input_token_cost_above_272k_tokens": 5e-07,
+        "cache_creation_input_token_cost_above_272k_tokens_flex": 2.5e-07,
+        "cache_creation_input_token_cost_above_272k_tokens_priority": 1e-06,
+        "cache_creation_input_token_cost_flex": 1.25e-07,
+        "cache_creation_input_token_cost_priority": 5e-07,
+        "cache_read_input_token_cost": 2e-08,
+        "cache_read_input_token_cost_above_272k_tokens": 4e-08,
+        "cache_read_input_token_cost_above_272k_tokens_flex": 2e-08,
+        "cache_read_input_token_cost_above_272k_tokens_priority": 8e-08,
+        "cache_read_input_token_cost_flex": 1e-08,
+        "cache_read_input_token_cost_priority": 4e-08,
+        "input_cost_per_token": 2e-07,
+        "input_cost_per_token_above_272k_tokens": 4e-07,
+        "input_cost_per_token_above_272k_tokens_flex": 2e-07,
+        "input_cost_per_token_above_272k_tokens_priority": 8e-07,
+        "input_cost_per_token_batches": 1e-07,
+        "input_cost_per_token_flex": 1e-07,
+        "input_cost_per_token_priority": 4e-07,
+        "output_cost_per_token": 1.2e-06,
+        "output_cost_per_token_above_272k_tokens": 1.8e-06,
+        "output_cost_per_token_above_272k_tokens_flex": 9e-07,
+        "output_cost_per_token_above_272k_tokens_priority": 3.6e-06,
+        "output_cost_per_token_batches": 6e-07,
+        "output_cost_per_token_flex": 6e-07,
+        "output_cost_per_token_priority": 2.4e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-5.4",
+      "upstream_model": "openai/gpt-5.4",
+      "exact_keys": [
+        "gpt-5.4"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "2.5e-06",
+          "verified_rate_per_token": "0.0000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16",
+          "field": "input_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "2.5e-07",
+          "verified_rate_per_token": "2.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16",
+          "field": "cache_read_input_token_cost_above_272k_tokens",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "1.5e-05",
+          "verified_rate_per_token": "0.000015",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16",
+          "field": "output_cost_per_token_above_272k_tokens",
+          "litellm_rate_per_token": "2.25e-05",
+          "verified_rate_per_token": "0.0000225",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "1.25e-06",
+          "verified_rate_per_token": "0.00000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16-flex",
+          "field": "input_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2.5e-06",
+          "verified_rate_per_token": "0.0000025",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "1.3e-07",
+          "verified_rate_per_token": "1.3E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_above_272k_tokens_flex",
+          "litellm_rate_per_token": "2.5e-07",
+          "verified_rate_per_token": "2.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "7.5e-06",
+          "verified_rate_per_token": "0.0000075",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16-flex",
+          "field": "output_cost_per_token_above_272k_tokens_flex",
+          "litellm_rate_per_token": "1.125e-05",
+          "verified_rate_per_token": "0.00001125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "5e-06",
+          "verified_rate_per_token": "0.000005",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "5e-07",
+          "verified_rate_per_token": "5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "3e-05",
+          "verified_rate_per_token": "0.00003",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2.5e-07,
+        "cache_read_input_token_cost_above_272k_tokens": 5e-07,
+        "cache_read_input_token_cost_flex": 1.3e-07,
+        "cache_read_input_token_cost_priority": 5e-07,
+        "input_cost_per_token": 2.5e-06,
+        "input_cost_per_token_above_272k_tokens": 5e-06,
+        "input_cost_per_token_flex": 1.25e-06,
+        "input_cost_per_token_batches": 1.25e-06,
+        "input_cost_per_token_priority": 5e-06,
+        "output_cost_per_token": 1.5e-05,
+        "output_cost_per_token_above_272k_tokens": 2.25e-05,
+        "output_cost_per_token_flex": 7.5e-06,
+        "output_cost_per_token_batches": 7.5e-06,
+        "output_cost_per_token_priority": 3e-05,
+        "input_cost_per_token_above_272k_tokens_flex": 2.5e-06,
+        "output_cost_per_token_above_272k_tokens_flex": 1.125e-05,
+        "cache_read_input_token_cost_above_272k_tokens_flex": 2.5e-07
+      }
+    },
+    {
+      "alias": "gpt-5.4-mini",
+      "upstream_model": "openai/gpt-5.4-mini",
+      "exact_keys": [
+        "gpt-5.4-mini"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-5.4-mini@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "7.5e-07",
+          "verified_rate_per_token": "7.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-mini@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "7.5e-08",
+          "verified_rate_per_token": "7.5E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-mini@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "4.5e-06",
+          "verified_rate_per_token": "0.0000045",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-mini@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "3.75e-07",
+          "verified_rate_per_token": "3.75E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-mini@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "3.75e-08",
+          "verified_rate_per_token": "3.75E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-mini@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "2.25e-06",
+          "verified_rate_per_token": "0.00000225",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-mini@2026-09-16-fast",
+          "field": "input_cost_per_token_priority",
+          "litellm_rate_per_token": "1.5e-06",
+          "verified_rate_per_token": "0.0000015",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-mini@2026-09-16-fast",
+          "field": "cache_read_input_token_cost_priority",
+          "litellm_rate_per_token": "1.5e-07",
+          "verified_rate_per_token": "1.5E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-mini@2026-09-16-fast",
+          "field": "output_cost_per_token_priority",
+          "litellm_rate_per_token": "9e-06",
+          "verified_rate_per_token": "0.000009",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 7.5e-08,
+        "cache_read_input_token_cost_flex": 3.75e-08,
+        "cache_read_input_token_cost_priority": 1.5e-07,
+        "input_cost_per_token": 7.5e-07,
+        "input_cost_per_token_flex": 3.75e-07,
+        "input_cost_per_token_batches": 3.75e-07,
+        "input_cost_per_token_priority": 1.5e-06,
+        "output_cost_per_token": 4.5e-06,
+        "output_cost_per_token_flex": 2.25e-06,
+        "output_cost_per_token_batches": 2.25e-06,
+        "output_cost_per_token_priority": 9e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-5.4-nano",
+      "upstream_model": "openai/gpt-5.4-nano",
+      "exact_keys": [
+        "gpt-5.4-nano"
+      ],
+      "comparisons": [
+        {
+          "pricing_version": "openai--gpt-5.4-nano@2026-09-16",
+          "field": "input_cost_per_token",
+          "litellm_rate_per_token": "2e-07",
+          "verified_rate_per_token": "2E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-nano@2026-09-16",
+          "field": "cache_read_input_token_cost",
+          "litellm_rate_per_token": "2e-08",
+          "verified_rate_per_token": "2E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-nano@2026-09-16",
+          "field": "output_cost_per_token",
+          "litellm_rate_per_token": "1.25e-06",
+          "verified_rate_per_token": "0.00000125",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-nano@2026-09-16-flex",
+          "field": "input_cost_per_token_flex",
+          "litellm_rate_per_token": "1e-07",
+          "verified_rate_per_token": "1E-7",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-nano@2026-09-16-flex",
+          "field": "cache_read_input_token_cost_flex",
+          "litellm_rate_per_token": "1e-08",
+          "verified_rate_per_token": "1E-8",
+          "status": "agreement"
+        },
+        {
+          "pricing_version": "openai--gpt-5.4-nano@2026-09-16-flex",
+          "field": "output_cost_per_token_flex",
+          "litellm_rate_per_token": "6.25e-07",
+          "verified_rate_per_token": "6.25E-7",
+          "status": "agreement"
+        }
+      ],
+      "status": "compared_dimensions_agree",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2e-08,
+        "cache_read_input_token_cost_flex": 1e-08,
+        "input_cost_per_token": 2e-07,
+        "input_cost_per_token_flex": 1e-07,
+        "input_cost_per_token_batches": 1e-07,
+        "output_cost_per_token": 1.25e-06,
+        "output_cost_per_token_flex": 6.25e-07,
+        "output_cost_per_token_batches": 6.25e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_high": 0.01,
+          "search_context_size_low": 0.01,
+          "search_context_size_medium": 0.01
+        }
+      }
+    },
+    {
+      "alias": "gpt-image-1.5",
+      "upstream_model": "openai/gpt-image-1.5",
+      "exact_keys": [
+        "gpt-image-1.5"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 1.25e-06,
+        "input_cost_per_token": 5e-06,
+        "output_cost_per_token": 1e-05,
+        "input_cost_per_image_token": 8e-06,
+        "input_cost_per_image_token_batches": 4e-06,
+        "input_cost_per_token_batches": 2.5e-06,
+        "output_cost_per_image_token": 3.2e-05,
+        "output_cost_per_token_batches": 5e-06
+      }
+    },
+    {
+      "alias": "gpt-image-2",
+      "upstream_model": "openai/gpt-image-2",
+      "exact_keys": [
+        "gpt-image-2"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 1.25e-06,
+        "input_cost_per_token": 5e-06,
+        "input_cost_per_image_token": 8e-06,
+        "input_cost_per_image_token_batches": 4e-06,
+        "input_cost_per_token_batches": 2.5e-06,
+        "output_cost_per_image_token": 3e-05
+      }
+    },
+    {
+      "alias": "gpt-image-2.5-sunburst",
+      "upstream_model": "openai/gpt-image-2.5-sunburst-2026-09-08",
+      "exact_keys": [
+        "gpt-image-2.5-sunburst-2026-09-08"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 1.25e-06,
+        "input_cost_per_token": 5e-06,
+        "input_cost_per_image_token": 8e-06,
+        "output_cost_per_image_token": 3e-05
+      }
+    },
+    {
+      "alias": "gpt-image-2.5-flare",
+      "upstream_model": "openai/gpt-image-2.5-flare-2026-09-08",
+      "exact_keys": [
+        "gpt-image-2.5-flare-2026-09-08"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 1.25e-06,
+        "input_cost_per_token": 5e-06,
+        "input_cost_per_image_token": 8e-06,
+        "output_cost_per_image_token": 3e-05
+      }
+    },
+    {
+      "alias": "gemini-latest",
+      "upstream_model": "vertex_ai/gemini-3.1-pro-preview",
+      "exact_keys": [
+        "vertex_ai/gemini-3.1-pro-preview",
+        "gemini-3.1-pro-preview"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_creation_input_token_cost_above_200k_tokens": 2.5e-07,
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_image": 0.00012,
+        "input_cost_per_token_priority": 3.6e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "output_cost_per_token_priority": 2.16e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "cache_read_input_token_cost_flex": 2e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "google_maps_grounding_cost_per_query": 0.014,
+        "input_cost_per_token_flex": 1e-06,
+        "output_cost_per_token_flex": 6e-06
+      }
+    },
+    {
+      "alias": "gemini-3.1-pro",
+      "upstream_model": "vertex_ai/gemini-3.1-pro-preview",
+      "exact_keys": [
+        "vertex_ai/gemini-3.1-pro-preview",
+        "gemini-3.1-pro-preview"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_creation_input_token_cost_above_200k_tokens": 2.5e-07,
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_image": 0.00012,
+        "input_cost_per_token_priority": 3.6e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "output_cost_per_token_priority": 2.16e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "cache_read_input_token_cost_flex": 2e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "google_maps_grounding_cost_per_query": 0.014,
+        "input_cost_per_token_flex": 1e-06,
+        "output_cost_per_token_flex": 6e-06
+      }
+    },
+    {
+      "alias": "gemini-3.1-pro-customtools",
+      "upstream_model": "vertex_ai/gemini-3.1-pro-preview-customtools",
+      "exact_keys": [
+        "vertex_ai/gemini-3.1-pro-preview-customtools",
+        "gemini-3.1-pro-preview-customtools"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_creation_input_token_cost_above_200k_tokens": 2.5e-07,
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_image": 0.00012,
+        "input_cost_per_token_priority": 3.6e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "output_cost_per_token_priority": 2.16e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "google_maps_grounding_cost_per_query": 0.014
+      }
+    },
+    {
+      "alias": "gemini-3.5-flash",
+      "upstream_model": "vertex_ai/gemini-3.5-flash",
+      "exact_keys": [
+        "vertex_ai/gemini-3.5-flash",
+        "gemini-3.5-flash"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 1.5e-07,
+        "input_cost_per_token": 1.5e-06,
+        "input_cost_per_audio_token": 1.5e-06,
+        "output_cost_per_reasoning_token": 9e-06,
+        "output_cost_per_token": 9e-06,
+        "input_cost_per_token_priority": 2.7e-06,
+        "input_cost_per_audio_token_priority": 2.7e-06,
+        "output_cost_per_token_priority": 1.62e-05,
+        "cache_read_input_token_cost_priority": 2.7e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "google_maps_grounding_cost_per_query": 0.014,
+        "input_cost_per_token_batches": 7.5e-07,
+        "output_cost_per_token_batches": 4.5e-06,
+        "input_cost_per_token_flex": 7.5e-07,
+        "output_cost_per_token_flex": 4.5e-06,
+        "cache_read_input_token_cost_flex": 7.5e-08
+      }
+    },
+    {
+      "alias": "gemini-3.8-flash",
+      "upstream_model": "vertex_ai/gemini-3.8-flash",
+      "exact_keys": [
+        "vertex_ai/gemini-3.8-flash",
+        "gemini-3.8-flash"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 7.5e-08,
+        "cache_read_input_token_cost_flex": 3.75e-08,
+        "input_cost_per_token": 7.5e-07,
+        "input_cost_per_token_batches": 3.75e-07,
+        "input_cost_per_token_flex": 3.75e-07,
+        "output_cost_per_reasoning_token": 3.75e-06,
+        "output_cost_per_token": 3.75e-06,
+        "output_cost_per_token_batches": 1.875e-06,
+        "output_cost_per_token_flex": 1.875e-06,
+        "input_cost_per_token_priority": 1.35e-06,
+        "output_cost_per_token_priority": 6.75e-06,
+        "cache_read_input_token_cost_priority": 1.35e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "google_maps_grounding_cost_per_query": 0.014
+      }
+    },
+    {
+      "alias": "gemini-3.5-flash-lite",
+      "upstream_model": "vertex_ai/gemini-3.5-flash-lite",
+      "exact_keys": [
+        "vertex_ai/gemini-3.5-flash-lite",
+        "gemini-3.5-flash-lite"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 3e-08,
+        "cache_read_input_token_cost_flex": 1.5e-08,
+        "cache_read_input_token_cost_priority": 5.4e-08,
+        "input_cost_per_token": 3e-07,
+        "input_cost_per_token_batches": 1.5e-07,
+        "input_cost_per_token_flex": 1.5e-07,
+        "input_cost_per_token_priority": 5.4e-07,
+        "output_cost_per_reasoning_token": 2.5e-06,
+        "output_cost_per_token": 2.5e-06,
+        "output_cost_per_token_batches": 1.25e-06,
+        "output_cost_per_token_flex": 1.25e-06,
+        "output_cost_per_token_priority": 4.5e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "google_maps_grounding_cost_per_query": 0.014
+      }
+    },
+    {
+      "alias": "gemini-3-flash-preview",
+      "upstream_model": "vertex_ai/gemini-3-flash-preview",
+      "exact_keys": [
+        "vertex_ai/gemini-3-flash-preview",
+        "gemini-3-flash-preview"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_audio_token_cost": 1e-07,
+        "cache_read_input_token_cost": 5e-08,
+        "cache_read_input_token_cost_flex": 5e-08,
+        "input_cost_per_token": 5e-07,
+        "input_cost_per_audio_token": 1e-06,
+        "output_cost_per_token": 3e-06,
+        "input_cost_per_token_priority": 9e-07,
+        "input_cost_per_audio_token_priority": 1.8e-06,
+        "output_cost_per_token_priority": 5.4e-06,
+        "cache_read_input_token_cost_priority": 9e-08,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "google_maps_grounding_cost_per_query": 0.014,
+        "input_cost_per_audio_token_batches": 5e-07,
+        "input_cost_per_token_batches": 2.5e-07,
+        "input_cost_per_token_flex": 2.5e-07,
+        "output_cost_per_token_batches": 1.5e-06,
+        "output_cost_per_token_flex": 1.5e-06
+      }
+    },
+    {
+      "alias": "gemini-3.1-flash-lite-preview",
+      "upstream_model": "vertex_ai/gemini-3.1-flash-lite-preview",
+      "exact_keys": [
+        "vertex_ai/gemini-3.1-flash-lite-preview",
+        "gemini-3.1-flash-lite-preview"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2.5e-08,
+        "input_cost_per_audio_token": 5e-07,
+        "input_cost_per_token": 2.5e-07,
+        "output_cost_per_reasoning_token": 1.5e-06,
+        "output_cost_per_token": 1.5e-06,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "google_maps_grounding_cost_per_query": 0.014
+      }
+    },
+    {
+      "alias": "nano-banana",
+      "upstream_model": "vertex_ai/gemini-3.1-flash-image",
+      "exact_keys": [
+        "vertex_ai/gemini-3.1-flash-image",
+        "gemini-3.1-flash-image"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 5e-08,
+        "cache_read_input_token_cost_flex": 2.5e-08,
+        "input_cost_per_image": 0.00056,
+        "input_cost_per_token": 5e-07,
+        "input_cost_per_token_batches": 2.5e-07,
+        "input_cost_per_token_flex": 2.5e-07,
+        "output_cost_per_image": 0.0672,
+        "output_cost_per_image_token": 6e-05,
+        "output_cost_per_token": 3e-06,
+        "output_cost_per_token_batches": 1.5e-06,
+        "output_cost_per_token_flex": 1.5e-06
+      }
+    },
+    {
+      "alias": "nano-banana-2",
+      "upstream_model": "vertex_ai/gemini-3.1-flash-image",
+      "exact_keys": [
+        "vertex_ai/gemini-3.1-flash-image",
+        "gemini-3.1-flash-image"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 5e-08,
+        "cache_read_input_token_cost_flex": 2.5e-08,
+        "input_cost_per_image": 0.00056,
+        "input_cost_per_token": 5e-07,
+        "input_cost_per_token_batches": 2.5e-07,
+        "input_cost_per_token_flex": 2.5e-07,
+        "output_cost_per_image": 0.0672,
+        "output_cost_per_image_token": 6e-05,
+        "output_cost_per_token": 3e-06,
+        "output_cost_per_token_batches": 1.5e-06,
+        "output_cost_per_token_flex": 1.5e-06
+      }
+    },
+    {
+      "alias": "nano-banana-pro",
+      "upstream_model": "vertex_ai/gemini-3-pro-image",
+      "exact_keys": [
+        "vertex_ai/gemini-3-pro-image",
+        "gemini-3-pro-image"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "cache_read_input_token_cost_flex": 1e-07,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "input_cost_per_image": 0.0011,
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "input_cost_per_token_flex": 1e-06,
+        "input_cost_per_token_priority": 3.6e-06,
+        "output_cost_per_image": 0.134,
+        "output_cost_per_image_token": 0.00012,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_token_flex": 6e-06,
+        "output_cost_per_token_priority": 2.16e-05
+      }
+    },
+    {
+      "alias": "nano-banana-2-lite",
+      "upstream_model": "vertex_ai/gemini-3.1-flash-lite-image",
+      "exact_keys": [
+        "vertex_ai/gemini-3.1-flash-lite-image",
+        "gemini-3.1-flash-lite-image"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2.5e-08,
+        "cache_read_input_token_cost_flex": 1.25e-08,
+        "input_cost_per_image": 0.00028,
+        "input_cost_per_token": 2.5e-07,
+        "input_cost_per_token_batches": 1.25e-07,
+        "input_cost_per_token_flex": 1.25e-07,
+        "output_cost_per_image": 0.0336,
+        "output_cost_per_image_token": 3e-05,
+        "output_cost_per_token": 1.5e-06,
+        "output_cost_per_token_batches": 7.5e-07,
+        "output_cost_per_token_flex": 7.5e-07
+      }
+    },
+    {
+      "alias": "veo-3.1",
+      "upstream_model": "vertex_ai/veo-3.1-generate-001",
+      "exact_keys": [
+        "vertex_ai/veo-3.1-generate-001"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "output_cost_per_second": 0.4,
+        "output_cost_per_second_4k": 0.6
+      }
+    },
+    {
+      "alias": "veo-3.1-fast",
+      "upstream_model": "vertex_ai/veo-3.1-fast-generate-001",
+      "exact_keys": [
+        "vertex_ai/veo-3.1-fast-generate-001"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "output_cost_per_second": 0.1,
+        "output_cost_per_second_1080p": 0.12,
+        "output_cost_per_second_4k": 0.3
+      }
+    },
+    {
+      "alias": "veo-3.1-lite",
+      "upstream_model": "vertex_ai/veo-3.1-lite-generate-001",
+      "exact_keys": [
+        "vertex_ai/veo-3.1-lite-generate-001"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "output_cost_per_second": 0.05,
+        "output_cost_per_second_1080p": 0.08
+      }
+    },
+    {
+      "alias": "gemini-omni-flash",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "gemini-omni-flash-preview",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "gemini-omni-1.1-flash",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "gemini-omni-1.1-flash-preview",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "imagen-4.0",
+      "upstream_model": "vertex_ai/imagen-4.0-generate-001",
+      "exact_keys": [
+        "vertex_ai/imagen-4.0-generate-001"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "output_cost_per_image": 0.04
+      }
+    },
+    {
+      "alias": "imagen-4.0-fast",
+      "upstream_model": "vertex_ai/imagen-4.0-fast-generate-001",
+      "exact_keys": [
+        "vertex_ai/imagen-4.0-fast-generate-001"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "output_cost_per_image": 0.02
+      }
+    },
+    {
+      "alias": "imagen-4.0-ultra",
+      "upstream_model": "vertex_ai/imagen-4.0-ultra-generate-001",
+      "exact_keys": [
+        "vertex_ai/imagen-4.0-ultra-generate-001"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "output_cost_per_image": 0.06
+      }
+    },
+    {
+      "alias": "grok-video",
+      "upstream_model": "grok-video/grok-imagine-video",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "grok-video-1.5",
+      "upstream_model": "grok-video/grok-imagine-video-1.5",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "grok-imagine-video-1.5-2026-05-30",
+      "upstream_model": "grok-video/grok-imagine-video-1.5-2026-05-30",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "grok-image",
+      "upstream_model": "grok-image/grok-imagine-image-quality",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "grok-imagine-image-quality",
+      "upstream_model": "grok-image/grok-imagine-image-quality",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "grok-imagine-image-2.0",
+      "upstream_model": "grok-image/grok-imagine-image-2.0",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "seedance-2.0",
+      "upstream_model": "seedance/dreamina-seedance-2-0-260128",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "seedance-2.0-fast",
+      "upstream_model": "seedance/dreamina-seedance-2-0-fast-260128",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "seedance-2.5",
+      "upstream_model": "seedance/dreamina-seedance-2-5-260628",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "seedream-5.0",
+      "upstream_model": "seedream/seedream-5-0-260128",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "seedream-5.0-lite",
+      "upstream_model": "seedream/seedream-5-0-lite-260128",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "seedream-5.0-pro",
+      "upstream_model": "seedream/dola-seedream-5-0-pro-260628",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "grok-latest",
+      "upstream_model": "xai/grok-4.20-non-reasoning-latest",
+      "exact_keys": [
+        "xai/grok-4.20-non-reasoning-latest"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2e-07,
+        "input_cost_per_token": 1.25e-06,
+        "output_cost_per_token": 2.5e-06,
+        "input_cost_per_token_above_200k_tokens": 2.5e-06,
+        "output_cost_per_token_above_200k_tokens": 5e-06,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07
+      }
+    },
+    {
+      "alias": "grok-4.20-reasoning",
+      "upstream_model": "xai/grok-4.20-reasoning-latest",
+      "exact_keys": [
+        "xai/grok-4.20-reasoning-latest"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2e-07,
+        "input_cost_per_token": 1.25e-06,
+        "output_cost_per_token": 2.5e-06,
+        "input_cost_per_token_above_200k_tokens": 2.5e-06,
+        "output_cost_per_token_above_200k_tokens": 5e-06,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07
+      }
+    },
+    {
+      "alias": "grok-4.20",
+      "upstream_model": "xai/grok-4.20-non-reasoning-latest",
+      "exact_keys": [
+        "xai/grok-4.20-non-reasoning-latest"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "cache_read_input_token_cost": 2e-07,
+        "input_cost_per_token": 1.25e-06,
+        "output_cost_per_token": 2.5e-06,
+        "input_cost_per_token_above_200k_tokens": 2.5e-06,
+        "output_cost_per_token_above_200k_tokens": 5e-06,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07
+      }
+    },
+    {
+      "alias": "elevenlabs-v3-tts",
+      "upstream_model": "elevenlabs/eleven_v3",
+      "exact_keys": [
+        "elevenlabs/eleven_v3"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "input_cost_per_character": 0.00018
+      }
+    },
+    {
+      "alias": "elevenlabs-multilingual-v2",
+      "upstream_model": "elevenlabs/eleven_multilingual_v2",
+      "exact_keys": [
+        "elevenlabs/eleven_multilingual_v2"
+      ],
+      "comparisons": [],
+      "status": "manual_dimensions_required",
+      "pricing_fields": {
+        "input_cost_per_character": 0.00018
+      }
+    },
+    {
+      "alias": "elevenlabs-sfx",
+      "upstream_model": "elevenlabs/eleven_text_to_sound_v2",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    },
+    {
+      "alias": "elevenlabs-music",
+      "upstream_model": "elevenlabs/music_v1",
+      "exact_keys": [],
+      "comparisons": [],
+      "status": "no_exact_key"
+    }
+  ]
+}

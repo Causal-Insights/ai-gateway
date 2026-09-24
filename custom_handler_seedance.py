@@ -23,10 +23,6 @@ Key env vars:
     SEEDANCE_POLL_TIMEOUT_S        upper bound on synchronous poll loops (default 1200)
     SEEDANCE_POLL_INTERVAL_S       seconds between polls (default 10)
     SEEDANCE_BLOCKING_POLL=1       legacy: wait up to POLL_TIMEOUT_S synchronously
-    SEEDANCE_PRICE_PER_MTOK        $/1M output tokens (text+image input); default 7.00
-    SEEDANCE_PRICE_PER_MTOK_VIDEO  $/1M output tokens when an input video is sent; default 4.30
-    SEEDANCE_PRICE_PER_MTOK_FAST          fast tier rate (no input video); default 5.60
-    SEEDANCE_PRICE_PER_MTOK_FAST_VIDEO    fast tier rate (with input video); default 3.30
     SEEDANCE_TASK_LEDGER_PATH          append-only JSONL log of every submitted task id
                                        (recover videos after client/proxy failures)
 
@@ -75,10 +71,6 @@ SEEDANCE_HANDLER_VERSION = "2026-05-24-poll-default-0"
 # BytePlus ARK official rates (USD per 1M output tokens) for Seedance 2.0 family at
 # 480p/720p. 1080p is roughly +10% but we keep a single rate per model since the
 # proxy bills off the upstream-returned completion_tokens.
-DEFAULT_PRICE_PER_MTOK = 7.00
-DEFAULT_PRICE_PER_MTOK_VIDEO = 4.30
-DEFAULT_PRICE_PER_MTOK_FAST = 5.60
-DEFAULT_PRICE_PER_MTOK_FAST_VIDEO = 3.30
 
 
 def _task_url(task_id: str) -> str:
@@ -111,10 +103,12 @@ def _running_response(task_id: str, status: str) -> ImageResponse:
     survive Pydantic round-tripping (ad-hoc kwargs on ImageResponse get
     dropped by the proxy at response time).
     """
-    return ImageResponse(
+    response = ImageResponse(
         created=int(time.time()),
         data=[ImageObject(url=_task_url(task_id), revised_prompt=status)],
     )
+    response._hidden_params.update(gateway_provider_request_id=task_id, gateway_pending=True)
+    return response
 
 
 def _final_response(
@@ -139,6 +133,10 @@ def _final_response(
 
 class SeedanceException(Exception):
     """Raised when BytePlus ARK Seedance task submission or polling fails."""
+
+    def __init__(self, message, *, body=None):
+        super().__init__(message)
+        self.body = body
 
 
 class SeedanceLLM(CustomLLM):
@@ -196,16 +194,6 @@ class SeedanceLLM(CustomLLM):
     def _is_fast_model(self, ark_model: str) -> bool:
         return "fast" in (ark_model or "").lower()
 
-    def _price_per_mtok(self, ark_model: str, *, has_input_video: bool) -> float:
-        if self._is_fast_model(ark_model):
-            if has_input_video:
-                return self._env_float(
-                    "SEEDANCE_PRICE_PER_MTOK_FAST_VIDEO", DEFAULT_PRICE_PER_MTOK_FAST_VIDEO
-                )
-            return self._env_float("SEEDANCE_PRICE_PER_MTOK_FAST", DEFAULT_PRICE_PER_MTOK_FAST)
-        if has_input_video:
-            return self._env_float("SEEDANCE_PRICE_PER_MTOK_VIDEO", DEFAULT_PRICE_PER_MTOK_VIDEO)
-        return self._env_float("SEEDANCE_PRICE_PER_MTOK", DEFAULT_PRICE_PER_MTOK)
 
     @staticmethod
     def _resolve_wait_seconds(
@@ -369,6 +357,8 @@ class SeedanceLLM(CustomLLM):
             raise SeedanceException(
                 normalize_error(submit_data.get("error", {}).get("message", submit_data))
             )
+        from gateway_accounting import bind_legacy_task
+        await bind_legacy_task(str(task_id), submit_body)
         return str(task_id)
 
     async def _get_task(
@@ -401,7 +391,7 @@ class SeedanceLLM(CustomLLM):
         if status == "succeeded":
             video_url = (body.get("content") or {}).get("video_url")
             if not video_url:
-                raise SeedanceException(normalize_error("missing video_url in succeeded task"))
+                raise SeedanceException(normalize_error("missing video_url in succeeded task"), body=body)
             cost: Optional[float] = None
             if self._mark_billed(task_id):
                 cost = self._compute_cost(
@@ -409,25 +399,23 @@ class SeedanceLLM(CustomLLM):
                     usage=body.get("usage") or {},
                     has_input_video=has_input_video,
                 )
-            return _final_response(video_url, response_cost=cost, task_id=task_id)
+            response = _final_response(video_url, response_cost=cost, task_id=task_id)
+            response._hidden_params.update(gateway_usage=body.get("usage") or {},
+                gateway_provider_request_id=task_id, gateway_served_model=body.get("model"),
+                gateway_served_options={"resolution": body.get("resolution"), "input_video": has_input_video})
+            return response
 
         if status in ("failed", "expired"):
             err = body.get("error") or {}
-            raise SeedanceException(normalize_error(err.get("message", status)))
+            raise SeedanceException(normalize_error(err.get("message", status)), body=body)
 
         return _running_response(task_id, status)
 
     def _compute_cost(
         self, *, ark_model: str, usage: dict, has_input_video: bool
     ) -> Optional[float]:
-        try:
-            tokens = int(usage.get("completion_tokens") or usage.get("total_tokens") or 0)
-        except (TypeError, ValueError):
-            return None
-        if tokens <= 0:
-            return None
-        rate_per_mtok = self._price_per_mtok(ark_model, has_input_video=has_input_video)
-        return tokens * rate_per_mtok / 1_000_000.0
+        """Legacy polls have no pinned accounting intent; cost remains unknown."""
+        return None
 
     async def _poll_until_done_or_deadline(
         self,

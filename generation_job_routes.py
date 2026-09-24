@@ -44,6 +44,8 @@ from generation_job_models import (
 )
 from generation_job_repository import repository
 from generation_job_scheduler import enqueue_poll, next_poll_time
+from cost_accounting import accounting, canonical_key, identity_for
+from pricing_registry import registry, PricingError
 
 
 logger = logging.getLogger("ai_gateway.generation_jobs")
@@ -75,7 +77,7 @@ def _owner(user: UserAPIKeyAuth) -> tuple[str, dict[str, Any]]:
         }.items()
         if value is not None
     }
-    context["api_key_hash"] = owner_hash
+    context.update(identity_for(user))
     return owner_hash, context
 
 
@@ -209,52 +211,45 @@ def _response(job: dict[str, Any], base_url: str) -> GenerationJobResponse:
         poll_after_ms=poll_after_ms,
         result=result,
         usage=job.get("usage"),
-        cost_usd=float(job["response_cost_usd"]) if job.get("response_cost_usd") is not None else None,
+        cost_usd=float(job["cost_contract"]["cost_usd"]) if (job.get("cost_contract") or {}).get("cost_usd") is not None else None,
+        accounting_id=job.get("accounting_id"),
+        cost_status=(job.get("cost_contract") or {}).get("cost_status", "pending"),
+        cost_source=(job.get("cost_contract") or {}).get("cost_source"),
+        pricing_version=(job.get("cost_contract") or {}).get("pricing_version"),
+        breakdown=(job.get("cost_contract") or {}).get("breakdown", []),
+        billing_eligible=(job.get("cost_contract") or {}).get("billing_eligible", False),
         error=error,
     )
 
 
 async def _record_spend(job: dict[str, Any]) -> None:
-    """Feed terminal usage through LiteLLM callbacks, guarded by the job row lock."""
-    if job.get("response_cost_usd") is None:
-        return
-
-    async def emit(row: dict[str, Any]) -> None:
-        from litellm.litellm_core_utils.litellm_logging import Logging
-        from litellm.types.utils import ImageObject, ImageResponse
-
-        now = datetime.now(timezone.utc)
-        response = ImageResponse(created=int(now.timestamp()), data=[ImageObject(url="gateway://generation-job")])
-        response._hidden_params["response_cost"] = float(row["response_cost_usd"])
-        identity = row.get("owner_context") or {}
-        logging_obj = Logging(
-            model=row["model"],
-            messages=[{"role": "user", "content": "[durable generation job]"}],
-            stream=False,
-            call_type="image_generation",
-            start_time=row.get("submitted_at") or row["created_at"],
-            litellm_call_id=row["id"],
-            function_id=row["id"],
-            kwargs={
-                "model": row["model"],
-                "litellm_call_id": row["id"],
-                "user": identity.get("user_id"),
-                "api_key": identity.get("api_key_hash"),
-                "team_id": identity.get("team_id"),
-                "metadata": {"generation_job_id": row["id"], "provider": row["provider"]},
-                "response_cost": float(row["response_cost_usd"]),
-            },
-        )
-        await logging_obj.async_success_handler(
-            result=response,
-            start_time=row.get("submitted_at") or row["created_at"],
-            end_time=row.get("completed_at") or now,
-        )
-
+    """Record the execution regardless of attribution or pricing verification."""
     try:
-        await repository.log_spend_once(job["id"], emit)
+        if not job.get("accounting_id"):
+            await accounting.recover_job(job)
+            return
+        metadata = job.get("request_metadata") or {}
+        served_options = {key: metadata[key] for key in ("resolution", "generate_audio") if key in metadata}
+        if "has_input_video" in metadata:
+            served_options["input_video"] = metadata["has_input_video"]
+        pool = await accounting.pool()
+        attempt_id = await pool.fetchval("select attempt_id from gateway_cost_attempts where accounting_id=$1 order by created_at limit 1", job["accounting_id"])
+        await accounting.observe(
+            attempt_id or job["accounting_id"] + ":1", raw_usage=job.get("usage"),
+            served_model=metadata.get("served_model") or metadata.get("upstream_model"),
+            provider_request_id=job.get("provider_request_id"),
+            outcome="success" if job["status"] == "completed" else "failure",
+            served_options=served_options or None,
+        )
+        await accounting.finish(job["accounting_id"])
     except Exception:
         logger.exception("generation_job_spend_logging_failed", extra={"generation_job_id": job["id"]})
+
+
+async def _cost_response(job, base_url):
+    if job.get("accounting_id"):
+        job["cost_contract"] = await accounting.get(job["accounting_id"])
+    return _response(job, base_url)
 
 
 async def _schedule(job_id: str, when: datetime) -> None:
@@ -371,7 +366,25 @@ async def create_generation_job(
         )
     response.headers["Location"] = f"/v1/generation-jobs/{job['id']}"
     if not created:
-        return _response(job, os.environ.get("GATEWAY_PUBLIC_BASE_URL") or str(request.base_url))
+        return await _cost_response(job, os.environ.get("GATEWAY_PUBLIC_BASE_URL") or str(request.base_url))
+
+    from gateway_accounting import check_context, options_for, state
+    try:
+        profile = registry().select(payload.model, "generation_job", options_for(payload.model_dump()))
+        check_context(profile)
+        await accounting.check_budgets(owner_context, payload.model)
+        accounting_id = await accounting.begin(model=payload.model, route="generation_job",
+            identity=owner_context, owner_hash=owner_hash, accounting_id=job_id)
+        await accounting.attempt(accounting_id, profile, attempt_id=accounting_id + ":1")
+        pool = await repository.pool()
+        await pool.execute("update gateway_generation_jobs set accounting_id=$2 where id=$1", job_id, accounting_id)
+        job["accounting_id"] = accounting_id
+        current = state.get()
+        if current is not None:
+            current.update(accounting_id=accounting_id, durable_job=True, profile=profile, alias=payload.model)
+    except PricingError as exc:
+        await repository.mark_submission_failed(job_id, code=exc.code, message=str(exc))
+        raise HTTPException(503, detail={"code": exc.code, "message": str(exc)}) from exc
 
     callback_base = (os.environ.get("GENERATION_CALLBACK_BASE_URL") or "").rstrip("/")
     callback_url = None
@@ -401,6 +414,7 @@ async def create_generation_job(
             code=code,
             message=str(exc),
             retryable=exc.retryable and not exc.outcome_unknown,
+            usage=exc.usage,
         )
     except Exception as exc:
         logger.exception("generation_submission_unhandled", extra={"generation_job_id": job_id})
@@ -409,7 +423,9 @@ async def create_generation_job(
             code="SUBMISSION_OUTCOME_UNKNOWN",
             message="The provider submission outcome could not be determined.",
         )
-    return _response(job, os.environ.get("GATEWAY_PUBLIC_BASE_URL") or str(request.base_url))
+    if job["status"] in TERMINAL_STATUSES:
+        await _record_spend(job)
+    return await _cost_response(job, os.environ.get("GATEWAY_PUBLIC_BASE_URL") or str(request.base_url))
 
 
 @router.get("/v1/generation-jobs/{job_id}", response_model=GenerationJobResponse)
@@ -422,7 +438,7 @@ async def get_generation_job(
     job = await repository.get(job_id, owner_hash)
     if not job:
         raise HTTPException(404, "Generation job not found.")
-    return _response(job, os.environ.get("GATEWAY_PUBLIC_BASE_URL") or str(request.base_url))
+    return await _cost_response(job, os.environ.get("GATEWAY_PUBLIC_BASE_URL") or str(request.base_url))
 
 
 async def _remote_content(url: str, incoming_range: Optional[str], maximum: int):
@@ -565,12 +581,21 @@ async def poll_generation_job(job_id: str, request: Request) -> dict[str, Any]:
     deadline_reached = datetime.now(timezone.utc) >= job["deadline_at"]
     try:
         provider_status = await adapter_for_job(job).retrieve(job)
+        if provider_status.status in TERMINAL_STATUSES:
+            # Cost evidence survives a later failure updating the media job.
+            await _record_spend({**job, "status": provider_status.status,
+                                 "usage": provider_status.usage or job.get("usage"),
+                                 "request_metadata": {**(job.get("request_metadata") or {}),
+                                                      "served_model": provider_status.served_model}})
         job = await repository.apply_provider_status(job_id, provider_status)
     except ProviderAdapterError as exc:
+        if exc.usage:
+            await _record_spend({**job, "status": "failed", "usage": exc.usage})
         if not exc.retryable:
             provider_status = ProviderStatus(
                 status="failed", provider_status=job.get("provider_status") or "unknown",
                 error_code=exc.code, error_message=str(exc), error_retryable=False,
+                usage=exc.usage,
             )
             job = await repository.apply_provider_status(job_id, provider_status)
         elif deadline_reached:
@@ -616,6 +641,13 @@ async def reconcile_generation_jobs(request: Request) -> dict[str, int]:
     )
     for spend_job in spend_jobs:
         await _record_spend(spend_job)
+    await accounting.reconcile()
+    from gateway_accounting import invalidate_caches
+    await invalidate_caches()
+    report = await accounting.report()
+    issue_count = sum(len(report[key]) for key in ("issues", "unfinished_requests", "aggregate_divergence", "expired_pricing"))
+    if issue_count:
+        logger.error("accounting_reconciliation_alert", extra={"issue_count": issue_count})
     return {"due": len(jobs), "enqueued": enqueued, "spend_reconciled": len(spend_jobs)}
 
 
