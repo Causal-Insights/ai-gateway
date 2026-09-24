@@ -11,7 +11,6 @@ from litellm.proxy._types import LiteLLMRoutes
 from litellm.proxy.proxy_server import app
 
 from generation_job_routes import router as generation_jobs_router
-from decision_routes import router as decisions_router
 from generation_job_repository import repository
 from generation_job_scheduler import start_local_scheduler, stop_local_scheduler
 from gateway_request_policy import GatewayRequestPolicyMiddleware
@@ -23,8 +22,6 @@ install_accounting()
 
 
 GENERATION_JOB_LLM_ROUTES = (
-    "/v1/decisions",
-    "/v1/decisions/models",
     "/v1/generation-jobs",
     "/v1/generation-jobs/{job_id}",
     "/v1/generation-jobs/{job_id}/content",
@@ -50,7 +47,6 @@ def register_generation_job_llm_routes() -> None:
 
 register_generation_job_llm_routes()
 app.include_router(generation_jobs_router)
-app.include_router(decisions_router)
 app.include_router(cost_router)
 app.add_middleware(GatewayRequestPolicyMiddleware)
 app.add_middleware(AccountingMiddleware)

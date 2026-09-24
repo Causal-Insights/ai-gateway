@@ -200,7 +200,3 @@ warnings from actual blockers, and resolve all 50 newly blocked aliases. All 56 
 Use `$price-verification` to collect official vendor evidence. Its canonical source
 is `skills/price-verification/`; run `python scripts/sync_price_verification.py`
 after changing it to refresh the personal skill.
-
-## Typed decisions
-
-Authenticated `/v1/decisions` supports pinned Jev System One questions with durable vendor cost accounting. Configure `JEV_API_KEY` on the Gateway server. See [the decision contract and activation status](docs/decisions.md); Jev is separate from generation models and its initial pricing profile is disabled.

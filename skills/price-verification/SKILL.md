@@ -16,7 +16,6 @@ vendor reference below. For ai-gateway also read [gateway policy](references/gat
 | xAI | [xAI](references/xai.md) |
 | BytePlus ModelArk / LAS | [BytePlus](references/byteplus.md) |
 | ElevenLabs | [ElevenLabs](references/elevenlabs.md) |
-| TypeSafe | [TypeSafe System One](references/typesafe.md) |
 
 Open current official pricing tables and their footnotes. A search snippet, an old
 skill value, a neighboring model, or a third-party calculator cannot verify a rate.

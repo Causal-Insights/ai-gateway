@@ -36,7 +36,6 @@ COPY openai_usage.py /app/openai_usage.py
 COPY gateway_logging.py /app/gateway_logging.py
 COPY gateway_healthcheck.py /app/gateway_healthcheck.py
 COPY gateway_server.py /app/gateway_server.py
-COPY decision_contract.py decision_routes.py /app/
 COPY pricing_registry.py litellm_pricing.py accounting_usage.py cost_accounting.py gateway_accounting.py cost_repairs.py /app/
 COPY pricing /app/pricing
 COPY gateway_entrypoint.sh /app/gateway_entrypoint.sh
