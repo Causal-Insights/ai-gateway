@@ -177,13 +177,6 @@
         "litellm:vertex_ai/gemini-3-flash-preview@40197b7bfaf6b4cea437"
       ]
     },
-    "gemini-3.1-flash-lite-preview": {
-      "upstream_model": "vertex_ai/gemini-3.1-flash-lite-preview",
-      "disabled": false,
-      "profiles": [
-        "litellm:vertex_ai/gemini-3.1-flash-lite-preview@b6566a9dc8e87b376a8a"
-      ]
-    },
     "nano-banana": {
       "upstream_model": "vertex_ai/gemini-3.1-flash-image",
       "disabled": false,
@@ -259,27 +252,6 @@
       "disabled": false,
       "profiles": [
         "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-16"
-      ]
-    },
-    "imagen-4.0": {
-      "upstream_model": "vertex_ai/imagen-4.0-generate-001",
-      "disabled": false,
-      "profiles": [
-        "litellm:vertex_ai/imagen-4.0-generate-001@ec24fa47951bcda18658"
-      ]
-    },
-    "imagen-4.0-fast": {
-      "upstream_model": "vertex_ai/imagen-4.0-fast-generate-001",
-      "disabled": false,
-      "profiles": [
-        "litellm:vertex_ai/imagen-4.0-fast-generate-001@bcbf7be68c01bdf1b2b8"
-      ]
-    },
-    "imagen-4.0-ultra": {
-      "upstream_model": "vertex_ai/imagen-4.0-ultra-generate-001",
-      "disabled": false,
-      "profiles": [
-        "litellm:vertex_ai/imagen-4.0-ultra-generate-001@8fee2bbdce213dd065c3"
       ]
     },
     "grok-video": {

@@ -1,8 +1,8 @@
 # OpenAI September 2026 Gateway release
 
-This release adds Gateway routes only. MagicLens registration, controls, pricing,
-publication, migrations, and deployment are deferred at the user's request until
-OpenAI grants image-model access to the configured project.
+This release adds Gateway routes. MagicLens registration, controls, pricing and
+publication have a separate lifecycle; Gateway access alone does not establish
+MagicLens feature readiness. See the [integration review](magiclens-integration-2026-09-24.md).
 
 | Gateway alias | Exact upstream model | Routes |
 |---|---|---|
@@ -14,7 +14,15 @@ OpenAI grants image-model access to the configured project.
 Astra validation and retry policy. Gateway discovery confirms routing, not
 upstream project entitlement. On 2026-09-09, read-only OpenAI model lookups using
 the Gateway's existing credential returned `model_not_found` for both image
-aliases and snapshots. No paid image-generation probe was submitted.
+aliases and snapshots. No paid image-generation probe was submitted at that time.
+
+On 2026-09-24, both aliases and exact snapshots returned HTTP 200 using the
+Gateway-configured OpenAI credential. One direct Image API generation per
+snapshot also succeeded (1024×1024, low quality, one image). This supersedes
+the access restriction above. The test verifies provider access and basic
+generation, not deployed Gateway dispatch, editing, streaming, or MagicLens
+execution. Sanitized request IDs and usage are in the
+[access evidence](evidence/gpt-image-2.5-access-2026-09-24.json).
 
 ## Request contract
 
@@ -38,7 +46,8 @@ rewriting the uploaded bytes.
 **Images-route streaming is explicitly unavailable in LiteLLM 1.95.0.** Such
 requests fail before provider submission instead of silently dropping streaming
 settings. Use the Responses image-generation tool when streaming is needed.
-Provider access and live streaming/media verification remain outstanding.
+Provider access and basic generation are verified as described above. Live
+Gateway streaming/editing and MagicLens workflow verification remain outstanding.
 
 ```json
 {

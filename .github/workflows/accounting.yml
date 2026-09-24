@@ -8,7 +8,7 @@ jobs:
       - run: docker build -t gateway-accounting-test .
       - name: Registry, skill evidence and offline regression suite
         run: |
-          docker run --rm --network none -v "$PWD:/workspace:ro" -w /workspace -e PYTHONPATH=/workspace -e LITELLM_LOCAL_MODEL_COST_MAP=True --entrypoint sh gateway-accounting-test -c 'python scripts/pricing_coverage.py && python scripts/validate_price_evidence.py && python -m unittest discover -s tests'
+          docker run --rm --network none -v "$PWD:/workspace:ro" -w /workspace -e PYTHONPATH=/workspace -e LITELLM_LOCAL_MODEL_COST_MAP=True --entrypoint sh gateway-accounting-test -c 'python scripts/provider_inventory.py && python scripts/pricing_coverage.py && python scripts/validate_price_evidence.py && python -m unittest discover -s tests'
       - name: Isolated PostgreSQL
         run: |
           docker network create accounting-tests

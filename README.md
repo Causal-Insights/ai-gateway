@@ -8,9 +8,14 @@ This repo packages a LiteLLM Proxy plus custom handlers for:
 - **Seedance 2.0, Fast and 2.5** with shared ModelArk credentials (BytePlus video)
 - **Seedream 5** including **Seedream 5.0 Pro** (BytePlus ModelArk image)
 
+Start provider and model work with the [provider implementation reference](docs/provider-implementation-reference.md):
+the complete model-to-provider inventory, exact serving APIs, implementation files,
+official documentation, and Magic Lens boundaries. CI checks its generated mappings.
+
 The [September 2026 OpenAI Gateway contract](docs/openai-september-2026.md) adds
-Sunburst, Flare, and Astra Responses image-tool routing. Image provider access
-and MagicLens integration remain deferred.
+Sunburst, Flare, and Astra Responses image-tool routing. Basic Sunburst/Flare direct
+provider access was verified on September 24; deployed Gateway and Magic Lens
+end-to-end verification remain separate (see the [integration review](docs/magiclens-integration-2026-09-24.md)).
 
 It can run locally via `docker-compose` and in production on **Google Cloud Run**.
 
@@ -176,7 +181,7 @@ Replace `<cloud-run-url>` with the HTTPS URL shown by `gcloud run deploy`.
   - `gemini-latest`, `gemini-3.7-flash`, `gemini-3.5-flash-lite`, `gemini-omni-1.1-flash`
   - compatibility aliases `gemini-omni-flash`, `gemini-omni-flash-preview`, and
     `gemini-omni-1.1-flash-preview` resolve to the same Gemini Omni Flash 1.1 Vertex upstream
-  - `imagen-4.0`, `grok-video`, `grok-video-1.5`, `grok-imagine-image-quality`, `seedance-2.0`, `seedream-5.0`, `seedream-5.0-lite`
+  - `grok-video`, `grok-video-1.5`, `grok-imagine-image-quality`, `seedance-2.0`, `seedream-5.0`, `seedream-5.0-lite`
 
 Clients **never** send provider API keys or upstream URLs; only the proxy holds those in its environment.
 # Provider cost accounting
@@ -200,3 +205,5 @@ warnings from actual blockers, and resolve all 50 newly blocked aliases. All 56 
 Use `$price-verification` to collect official vendor evidence. Its canonical source
 is `skills/price-verification/`; run `python scripts/sync_price_verification.py`
 after changing it to refresh the personal skill.
+
+Model retirement and Magic Lens compatibility: [September 24 review](docs/magiclens-integration-2026-09-24.md).

@@ -17,7 +17,6 @@ EXISTING_MODEL_MAP = {
     "gemini-3.1-pro-customtools": "vertex_ai/gemini-3.1-pro-preview-customtools",
     "gemini-3.5-flash": "vertex_ai/gemini-3.5-flash",
     "gemini-3-flash-preview": "vertex_ai/gemini-3-flash-preview",
-    "gemini-3.1-flash-lite-preview": "vertex_ai/gemini-3.1-flash-lite-preview",
     "nano-banana": "vertex_ai/gemini-3.1-flash-image",
     "nano-banana-2": "vertex_ai/gemini-3.1-flash-image",
     "nano-banana-pro": "vertex_ai/gemini-3-pro-image",
@@ -26,9 +25,6 @@ EXISTING_MODEL_MAP = {
     "veo-3.1-fast": "vertex_ai/veo-3.1-fast-generate-001",
     "veo-3.1-lite": "vertex_ai/veo-3.1-lite-generate-001",
     "gemini-omni-flash": "vertex_ai/gemini-omni-1.1-flash-preview",
-    "imagen-4.0": "vertex_ai/imagen-4.0-generate-001",
-    "imagen-4.0-fast": "vertex_ai/imagen-4.0-fast-generate-001",
-    "imagen-4.0-ultra": "vertex_ai/imagen-4.0-ultra-generate-001",
     "grok-video": "grok-video/grok-imagine-video",
     "grok-video-1.5": "grok-video/grok-imagine-video-1.5",
     "grok-imagine-video-1.5-2026-05-30": "grok-video/grok-imagine-video-1.5-2026-05-30",
@@ -69,6 +65,24 @@ class ModelCatalogTests(unittest.TestCase):
             {name: catalog.get(name) for name in EXISTING_MODEL_MAP},
             EXISTING_MODEL_MAP,
         )
+
+    def test_retired_models_are_not_routable_but_historical_prices_remain(self):
+        from pricing_registry import PricingRegistry, PricingError
+        retired = {
+            "imagen-4.0": "vertex_ai/imagen-4.0-generate-001",
+            "imagen-4.0-fast": "vertex_ai/imagen-4.0-fast-generate-001",
+            "imagen-4.0-ultra": "vertex_ai/imagen-4.0-ultra-generate-001",
+            "gemini-3.1-flash-lite-preview": "vertex_ai/gemini-3.1-flash-lite-preview",
+        }
+        catalog = catalog_from_config()
+        registry = PricingRegistry()
+        for alias, upstream in retired.items():
+            with self.subTest(alias=alias):
+                self.assertNotIn(alias, catalog)
+                self.assertNotIn(alias, registry.models)
+                with self.assertRaises(PricingError):
+                    registry.select(alias, "completion" if "gemini" in alias else "image_generation")
+                self.assertTrue(any(p["upstream_model"] == upstream for p in registry.profiles.values()))
 
     def test_new_aliases_have_exact_upstream_models(self):
         catalog = catalog_from_config()

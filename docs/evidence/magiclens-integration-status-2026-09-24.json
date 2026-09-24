@@ -1,0 +1,97 @@
+{
+  "checked_at": "2026-09-24T20:41:05.952Z",
+  "environment": "dev",
+  "mode": "read_only",
+  "registry": {
+    "total": 37,
+    "scope": "Models selectable for non-admin Studio users under the dev audit helper",
+    "targets": [
+      {
+        "alias": "imagen-4.0",
+        "selectable": false,
+        "matches": []
+      },
+      {
+        "alias": "imagen-4.0-fast",
+        "selectable": false,
+        "matches": []
+      },
+      {
+        "alias": "imagen-4.0-ultra",
+        "selectable": false,
+        "matches": []
+      },
+      {
+        "alias": "gemini-3.1-flash-lite-preview",
+        "selectable": true,
+        "matches": [
+          {
+            "id": "gemini-3.1-flash-lite-preview",
+            "nodeType": "GPT",
+            "gatewayModelId": "gemini-3.1-flash-lite-preview",
+            "requestProfile": "chat",
+            "contractRevision": null,
+            "lifecycle": "active"
+          }
+        ]
+      },
+      {
+        "alias": "gpt-image-2.5-sunburst",
+        "selectable": true,
+        "matches": [
+          {
+            "id": "gpt-image-2.5-sunburst",
+            "nodeType": "Image",
+            "gatewayModelId": "gpt-image-2.5-sunburst",
+            "requestProfile": "openai_image",
+            "contractRevision": "openai-2026-09-09/v1",
+            "lifecycle": "active"
+          }
+        ]
+      },
+      {
+        "alias": "gpt-image-2.5-flare",
+        "selectable": true,
+        "matches": [
+          {
+            "id": "gpt-image-2.5-flare",
+            "nodeType": "Image",
+            "gatewayModelId": "gpt-image-2.5-flare",
+            "requestProfile": "openai_image",
+            "contractRevision": "openai-2026-09-09/v1",
+            "lifecycle": "active"
+          }
+        ]
+      }
+    ]
+  },
+  "gateway": {
+    "total": 56,
+    "targets": [
+      {
+        "alias": "imagen-4.0",
+        "advertised": true
+      },
+      {
+        "alias": "imagen-4.0-fast",
+        "advertised": true
+      },
+      {
+        "alias": "imagen-4.0-ultra",
+        "advertised": true
+      },
+      {
+        "alias": "gemini-3.1-flash-lite-preview",
+        "advertised": true
+      },
+      {
+        "alias": "gpt-image-2.5-sunburst",
+        "advertised": true
+      },
+      {
+        "alias": "gpt-image-2.5-flare",
+        "advertised": true
+      }
+    ]
+  }
+}

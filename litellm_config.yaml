@@ -154,13 +154,6 @@ model_list:
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
-  # Optional: keep only if you explicitly want the older preview endpoint
-  - model_name: gemini-3.1-flash-lite-preview
-    litellm_params:
-      model: vertex_ai/gemini-3.1-flash-lite-preview
-      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
-
   # ── Nano Banana / Gemini image ───────────────────────────────────────────
   - model_name: nano-banana
     litellm_params:
@@ -228,25 +221,6 @@ model_list:
       model: vertex_ai/gemini-omni-1.1-flash-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: global
-
-  # ── Imagen 4 ─────────────────────────────────────────────────────────────
-  - model_name: imagen-4.0
-    litellm_params:
-      model: vertex_ai/imagen-4.0-generate-001
-      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
-
-  - model_name: imagen-4.0-fast
-    litellm_params:
-      model: vertex_ai/imagen-4.0-fast-generate-001
-      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
-
-  - model_name: imagen-4.0-ultra
-    litellm_params:
-      model: vertex_ai/imagen-4.0-ultra-generate-001
-      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
   # ── xAI (custom: video) ─────────────────────────────────────────────────
   # The journal uses verified xAI usage.cost_in_usd_ticks; missing charges stay unknown.

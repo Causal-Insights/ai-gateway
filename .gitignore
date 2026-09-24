@@ -43,3 +43,7 @@ test_outputs/
 !pricing/litellm_catalog.json
 !pricing/evidence/*.json
 !skills/price-verification/references/evidence.schema.json
+
+# Reviewed access/status receipts contain no credentials or generated media.
+!docs/evidence/gpt-image-2.5-access-2026-09-24.json
+!docs/evidence/magiclens-integration-status-2026-09-24.json
