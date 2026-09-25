@@ -1,4 +1,4 @@
-"""Pinned LiteLLM 1.95 accounting integration; all inference is fail closed."""
+"""Pinned LiteLLM accounting integration with durable execution receipts."""
 from __future__ import annotations
 
 import asyncio
@@ -10,6 +10,7 @@ from importlib.metadata import version
 
 from fastapi import APIRouter, Depends, HTTPException
 from litellm.integrations.custom_logger import CustomLogger
+from litellm.types.utils import ImageResponse
 from litellm.proxy.auth.user_api_key_auth import UserAPIKeyAuth, user_api_key_auth
 
 from accounting_usage import as_dict, numbers
@@ -26,7 +27,7 @@ CALL_TYPES = {"acompletion": "completion", "completion": "completion", "text_com
 BILLING_OPTIONS = {"service_tier", "resolution", "quality", "generate_audio", "duration_seconds", "size",
                    "profile_id", "tools", "modalities", "background", "audio", "web_search_options",
                    "n", "output_count", "input_video", "operation", "render_quality", "frame_rate",
-                   "cache_control", "prompt_cache_retention", "reasoning_effort"}
+                   "cache_control", "prompt_cache_retention", "reasoning_effort", "layer_decomposition"}
 
 
 def options_for(data):
@@ -160,6 +161,47 @@ async def capture(attempt_id, response, *, outcome="success"):
                 # observe emits the numeric recovery receipt before touching DB.
                 # A failed profile lookup must not bypass that receipt.
                 pass
+        if profile.get("hosted_contract"):
+            from hosted_tools import measured_tools, parent_subtotal
+            raw.update(measured_tools(response))
+            subtotal = parent_subtotal(profile, raw, served_options)
+            if subtotal is not None:
+                raw["gateway_hosted_parent_cost_usd"] = subtotal
+        if profile.get("grounding_contract"):
+            from grounded_pricing import measured, parent_subtotal
+            observed = measured(profile, response)
+            raw.update(observed)
+            subtotal = parent_subtotal(profile, response)
+            if subtotal is not None:
+                raw["gateway_grounding_parent_cost_usd"] = subtotal
+            counts = {}
+            for name, value in observed["gateway_grounding_counts"].items():
+                try:
+                    from pricing_registry import decimal
+                    number = decimal(value)
+                    if number == number.to_integral_value():
+                        counts[name] = int(number)
+                except PricingError:
+                    pass
+            target = getattr(response, "response", None) or response
+            if isinstance(target, dict) and target.get("type") in {"response.completed", "response.failed", "response.incomplete"}:
+                target = target.get("response") or target
+            if isinstance(target, dict):
+                target["gateway_grounding_usage"] = counts
+                target["gateway_grounding_usage_source"] = observed["gateway_grounding_usage_source"]
+            elif hasattr(target, "model_dump"):
+                target.gateway_grounding_usage = counts
+                target.gateway_grounding_usage_source = observed["gateway_grounding_usage_source"]
+        if profile.get("hosted_contract") or profile.get("batch_contract") or profile.get("grounding_contract"):
+            raw.pop("gateway_native_cost_usd", None)
+        if current.get("resource_owner"):
+            from hosted_tools import retain_resources
+            try:
+                await retain_resources(response, current)
+            except Exception:
+                log.exception("hosted_resource_retention_pending")
+        if as_dict(response).get("status") in {"queued", "in_progress"} and current.get("route") == "responses":
+            return
         if profile.get("engine") == "litellm" and raw and not isinstance(response, Exception):
             from litellm_pricing import cost_using_response
             try:
@@ -241,11 +283,19 @@ async def recover_unmapped(request_data, response, *, outcome="success"):
 
 class GatewayAccounting(CustomLogger):
     async def async_pre_call_hook(self, user_api_key_dict, cache, data, call_type):
+        resource_owner = None
         try:
             route = route_for_call(call_type)
             if any(data.get(key) for key in ("api_base", "api_key", "vertex_project", "vertex_location", "vertex_credentials")):
                 raise PricingError("Request-level provider/account overrides require a separate verified deployment")
             profile = registry().select(data.get("model"), route, options_for(data))
+            if profile.get("grounding_tariff"):
+                from grounded_pricing import pin_contract as pin_grounding
+                profile = pin_grounding(profile, data)
+            if route == "responses" and profile.get("vendor") == "openai":
+                from hosted_tools import pin_contract, validate_resources
+                resource_owner = await validate_resources(user_api_key_dict, data)
+                profile = pin_contract(profile, data, registry().document)
             check_context(profile)
             identity = identity_for(user_api_key_dict, (data.get("metadata") or {}).get("tags"))
             resumed = None
@@ -271,6 +321,8 @@ class GatewayAccounting(CustomLogger):
             state.set(current)
         current.update(accounting_id=accounting_id, profile=profile, alias=data["model"], route=route,
                        options=options_for(data), identity=identity, attempts=[], attempt_map={}, reservation=user_api_key_dict.budget_reservation)
+        if resource_owner:
+            current["resource_owner"] = resource_owner
         if resumed:
             current.update(legacy_poll=True, attempts=[resumed["attempt_id"]], legacy_served_options=resumed.get("served_options") or {})
         if route == "speech" and isinstance(data.get("input"), str):
@@ -327,7 +379,7 @@ class GatewayAccounting(CustomLogger):
 
     async def async_post_call_success_deployment_hook(self, request_data, response, call_type):
         attempt_id = attempt_for(request_data)
-        if attempt_id and not request_data.get("stream"):
+        if attempt_id and (not request_data.get("stream") or isinstance(response, ImageResponse)):
             await capture(attempt_id, response)
         return response
 
@@ -340,7 +392,10 @@ class GatewayAccounting(CustomLogger):
 
     async def async_post_call_success_hook(self, data, user_api_key_dict, response):
         current = state.get()
-        if current and current.get("accounting_id") and not data.get("stream"):
+        # Custom image adapters may collect provider SSE into a concrete result.
+        # Such results never run the streaming iterator finalizer.
+        buffered = not data.get("stream") or isinstance(response, ImageResponse)
+        if current and current.get("accounting_id") and buffered:
             try:
                 # A provider cache hit can precede the deployment hook entirely.
                 if not current.get("attempts") and (getattr(response, "_hidden_params", {}) or {}).get("cache_hit") is True:
@@ -354,7 +409,7 @@ class GatewayAccounting(CustomLogger):
                 await finalize_reservation(current)
             except Exception:
                 log.exception("cost_request_finalization_pending", extra={"accounting_id": current["accounting_id"]})
-        elif not data.get("stream"):
+        elif buffered:
             await recover_unmapped(data, response)
         return response
 
@@ -485,7 +540,7 @@ class AccountingMiddleware:
 
 
 def install_stream_evidence_hooks():
-    """Retain the provider's terminal usage before 1.95 normalizes/synthesizes it.
+    """Retain terminal provider usage before LiteLLM normalizes/synthesizes it.
 
     LiteLLM's completed stream can rebuild Usage and omit provider-specific
     charge fields. Its synthesized token estimates must never attest to cost.
@@ -549,7 +604,7 @@ def install_stream_evidence_hooks():
 
 
 def install():
-    if version("litellm") != "1.95.0":
+    if version("litellm") != "1.102.1":
         raise RuntimeError("Accounting integration must be revalidated before upgrading LiteLLM")
     import litellm
     from litellm_pricing import install_catalog
@@ -590,10 +645,16 @@ def install():
     _ProxyDBLogger.async_post_call_failure_hook = execution_failure
     _ProxyDBLogger._gateway_writer = True
     from litellm.proxy import proxy_server
-    async def fresh_floor(counter_key, window_entity_type=None, window_entity_id=None, window_start=None):
+    async def fresh_floor(counter_key, window_entity_type=None, window_entity_id=None,
+                          window_duration=None, window_start=None):
+        if counter_key.startswith(proxy_server.END_USER_COUNTER_PREFIX):
+            return await proxy_server.SpendCounterReseed.end_user_from_db(
+                prisma_client=proxy_server.prisma_client, counter_key=counter_key)
         amount = await proxy_server.SpendCounterReseed.from_db(
             prisma_client=proxy_server.prisma_client, counter_key=counter_key)
         if amount is None and window_entity_type and window_entity_id and window_start:
+            # Gateway commits spend logs itself; LiteLLM's separate window table
+            # is not maintained by this writer. Read the committed journal.
             amount = await proxy_server.SpendCounterReseed.window_from_spend_logs(
                 prisma_client=proxy_server.prisma_client, entity_type=window_entity_type,
                 entity_id=window_entity_id, window_start=window_start)

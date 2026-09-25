@@ -58,14 +58,25 @@ services:
       - ./generation_job_models.py:/app/generation_job_models.py:ro
       - ./generation_job_repository.py:/app/generation_job_repository.py:ro
       - ./generation_job_adapters.py:/app/generation_job_adapters.py:ro
+      - ./video_capabilities.py:/app/video_capabilities.py:ro
+      - ./capability_discovery.py:/app/capability_discovery.py:ro
+      - ./expanded_video_adapters.py:/app/expanded_video_adapters.py:ro
       - ./generation_job_scheduler.py:/app/generation_job_scheduler.py:ro
       - ./generation_job_routes.py:/app/generation_job_routes.py:ro
       - ./gateway_request_policy.py:/app/gateway_request_policy.py:ro
       - ./openai_model_contracts.py:/app/openai_model_contracts.py:ro
+      - ./image_stream_routes.py:/app/image_stream_routes.py:ro
       - ./openai_usage.py:/app/openai_usage.py:ro
       - ./gateway_logging.py:/app/gateway_logging.py:ro
       - ./gateway_healthcheck.py:/app/gateway_healthcheck.py:ro
       - ./gateway_server.py:/app/gateway_server.py:ro
+      - ./voice_resources.py:/app/voice_resources.py:ro
+      - ./advanced_audio.py:/app/advanced_audio.py:ro
+      - ./hosted_tools.py:/app/hosted_tools.py:ro
+      - ./grounded_pricing.py:/app/grounded_pricing.py:ro
+      - ./owned_openai_resources.py:/app/owned_openai_resources.py:ro
+      - ./openai_owner_lifecycle.py:/app/openai_owner_lifecycle.py:ro
+      - ./native_vertex.py:/app/native_vertex.py:ro
       - ./pricing_registry.py:/app/pricing_registry.py:ro
       - ./litellm_pricing.py:/app/litellm_pricing.py:ro
       - ./accounting_usage.py:/app/accounting_usage.py:ro

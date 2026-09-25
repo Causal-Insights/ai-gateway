@@ -24,8 +24,9 @@ Long-running video models also expose the durable job API: submit once with
 asset from `/content`. See [docs/durable-generation-jobs.md](docs/durable-generation-jobs.md)
 and [ADR-001](docs/ADR-001-durable-async-generation-jobs.md). The older blocking video calls
 remain available during migration but are deprecated and emit structured usage events.
-Use the [LiteLLM v1.95 rollout runbook](docs/litellm-v1.95-rollout.md) for the database-integrity
-gate, compatibility checks, provider probes, and staged Cloud Run traffic promotion.
+The runtime is pinned to **LiteLLM 1.102.1**. See the
+[upgrade evidence and rollout notes](docs/litellm-v1.102-upgrade.md) for compatibility
+changes, Magic Lens checks, database preservation and remaining capability gaps.
 
 ---
 

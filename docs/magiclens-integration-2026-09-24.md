@@ -4,6 +4,11 @@ This is dated evidence and a compatibility review, not a deployment record.
 Gateway baseline: `0cc8ec95d25a34b69ac346294a81f68854d6a704` plus this retirement change.
 Magic Lens inspected baseline: `63f3be14db08ff0b8719bdb9d159633873485ec7`; that checkout has unrelated local changes. No Magic Lens files or registry state were changed.
 
+Subsequent local LiteLLM 1.102.1 upgrade results, including database preservation,
+consumer tests and mocked browser workflows, are recorded in the
+[upgrade evidence](litellm-v1.102-upgrade.md). The original live dev observations
+below remain dated evidence; the upgrade did not deploy that environment.
+
 ## Retirement scope
 
 Removed from `litellm_config.yaml` and the active alias map in `pricing/registry.json`:

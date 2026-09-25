@@ -1,7 +1,7 @@
 # LiteLLM pricing and gateway verification
 
 LiteLLM's maintained model catalog and provider calculators are the default
-pricing source. All 56 configured aliases now have enabled price profiles; the
+pricing source. All 52 configured aliases have enabled price profiles; the
 broad manual approval gate has been removed. Native routes use immutable captured
 catalog entries. Custom media routes use documented provider rates. See
 [coverage](pricing-coverage.md) and [onboarding](model-onboarding.md).
@@ -15,7 +15,7 @@ Keep three questions separate:
 The original missing Omni/video spend involved attribution and persistence. A
 correct model price alone would not repair those dropped database writes.
 
-LiteLLM 1.95.0 fetches its maintained map on startup unless local-only mode is
+LiteLLM fetches its maintained map on startup unless local-only mode is
 configured. Failed retrieval or integrity validation falls back to its bundled
 snapshot. The snapshot and live catalog can differ. See
 [LiteLLM pricing documentation](https://docs.litellm.ai/docs/completion/token_usage)

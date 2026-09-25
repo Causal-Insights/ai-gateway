@@ -39,6 +39,7 @@ app = FastAPI(
 
 
 @app.get("/healthz")
+@app.get("/health/liveliness")
 async def healthz() -> dict[str, bool]:
     return {"ok": True}
 

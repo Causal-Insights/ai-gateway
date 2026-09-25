@@ -33,9 +33,9 @@ class AudioStudioLLM(CustomLLM):
         normalized = (model or "").strip().lower()
         if normalized.endswith("elevenlabs-sfx"):
             return "sfx"
-        if normalized.endswith("elevenlabs-music"):
+        if normalized.endswith(("elevenlabs-music", "elevenlabs-music-2.5")):
             return "music"
-        raise ValueError("Audio Studio model must be elevenlabs-sfx or elevenlabs-music")
+        raise ValueError("Audio Studio model must be elevenlabs-sfx, elevenlabs-music or elevenlabs-music-2.5")
 
     @staticmethod
     def _optional_value(optional_params: dict, key: str) -> Any:
@@ -65,7 +65,7 @@ class AudioStudioLLM(CustomLLM):
         else:
             payload = {
                 "prompt": prompt_text,
-                "model_id": "music_v1",
+                "model_id": "music_v2_5" if model.strip().lower().endswith("elevenlabs-music-2.5") else "music_v1",
             }
             for key in ("music_length_ms", "force_instrumental"):
                 value = self._optional_value(params, key)

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "xai",
+    "api_product": "Responses API",
+    "upstream_model": "exact configured aliases listed",
+    "aliases": [
+      "grok-latest",
+      "grok-4.20",
+      "grok-4.20-reasoning"
+    ],
+    "account_context": null,
+    "region": "global",
+    "routes": [
+      "responses"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.x.ai/developers/pricing",
+      "retrieved_at": "2026-09-25T01:37:54.390284+00:00",
+      "scope": "pricing",
+      "excerpt": "X Search is billed per item fetched rather than per call"
+    },
+    {
+      "url": "https://docs.x.ai/developers/tools/x-search",
+      "retrieved_at": "2026-09-25T01:37:54.390284+00:00",
+      "scope": "usage_schema",
+      "excerpt": "x_posts_fetched"
+    }
+  ],
+  "retrieved_at": "2026-09-25T01:37:54.390284+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "web_search_calls",
+      "unit": "call",
+      "rate": "0.005",
+      "per": "1",
+      "conditions": {}
+    },
+    {
+      "name": "x_posts_fetched",
+      "unit": "item",
+      "rate": "0.005",
+      "per": "1",
+      "conditions": {}
+    },
+    {
+      "name": "x_users_fetched",
+      "unit": "item",
+      "rate": "0.010",
+      "per": "1",
+      "conditions": {}
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "web_search_calls": "2",
+      "x_posts_fetched": "44",
+      "x_users_fetched": "3"
+    },
+    "formula": "2 * 0.005 + 44 * 0.005 + 3 * 0.010",
+    "calculated_cost": "0.260",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "Parent tokens retain the original immutable catalog rates. Missing counters leave combined cost unresolved; valid output and citations remain intact.",
+    "Posted rates exclude account-specific free quota allocation and negotiated discounts. No paid/live grounding calls made.",
+    "X posts and profiles are counted per fetch, without deduplicating repeated results. The obsolete x_search_calls counter is not priced. Terminal counters are required; authoritative verified provider charge remains usable when returned."
+  ]
+}

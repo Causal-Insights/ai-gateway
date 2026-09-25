@@ -132,14 +132,14 @@
       "upstream_model": "vertex_ai/gemini-3.1-pro-preview",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/gemini-3.1-pro-preview@ceec9a0d7f95394247ee"
+        "litellm:vertex_ai/gemini-3.1-pro-preview@ceec9a0d7f95394247ee-grounding-20260924"
       ]
     },
     "gemini-3.1-pro": {
       "upstream_model": "vertex_ai/gemini-3.1-pro-preview",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/gemini-3.1-pro-preview@ceec9a0d7f95394247ee"
+        "litellm:vertex_ai/gemini-3.1-pro-preview@ceec9a0d7f95394247ee-grounding-20260924"
       ]
     },
     "gemini-3.1-pro-customtools": {
@@ -153,49 +153,49 @@
       "upstream_model": "vertex_ai/gemini-3.5-flash",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/gemini-3.5-flash@645b9039e4d7e8b10f0c"
+        "litellm:vertex_ai/gemini-3.5-flash@645b9039e4d7e8b10f0c-grounding-20260924"
       ]
     },
     "gemini-3.8-flash": {
       "upstream_model": "vertex_ai/gemini-3.8-flash",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/gemini-3.8-flash@139f52669235ee26cd2b"
+        "litellm:vertex_ai/gemini-3.8-flash@139f52669235ee26cd2b-grounding-20260924"
       ]
     },
     "gemini-3.5-flash-lite": {
       "upstream_model": "vertex_ai/gemini-3.5-flash-lite",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/gemini-3.5-flash-lite@fcf810ef97c86ba5672c"
+        "litellm:vertex_ai/gemini-3.5-flash-lite@fcf810ef97c86ba5672c-grounding-20260924"
       ]
     },
     "gemini-3-flash-preview": {
       "upstream_model": "vertex_ai/gemini-3-flash-preview",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/gemini-3-flash-preview@40197b7bfaf6b4cea437"
+        "litellm:vertex_ai/gemini-3-flash-preview@40197b7bfaf6b4cea437-grounding-20260924"
       ]
     },
     "nano-banana": {
       "upstream_model": "vertex_ai/gemini-3.1-flash-image",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/gemini-3.1-flash-image@42ad97ff4fcfa732d172-chat-route-v1"
+        "litellm:vertex_ai/gemini-3.1-flash-image@42ad97ff4fcfa732d172-chat-route-v1-grounding-20260924"
       ]
     },
     "nano-banana-2": {
       "upstream_model": "vertex_ai/gemini-3.1-flash-image",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/gemini-3.1-flash-image@42ad97ff4fcfa732d172-chat-route-v1"
+        "litellm:vertex_ai/gemini-3.1-flash-image@42ad97ff4fcfa732d172-chat-route-v1-grounding-20260924"
       ]
     },
     "nano-banana-pro": {
       "upstream_model": "vertex_ai/gemini-3-pro-image",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/gemini-3-pro-image@5e43193bc2eedf90d987-chat-route-v1"
+        "litellm:vertex_ai/gemini-3-pro-image@5e43193bc2eedf90d987-chat-route-v1-grounding-20260924"
       ]
     },
     "nano-banana-2-lite": {
@@ -209,49 +209,53 @@
       "upstream_model": "vertex_ai/veo-3.1-generate-001",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/veo-3.1-generate-001@900b57616a8a755afecc"
+        "litellm:vertex_ai/veo-3.1-generate-001@900b57616a8a755afecc-video-v2"
       ]
     },
     "veo-3.1-fast": {
       "upstream_model": "vertex_ai/veo-3.1-fast-generate-001",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/veo-3.1-fast-generate-001@becbf624f5af4b975225"
+        "litellm:vertex_ai/veo-3.1-fast-generate-001@becbf624f5af4b975225-video-v2"
       ]
     },
     "veo-3.1-lite": {
       "upstream_model": "vertex_ai/veo-3.1-lite-generate-001",
       "disabled": false,
       "profiles": [
-        "litellm:vertex_ai/veo-3.1-lite-generate-001@ea994d823064d41de1ea"
+        "litellm:vertex_ai/veo-3.1-lite-generate-001@ea994d823064d41de1ea-video-v2"
       ]
     },
     "gemini-omni-flash": {
       "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
       "disabled": false,
       "profiles": [
-        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-16"
+        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-16",
+        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-24-audio-video-v2"
       ]
     },
     "gemini-omni-flash-preview": {
       "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
       "disabled": false,
       "profiles": [
-        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-16"
+        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-16",
+        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-24-audio-video-v2"
       ]
     },
     "gemini-omni-1.1-flash": {
       "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
       "disabled": false,
       "profiles": [
-        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-16"
+        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-16",
+        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-24-audio-video-v2"
       ]
     },
     "gemini-omni-1.1-flash-preview": {
       "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
       "disabled": false,
       "profiles": [
-        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-16"
+        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-16",
+        "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-24-audio-video-v2"
       ]
     },
     "grok-video": {
@@ -348,28 +352,28 @@
       "upstream_model": "seedream/dola-seedream-5-0-pro-260628",
       "disabled": false,
       "profiles": [
-        "seedream--dola-seedream-5-0-pro-260628@2026-09-16"
+        "seedream--dola-seedream-5-0-pro-260628@2026-09-24-layers"
       ]
     },
     "grok-latest": {
       "upstream_model": "xai/grok-4.20-non-reasoning-latest",
       "disabled": false,
       "profiles": [
-        "litellm:xai/grok-4.20-non-reasoning-latest@b3bea4735604f290e505"
+        "litellm:xai/grok-4.20-non-reasoning-latest@b3bea4735604f290e505-grounding-20260924"
       ]
     },
     "grok-4.20-reasoning": {
       "upstream_model": "xai/grok-4.20-reasoning-latest",
       "disabled": false,
       "profiles": [
-        "litellm:xai/grok-4.20-reasoning-latest@799f35d0e9c13f4d2c81"
+        "litellm:xai/grok-4.20-reasoning-latest@799f35d0e9c13f4d2c81-grounding-20260924"
       ]
     },
     "grok-4.20": {
       "upstream_model": "xai/grok-4.20-non-reasoning-latest",
       "disabled": false,
       "profiles": [
-        "litellm:xai/grok-4.20-non-reasoning-latest@b3bea4735604f290e505"
+        "litellm:xai/grok-4.20-non-reasoning-latest@b3bea4735604f290e505-grounding-20260924"
       ]
     },
     "elevenlabs-v3-tts": {
@@ -401,6 +405,35 @@
         "elevenlabs--music_v1@2026-09-16"
       ],
       "deployment_model": "audio-studio/elevenlabs-music"
+    },
+    "elevenlabs-music-2.5": {
+      "upstream_model": "elevenlabs/music_v2_5",
+      "disabled": false,
+      "profiles": [
+        "elevenlabs--music_v2_5@2026-09-24"
+      ],
+      "deployment_model": "audio-studio/elevenlabs-music-2.5"
+    },
+    "gpt-5.6-sol": {
+      "upstream_model": "openai/gpt-5.6-sol",
+      "disabled": false,
+      "profiles": [
+        "litellm:openai/gpt-5.6-sol@2043ffb80c73ed5fa617"
+      ]
+    },
+    "gpt-5.6-terra": {
+      "upstream_model": "openai/gpt-5.6-terra",
+      "disabled": false,
+      "profiles": [
+        "litellm:openai/gpt-5.6-terra@85072393d6b4b106bac1"
+      ]
+    },
+    "gpt-5.6-luna": {
+      "upstream_model": "openai/gpt-5.6-luna",
+      "disabled": false,
+      "profiles": [
+        "litellm:openai/gpt-5.6-luna@58b321e95391892d1a71"
+      ]
     }
   },
   "profiles": {
@@ -2146,7 +2179,7 @@
       "account_context": "vertex-project:ai-gateway-495414",
       "currency": "USD",
       "effective_from": "2026-09-16T00:00:00Z",
-      "effective_to": null,
+      "effective_to": "2026-09-24T00:00:00Z",
       "verified_at": "2026-09-16T00:00:00Z",
       "verify_by": "2026-10-16T00:00:00Z",
       "calculation_version": "decimal-components-v1",
@@ -10459,6 +10492,1402 @@
         "provider_filtered_outputs"
       ],
       "calculation_version": "litellm-1.95.0-v1"
+    },
+    "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-24-audio": {
+      "version": "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-24-audio",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "vendor": "google",
+      "api_product": "Vertex AI",
+      "account_context": "vertex-project:ai-gateway-495414",
+      "currency": "USD",
+      "effective_from": "2026-09-24T00:00:00Z",
+      "effective_to": null,
+      "verified_at": "2026-09-16T00:00:00Z",
+      "verify_by": "2026-10-16T00:00:00Z",
+      "calculation_version": "decimal-components-v1",
+      "status": "verified",
+      "enabled": true,
+      "rate_source": "account_rate",
+      "routes": [
+        "generation_job"
+      ],
+      "options": {
+        "tools": [
+          false
+        ],
+        "service_tier": [
+          null,
+          "default"
+        ],
+        "resolution": [
+          null,
+          "360p",
+          "720p",
+          "1080p",
+          "4k"
+        ]
+      },
+      "defaults": {
+        "tools": false
+      },
+      "extractor": "omni",
+      "components": [
+        {
+          "usage": "input_tokens",
+          "rate": "1.50",
+          "per": "1000000",
+          "unit": "token"
+        },
+        {
+          "usage": "text_output_tokens",
+          "rate": "9.00",
+          "per": "1000000",
+          "unit": "token"
+        },
+        {
+          "usage": "video_tokens",
+          "rate": "17.50",
+          "per": "1000000",
+          "unit": "token"
+        }
+      ],
+      "evidence": [
+        "pricing/evidence/omni-posted-rates-2026-09-16.json",
+        "pricing/evidence/omni-account-rates-2026-09-16.json"
+      ],
+      "acceptance_evidence": [
+        "pricing/evidence/omni-usage.json",
+        "tests/test_cost_accounting_db.py"
+      ],
+      "block_reason": "",
+      "official_source": "https://cloud.google.com/vertex-ai/generative-ai/pricing",
+      "served_models": [
+        "vertex_ai/gemini-omni-1.1-flash-preview",
+        "gemini-omni-1.1-flash-preview"
+      ],
+      "zero_reasons": [
+        "gateway_response_cache"
+      ],
+      "deployment_context": {
+        "project": "ai-gateway-495414",
+        "location": "global"
+      },
+      "metered_options": [
+        "duration_seconds",
+        "operation",
+        "input_video",
+        "background",
+        "generate_audio"
+      ],
+      "notes": "Audio is provider-managed in Vertex Interactions. Explicit enablement has no separate rate; output video tokens remain the billable quantity. Omitted/legacy false are retained without claiming a mute control."
+    },
+    "elevenlabs--music_v2_5@2026-09-24": {
+      "version": "elevenlabs--music_v2_5@2026-09-24",
+      "upstream_model": "elevenlabs/music_v2_5",
+      "vendor": "elevenlabs",
+      "api_product": "ElevenAPI",
+      "account_context": "default",
+      "currency": "USD",
+      "effective_from": "2026-09-24T00:00:00Z",
+      "effective_to": null,
+      "verified_at": "2026-09-25T00:25:47.543399+00:00",
+      "verify_by": "2026-10-24T00:00:00Z",
+      "calculation_version": "decimal-components-v1",
+      "status": "verified",
+      "enabled": true,
+      "rate_source": "posted_api_rate",
+      "routes": [
+        "image_generation"
+      ],
+      "options": {
+        "tools": [
+          false
+        ]
+      },
+      "defaults": {
+        "tools": false
+      },
+      "extractor": "components",
+      "components": [
+        {
+          "usage": "audio_seconds",
+          "rate": "0.150",
+          "per": "60",
+          "unit": "second"
+        }
+      ],
+      "evidence": [
+        "pricing/evidence/music_v2_5-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "block_reason": "",
+      "official_source": "https://elevenlabs.io/pricing/api",
+      "zero_reasons": [
+        "gateway_response_cache"
+      ],
+      "deployment_model": "audio-studio/elevenlabs-music-2.5",
+      "served_models": [
+        "elevenlabs/music_v2_5",
+        "music_v2_5"
+      ],
+      "metered_options": [
+        "duration_seconds"
+      ]
+    },
+    "seedream--dola-seedream-5-0-pro-260628@2026-09-24-layers": {
+      "version": "seedream--dola-seedream-5-0-pro-260628@2026-09-24-layers",
+      "upstream_model": "seedream/dola-seedream-5-0-pro-260628",
+      "vendor": "byteplus",
+      "api_product": "ModelArk",
+      "account_context": "default",
+      "currency": "USD",
+      "effective_from": "2026-09-24T00:00:00Z",
+      "effective_to": null,
+      "verified_at": "2026-09-24T23:50:00Z",
+      "verify_by": "2026-10-24T00:00:00Z",
+      "calculation_version": "decimal-components-v1",
+      "status": "verified",
+      "enabled": true,
+      "rate_source": "posted_api_rate",
+      "routes": [
+        "image_generation",
+        "image_edit"
+      ],
+      "options": {
+        "tools": [
+          false
+        ]
+      },
+      "defaults": {
+        "tools": false
+      },
+      "extractor": "components",
+      "components": [
+        {
+          "unit": "image",
+          "rate": "0.045",
+          "per": "1",
+          "usage": "output_images_small"
+        },
+        {
+          "unit": "image",
+          "rate": "0.09",
+          "per": "1",
+          "usage": "output_images_large"
+        },
+        {
+          "unit": "image",
+          "rate": "0.0225",
+          "per": "1",
+          "usage": "layer_images_small"
+        },
+        {
+          "unit": "image",
+          "rate": "0.045",
+          "per": "1",
+          "usage": "layer_images_large"
+        },
+        {
+          "unit": "image",
+          "rate": "0.003",
+          "per": "1",
+          "usage": "billable_reference_images"
+        }
+      ],
+      "evidence": [
+        "pricing/evidence/dola-seedream-5-0-pro-260628-layers-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "block_reason": "",
+      "official_source": "https://docs.byteplus.com/en/docs/ModelArk/1544106",
+      "zero_reasons": [
+        "gateway_response_cache"
+      ],
+      "metered_options": [
+        "size",
+        "n",
+        "quality",
+        "reasoning_effort",
+        "background",
+        "layer_decomposition"
+      ],
+      "served_models": [
+        "seedream/dola-seedream-5-0-pro-260628",
+        "dola-seedream-5-0-pro-260628"
+      ]
+    },
+    "litellm:vertex_ai/veo-3.1-generate-001@900b57616a8a755afecc-video-v2": {
+      "version": "litellm:vertex_ai/veo-3.1-generate-001@900b57616a8a755afecc-video-v2",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/veo-3.1-generate-001",
+      "deployment_model": "vertex_ai/veo-3.1-generate-001",
+      "served_models": [
+        "veo-3.1-generate-001"
+      ],
+      "currency": "USD",
+      "rate_source": "posted_api_rate",
+      "extractor": "components",
+      "effective_from": "2026-09-24T00:00:00Z",
+      "routes": [
+        "generation_job",
+        "image_generation"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/veo-3.1-generate-001-silent-2026-09-16.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "vertex_ai/veo-3.1-generate-001",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "deprecation_date": "2026-11-17",
+        "litellm_provider": "vertex_ai-video-models",
+        "max_input_tokens": 1024,
+        "max_tokens": 1024,
+        "mode": "video_generation",
+        "output_cost_per_second": 0.4,
+        "output_cost_per_second_4k": 0.6,
+        "source": "https://cloud.google.com/vertex-ai/generative-ai/pricing",
+        "supported_modalities": [
+          "text"
+        ],
+        "supported_output_modalities": [
+          "video"
+        ],
+        "gateway_video_silent_rates": {
+          "720p": "0.20",
+          "1080p": "0.20",
+          "4k": "0.40"
+        },
+        "gateway_rate_evidence": "pricing/evidence/veo-3.1-generate-001-silent-2026-09-16.json"
+      },
+      "cost_model": "vertex_ai/veo-3.1-generate-001",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "metered_options": [
+        "profile_id",
+        "output_count",
+        "operation",
+        "input_video"
+      ]
+    },
+    "litellm:vertex_ai/veo-3.1-fast-generate-001@becbf624f5af4b975225-video-v2": {
+      "version": "litellm:vertex_ai/veo-3.1-fast-generate-001@becbf624f5af4b975225-video-v2",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/veo-3.1-fast-generate-001",
+      "deployment_model": "vertex_ai/veo-3.1-fast-generate-001",
+      "served_models": [
+        "veo-3.1-fast-generate-001"
+      ],
+      "currency": "USD",
+      "rate_source": "posted_api_rate",
+      "extractor": "components",
+      "effective_from": "2026-09-24T00:00:00Z",
+      "routes": [
+        "generation_job",
+        "image_generation"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/veo-3.1-fast-generate-001-silent-2026-09-16.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "vertex_ai/veo-3.1-fast-generate-001",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "deprecation_date": "2026-11-17",
+        "litellm_provider": "vertex_ai-video-models",
+        "max_input_tokens": 1024,
+        "max_tokens": 1024,
+        "mode": "video_generation",
+        "output_cost_per_second": 0.1,
+        "output_cost_per_second_1080p": 0.12,
+        "output_cost_per_second_4k": 0.3,
+        "source": "https://cloud.google.com/vertex-ai/generative-ai/pricing",
+        "supported_modalities": [
+          "text"
+        ],
+        "supported_output_modalities": [
+          "video"
+        ],
+        "gateway_video_silent_rates": {
+          "720p": "0.08",
+          "1080p": "0.10",
+          "4k": "0.25"
+        },
+        "gateway_rate_evidence": "pricing/evidence/veo-3.1-fast-generate-001-silent-2026-09-16.json"
+      },
+      "cost_model": "vertex_ai/veo-3.1-fast-generate-001",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "metered_options": [
+        "profile_id",
+        "output_count",
+        "operation",
+        "input_video"
+      ]
+    },
+    "litellm:vertex_ai/veo-3.1-lite-generate-001@ea994d823064d41de1ea-video-v2": {
+      "version": "litellm:vertex_ai/veo-3.1-lite-generate-001@ea994d823064d41de1ea-video-v2",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/veo-3.1-lite-generate-001",
+      "deployment_model": "vertex_ai/veo-3.1-lite-generate-001",
+      "served_models": [
+        "veo-3.1-lite-generate-001"
+      ],
+      "currency": "USD",
+      "rate_source": "posted_api_rate",
+      "extractor": "components",
+      "effective_from": "2026-09-24T00:00:00Z",
+      "routes": [
+        "generation_job",
+        "image_generation"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/veo-3.1-lite-generate-001-silent-2026-09-16.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "vertex_ai/veo-3.1-lite-generate-001",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "litellm_provider": "vertex_ai-video-models",
+        "max_input_tokens": 1024,
+        "max_tokens": 1024,
+        "mode": "video_generation",
+        "output_cost_per_second": 0.05,
+        "output_cost_per_second_1080p": 0.08,
+        "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing#veo",
+        "supported_modalities": [
+          "text",
+          "image"
+        ],
+        "supported_output_modalities": [
+          "video"
+        ],
+        "gateway_video_silent_rates": {
+          "720p": "0.03",
+          "1080p": "0.05"
+        },
+        "gateway_rate_evidence": "pricing/evidence/veo-3.1-lite-generate-001-silent-2026-09-16.json"
+      },
+      "cost_model": "vertex_ai/veo-3.1-lite-generate-001",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "metered_options": [
+        "profile_id",
+        "output_count",
+        "operation",
+        "input_video"
+      ]
+    },
+    "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-24-audio-video-v2": {
+      "version": "vertex_ai--gemini-omni-1.1-flash-preview@2026-09-24-audio-video-v2",
+      "upstream_model": "vertex_ai/gemini-omni-1.1-flash-preview",
+      "vendor": "google",
+      "api_product": "Vertex AI",
+      "account_context": "vertex-project:ai-gateway-495414",
+      "currency": "USD",
+      "effective_from": "2026-09-24T00:00:00Z",
+      "effective_to": null,
+      "verified_at": "2026-09-16T00:00:00Z",
+      "verify_by": "2026-10-16T00:00:00Z",
+      "calculation_version": "decimal-components-v1",
+      "status": "verified",
+      "enabled": true,
+      "rate_source": "account_rate",
+      "routes": [
+        "generation_job",
+        "interactions"
+      ],
+      "options": {
+        "tools": [
+          false
+        ],
+        "service_tier": [
+          null,
+          "default"
+        ],
+        "resolution": [
+          null,
+          "360p",
+          "720p",
+          "1080p",
+          "4k"
+        ]
+      },
+      "defaults": {
+        "tools": false
+      },
+      "extractor": "omni",
+      "components": [
+        {
+          "usage": "input_tokens",
+          "rate": "1.50",
+          "per": "1000000",
+          "unit": "token"
+        },
+        {
+          "usage": "text_output_tokens",
+          "rate": "9.00",
+          "per": "1000000",
+          "unit": "token"
+        },
+        {
+          "usage": "video_tokens",
+          "rate": "17.50",
+          "per": "1000000",
+          "unit": "token"
+        }
+      ],
+      "evidence": [
+        "pricing/evidence/omni-posted-rates-2026-09-16.json",
+        "pricing/evidence/omni-account-rates-2026-09-16.json"
+      ],
+      "acceptance_evidence": [
+        "pricing/evidence/omni-usage.json",
+        "tests/test_cost_accounting_db.py"
+      ],
+      "block_reason": "",
+      "official_source": "https://cloud.google.com/vertex-ai/generative-ai/pricing",
+      "served_models": [
+        "vertex_ai/gemini-omni-1.1-flash-preview",
+        "gemini-omni-1.1-flash-preview"
+      ],
+      "zero_reasons": [
+        "gateway_response_cache"
+      ],
+      "deployment_context": {
+        "project": "ai-gateway-495414",
+        "location": "global"
+      },
+      "metered_options": [
+        "duration_seconds",
+        "operation",
+        "input_video",
+        "background",
+        "generate_audio",
+        "profile_id",
+        "output_count"
+      ],
+      "notes": "Audio is provider-managed in Vertex Interactions. Explicit enablement has no separate rate; output video tokens remain the billable quantity. Omitted/legacy false are retained without claiming a mute control."
+    },
+    "litellm:vertex_ai/gemini-3.1-pro-preview@ceec9a0d7f95394247ee-grounding-20260924": {
+      "version": "litellm:vertex_ai/gemini-3.1-pro-preview@ceec9a0d7f95394247ee-grounding-20260924",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/gemini-3.1-pro-preview",
+      "deployment_model": "vertex_ai/gemini-3.1-pro-preview",
+      "served_models": [
+        "gemini-3.1-pro-preview"
+      ],
+      "currency": "USD",
+      "rate_source": "litellm_catalog",
+      "extractor": "components",
+      "effective_from": "2026-09-16T20:01:32.070273+00:00",
+      "routes": [
+        "completion",
+        "responses"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/google-grounding-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "gemini-3.1-pro-preview",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "prompt_cache_min_tokens": 4096,
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_creation_input_token_cost_above_200k_tokens": 2.5e-07,
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "litellm_provider": "vertex_ai-language-models",
+        "max_input_tokens": 1048576,
+        "max_output_tokens": 65536,
+        "max_tokens": 65536,
+        "mode": "chat",
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_image": 0.00012,
+        "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/completions",
+          "/v1/batch"
+        ],
+        "supported_modalities": [
+          "text",
+          "image",
+          "audio",
+          "video"
+        ],
+        "supported_output_modalities": [
+          "text"
+        ],
+        "supports_audio_input": true,
+        "supports_function_calling": true,
+        "supports_pdf_input": true,
+        "supports_prompt_caching": true,
+        "supports_reasoning": true,
+        "supports_response_schema": true,
+        "supports_system_messages": true,
+        "supports_tool_choice": true,
+        "supports_video_input": true,
+        "supports_vision": true,
+        "supports_web_search": true,
+        "supports_url_context": true,
+        "supports_native_streaming": true,
+        "input_cost_per_token_priority": 3.6e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "output_cost_per_token_priority": 2.16e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "cache_read_input_token_cost_flex": 2e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "web_search_billing_unit": "per_query",
+        "google_maps_grounding_cost_per_query": 0.014,
+        "input_cost_per_token_flex": 1e-06,
+        "output_cost_per_token_flex": 6e-06
+      },
+      "cost_model": "vertex_ai/gemini-3.1-pro-preview",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "grounding_tariff": {
+        "version": "google-grounding-2026-09-24",
+        "rates": {
+          "google_search_queries": "0.014"
+        },
+        "basis": "posted_api_rate",
+        "free_allowance_applied": false
+      }
+    },
+    "litellm:vertex_ai/gemini-3.5-flash@645b9039e4d7e8b10f0c-grounding-20260924": {
+      "version": "litellm:vertex_ai/gemini-3.5-flash@645b9039e4d7e8b10f0c-grounding-20260924",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/gemini-3.5-flash",
+      "deployment_model": "vertex_ai/gemini-3.5-flash",
+      "served_models": [
+        "gemini-3.5-flash"
+      ],
+      "currency": "USD",
+      "rate_source": "litellm_catalog",
+      "extractor": "components",
+      "effective_from": "2026-09-16T20:01:32.070273+00:00",
+      "routes": [
+        "completion",
+        "responses"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/google-grounding-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "vertex_ai/gemini-3.5-flash",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "prompt_cache_min_tokens": 4096,
+        "deprecation_date": "2027-05-19",
+        "cache_read_input_token_cost": 1.5e-07,
+        "input_cost_per_token": 1.5e-06,
+        "input_cost_per_audio_token": 1.5e-06,
+        "litellm_provider": "vertex_ai",
+        "max_input_tokens": 1048576,
+        "max_output_tokens": 65535,
+        "max_tokens": 65535,
+        "mode": "chat",
+        "output_cost_per_reasoning_token": 9e-06,
+        "output_cost_per_token": 9e-06,
+        "regional_endpoint_uplift_multiplier": 1.1,
+        "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/completions",
+          "/v1/batch"
+        ],
+        "supported_modalities": [
+          "text",
+          "image",
+          "audio",
+          "video"
+        ],
+        "supported_output_modalities": [
+          "text"
+        ],
+        "supports_audio_input": true,
+        "supports_function_calling": true,
+        "supports_parallel_function_calling": true,
+        "supports_pdf_input": true,
+        "supports_prompt_caching": true,
+        "supports_reasoning": true,
+        "supports_response_schema": true,
+        "supports_system_messages": true,
+        "supports_tool_choice": true,
+        "supports_url_context": true,
+        "supports_video_input": true,
+        "supports_vision": true,
+        "supports_web_search": true,
+        "supports_native_streaming": true,
+        "input_cost_per_token_priority": 2.7e-06,
+        "input_cost_per_audio_token_priority": 2.7e-06,
+        "output_cost_per_token_priority": 1.62e-05,
+        "cache_read_input_token_cost_priority": 2.7e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "web_search_billing_unit": "per_query",
+        "google_maps_grounding_cost_per_query": 0.014,
+        "input_cost_per_token_batches": 7.5e-07,
+        "output_cost_per_token_batches": 4.5e-06,
+        "input_cost_per_token_flex": 7.5e-07,
+        "output_cost_per_token_flex": 4.5e-06,
+        "cache_read_input_token_cost_flex": 7.5e-08
+      },
+      "cost_model": "vertex_ai/gemini-3.5-flash",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "grounding_tariff": {
+        "version": "google-grounding-2026-09-24",
+        "rates": {
+          "google_search_queries": "0.014"
+        },
+        "basis": "posted_api_rate",
+        "free_allowance_applied": false
+      }
+    },
+    "litellm:vertex_ai/gemini-3.8-flash@139f52669235ee26cd2b-grounding-20260924": {
+      "version": "litellm:vertex_ai/gemini-3.8-flash@139f52669235ee26cd2b-grounding-20260924",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/gemini-3.8-flash",
+      "deployment_model": "vertex_ai/gemini-3.8-flash",
+      "served_models": [
+        "gemini-3.8-flash"
+      ],
+      "currency": "USD",
+      "rate_source": "litellm_catalog",
+      "extractor": "components",
+      "effective_from": "2026-09-16T20:01:32.070273+00:00",
+      "routes": [
+        "completion",
+        "responses"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/google-grounding-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "vertex_ai/gemini-3.8-flash",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "prompt_cache_min_tokens": 4096,
+        "cache_read_input_token_cost": 7.5e-08,
+        "cache_read_input_token_cost_flex": 3.75e-08,
+        "input_cost_per_token": 7.5e-07,
+        "input_cost_per_token_batches": 3.75e-07,
+        "input_cost_per_token_flex": 3.75e-07,
+        "litellm_provider": "vertex_ai",
+        "max_input_tokens": 1048576,
+        "max_output_tokens": 65536,
+        "max_tokens": 65536,
+        "mode": "chat",
+        "output_cost_per_reasoning_token": 3.75e-06,
+        "output_cost_per_token": 3.75e-06,
+        "output_cost_per_token_batches": 1.875e-06,
+        "output_cost_per_token_flex": 1.875e-06,
+        "regional_endpoint_uplift_multiplier": 1.1,
+        "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/completions",
+          "/v1/batch"
+        ],
+        "supported_modalities": [
+          "text",
+          "image",
+          "audio",
+          "video"
+        ],
+        "supported_output_modalities": [
+          "text"
+        ],
+        "supports_audio_input": true,
+        "supports_function_calling": true,
+        "supports_parallel_function_calling": true,
+        "supports_pdf_input": true,
+        "supports_prompt_caching": true,
+        "supports_reasoning": true,
+        "supports_response_schema": true,
+        "supports_system_messages": true,
+        "supports_tool_choice": true,
+        "supports_url_context": true,
+        "supports_video_input": true,
+        "supports_vision": true,
+        "supports_web_search": true,
+        "supports_native_streaming": true,
+        "input_cost_per_token_priority": 1.35e-06,
+        "output_cost_per_token_priority": 6.75e-06,
+        "cache_read_input_token_cost_priority": 1.35e-07,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "web_search_billing_unit": "per_query",
+        "google_maps_grounding_cost_per_query": 0.014
+      },
+      "cost_model": "vertex_ai/gemini-3.8-flash",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "grounding_tariff": {
+        "version": "google-grounding-2026-09-24",
+        "rates": {
+          "google_search_queries": "0.014"
+        },
+        "basis": "posted_api_rate",
+        "free_allowance_applied": false
+      }
+    },
+    "litellm:vertex_ai/gemini-3.5-flash-lite@fcf810ef97c86ba5672c-grounding-20260924": {
+      "version": "litellm:vertex_ai/gemini-3.5-flash-lite@fcf810ef97c86ba5672c-grounding-20260924",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/gemini-3.5-flash-lite",
+      "deployment_model": "vertex_ai/gemini-3.5-flash-lite",
+      "served_models": [
+        "gemini-3.5-flash-lite"
+      ],
+      "currency": "USD",
+      "rate_source": "litellm_catalog",
+      "extractor": "components",
+      "effective_from": "2026-09-16T20:01:32.070273+00:00",
+      "routes": [
+        "completion",
+        "responses"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/google-grounding-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "gemini-3.5-flash-lite",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "deprecation_date": "2027-07-21",
+        "cache_read_input_token_cost": 3e-08,
+        "cache_read_input_token_cost_flex": 1.5e-08,
+        "cache_read_input_token_cost_priority": 5.4e-08,
+        "input_cost_per_token": 3e-07,
+        "input_cost_per_token_batches": 1.5e-07,
+        "input_cost_per_token_flex": 1.5e-07,
+        "input_cost_per_token_priority": 5.4e-07,
+        "litellm_provider": "vertex_ai-language-models",
+        "max_input_tokens": 1048576,
+        "max_output_tokens": 65536,
+        "max_tokens": 65536,
+        "mode": "chat",
+        "output_cost_per_reasoning_token": 2.5e-06,
+        "output_cost_per_token": 2.5e-06,
+        "output_cost_per_token_batches": 1.25e-06,
+        "output_cost_per_token_flex": 1.25e-06,
+        "output_cost_per_token_priority": 4.5e-06,
+        "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/completions",
+          "/v1/batch"
+        ],
+        "supported_modalities": [
+          "text",
+          "image",
+          "audio",
+          "video"
+        ],
+        "supported_output_modalities": [
+          "text"
+        ],
+        "supports_audio_input": true,
+        "supports_audio_output": false,
+        "supports_function_calling": true,
+        "supports_parallel_function_calling": true,
+        "supports_pdf_input": true,
+        "supports_prompt_caching": true,
+        "supports_reasoning": true,
+        "supports_response_schema": true,
+        "supports_system_messages": true,
+        "supports_tool_choice": true,
+        "supports_url_context": true,
+        "supports_video_input": true,
+        "supports_vision": true,
+        "supports_web_search": true,
+        "supports_native_streaming": true,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "web_search_billing_unit": "per_query",
+        "google_maps_grounding_cost_per_query": 0.014
+      },
+      "cost_model": "vertex_ai/gemini-3.5-flash-lite",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "grounding_tariff": {
+        "version": "google-grounding-2026-09-24",
+        "rates": {
+          "google_search_queries": "0.014"
+        },
+        "basis": "posted_api_rate",
+        "free_allowance_applied": false
+      }
+    },
+    "litellm:vertex_ai/gemini-3-flash-preview@40197b7bfaf6b4cea437-grounding-20260924": {
+      "version": "litellm:vertex_ai/gemini-3-flash-preview@40197b7bfaf6b4cea437-grounding-20260924",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/gemini-3-flash-preview",
+      "deployment_model": "vertex_ai/gemini-3-flash-preview",
+      "served_models": [
+        "gemini-3-flash-preview"
+      ],
+      "currency": "USD",
+      "rate_source": "litellm_catalog",
+      "extractor": "components",
+      "effective_from": "2026-09-16T20:01:32.070273+00:00",
+      "routes": [
+        "completion",
+        "responses"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/google-grounding-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "vertex_ai/gemini-3-flash-preview",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "cache_read_input_audio_token_cost": 1e-07,
+        "cache_read_input_token_cost": 5e-08,
+        "cache_read_input_token_cost_flex": 5e-08,
+        "input_cost_per_token": 5e-07,
+        "input_cost_per_audio_token": 1e-06,
+        "litellm_provider": "vertex_ai",
+        "max_input_tokens": 1048576,
+        "max_output_tokens": 65535,
+        "max_tokens": 65535,
+        "mode": "chat",
+        "output_cost_per_token": 3e-06,
+        "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/completions",
+          "/v1/batch"
+        ],
+        "supported_modalities": [
+          "text",
+          "image",
+          "audio",
+          "video"
+        ],
+        "supported_output_modalities": [
+          "text"
+        ],
+        "supports_audio_input": true,
+        "supports_function_calling": true,
+        "supports_pdf_input": true,
+        "supports_prompt_caching": true,
+        "supports_reasoning": true,
+        "supports_response_schema": true,
+        "supports_system_messages": true,
+        "supports_tool_choice": true,
+        "supports_video_input": true,
+        "supports_vision": true,
+        "supports_web_search": true,
+        "supports_native_streaming": true,
+        "input_cost_per_token_priority": 9e-07,
+        "input_cost_per_audio_token_priority": 1.8e-06,
+        "output_cost_per_token_priority": 5.4e-06,
+        "cache_read_input_token_cost_priority": 9e-08,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "web_search_billing_unit": "per_query",
+        "google_maps_grounding_cost_per_query": 0.014,
+        "input_cost_per_audio_token_batches": 5e-07,
+        "input_cost_per_token_batches": 2.5e-07,
+        "input_cost_per_token_flex": 2.5e-07,
+        "output_cost_per_token_batches": 1.5e-06,
+        "output_cost_per_token_flex": 1.5e-06
+      },
+      "cost_model": "vertex_ai/gemini-3-flash-preview",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "grounding_tariff": {
+        "version": "google-grounding-2026-09-24",
+        "rates": {
+          "google_search_queries": "0.014"
+        },
+        "basis": "posted_api_rate",
+        "free_allowance_applied": false
+      }
+    },
+    "litellm:vertex_ai/gemini-3.1-flash-image@42ad97ff4fcfa732d172-chat-route-v1-grounding-20260924": {
+      "version": "litellm:vertex_ai/gemini-3.1-flash-image@42ad97ff4fcfa732d172-chat-route-v1-grounding-20260924",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/gemini-3.1-flash-image",
+      "deployment_model": "vertex_ai/gemini-3.1-flash-image",
+      "served_models": [
+        "gemini-3.1-flash-image"
+      ],
+      "currency": "USD",
+      "rate_source": "litellm_catalog",
+      "extractor": "components",
+      "effective_from": "2026-09-23T20:38:41.029932+00:00",
+      "routes": [
+        "image_generation",
+        "image_edit",
+        "completion"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/google-grounding-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "gemini-3.1-flash-image",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "cache_read_input_token_cost": 5e-08,
+        "cache_read_input_token_cost_flex": 2.5e-08,
+        "deprecation_date": "2027-05-28",
+        "input_cost_per_image": 0.00056,
+        "input_cost_per_token": 5e-07,
+        "input_cost_per_token_batches": 2.5e-07,
+        "input_cost_per_token_flex": 2.5e-07,
+        "litellm_provider": "vertex_ai-language-models",
+        "max_input_tokens": 65536,
+        "max_output_tokens": 32768,
+        "max_tokens": 32768,
+        "mode": "image_generation",
+        "output_cost_per_image": 0.0672,
+        "output_cost_per_image_token": 6e-05,
+        "output_cost_per_token": 3e-06,
+        "output_cost_per_token_batches": 1.5e-06,
+        "output_cost_per_token_flex": 1.5e-06,
+        "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/completions",
+          "/v1/batch"
+        ],
+        "supported_modalities": [
+          "text",
+          "image"
+        ],
+        "supported_output_modalities": [
+          "text",
+          "image"
+        ],
+        "supports_function_calling": false,
+        "supports_prompt_caching": true,
+        "supports_response_schema": true,
+        "supports_system_messages": true,
+        "supports_vision": true,
+        "supports_web_search": true,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "web_search_billing_unit": "per_query"
+      },
+      "cost_model": "vertex_ai/gemini-3.1-flash-image",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "grounding_tariff": {
+        "version": "google-grounding-2026-09-24",
+        "rates": {
+          "google_search_queries": "0.014"
+        },
+        "basis": "posted_api_rate",
+        "free_allowance_applied": false
+      }
+    },
+    "litellm:vertex_ai/gemini-3-pro-image@5e43193bc2eedf90d987-chat-route-v1-grounding-20260924": {
+      "version": "litellm:vertex_ai/gemini-3-pro-image@5e43193bc2eedf90d987-chat-route-v1-grounding-20260924",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "google",
+      "upstream_model": "vertex_ai/gemini-3-pro-image",
+      "deployment_model": "vertex_ai/gemini-3-pro-image",
+      "served_models": [
+        "gemini-3-pro-image"
+      ],
+      "currency": "USD",
+      "rate_source": "litellm_catalog",
+      "extractor": "components",
+      "effective_from": "2026-09-23T20:38:41.029932+00:00",
+      "routes": [
+        "image_generation",
+        "image_edit",
+        "completion"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/google-grounding-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "gemini-3-pro-image",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "cache_read_input_token_cost": 2e-07,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "cache_read_input_token_cost_above_200k_tokens_priority": 7.2e-07,
+        "cache_read_input_token_cost_flex": 1e-07,
+        "cache_read_input_token_cost_priority": 3.6e-07,
+        "deprecation_date": "2027-05-28",
+        "input_cost_per_image": 0.0011,
+        "input_cost_per_token": 2e-06,
+        "input_cost_per_token_above_200k_tokens": 4e-06,
+        "input_cost_per_token_above_200k_tokens_priority": 7.2e-06,
+        "input_cost_per_token_batches": 1e-06,
+        "input_cost_per_token_flex": 1e-06,
+        "input_cost_per_token_priority": 3.6e-06,
+        "litellm_provider": "vertex_ai-language-models",
+        "max_input_tokens": 65536,
+        "max_output_tokens": 32768,
+        "max_tokens": 32768,
+        "mode": "image_generation",
+        "output_cost_per_image": 0.134,
+        "output_cost_per_image_token": 0.00012,
+        "output_cost_per_token": 1.2e-05,
+        "output_cost_per_token_above_200k_tokens": 1.8e-05,
+        "output_cost_per_token_above_200k_tokens_priority": 3.24e-05,
+        "output_cost_per_token_batches": 6e-06,
+        "output_cost_per_token_flex": 6e-06,
+        "output_cost_per_token_priority": 2.16e-05,
+        "source": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/completions",
+          "/v1/batch"
+        ],
+        "supported_modalities": [
+          "text",
+          "image"
+        ],
+        "supported_output_modalities": [
+          "text",
+          "image"
+        ],
+        "supports_function_calling": false,
+        "supports_prompt_caching": true,
+        "supports_response_schema": true,
+        "supports_system_messages": true,
+        "supports_vision": true,
+        "supports_web_search": true,
+        "search_context_cost_per_query": {
+          "search_context_size_low": 0.014,
+          "search_context_size_medium": 0.014,
+          "search_context_size_high": 0.014
+        },
+        "web_search_billing_unit": "per_query"
+      },
+      "cost_model": "vertex_ai/gemini-3-pro-image",
+      "cost_provider": "vertex_ai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "grounding_tariff": {
+        "version": "google-grounding-2026-09-24",
+        "rates": {
+          "google_search_queries": "0.014"
+        },
+        "basis": "posted_api_rate",
+        "free_allowance_applied": false
+      }
+    },
+    "litellm:xai/grok-4.20-non-reasoning-latest@b3bea4735604f290e505-grounding-20260924": {
+      "version": "litellm:xai/grok-4.20-non-reasoning-latest@b3bea4735604f290e505-grounding-20260924",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "xai",
+      "upstream_model": "xai/grok-4.20-non-reasoning-latest",
+      "deployment_model": "xai/grok-4.20-non-reasoning-latest",
+      "served_models": [
+        "grok-4.20-non-reasoning-latest"
+      ],
+      "currency": "USD",
+      "rate_source": "litellm_catalog",
+      "extractor": "components",
+      "effective_from": "2026-09-16T20:01:32.070273+00:00",
+      "routes": [
+        "completion",
+        "responses"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/xai-grounding-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "xai/grok-4.20-non-reasoning-latest",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "cache_read_input_token_cost": 2e-07,
+        "input_cost_per_token": 1.25e-06,
+        "litellm_provider": "xai",
+        "max_input_tokens": 1000000,
+        "max_output_tokens": 1000000,
+        "max_tokens": 1000000,
+        "mode": "chat",
+        "output_cost_per_token": 2.5e-06,
+        "source": "https://docs.x.ai/docs/models",
+        "supports_function_calling": true,
+        "supports_prompt_caching": true,
+        "supports_tool_choice": true,
+        "supports_vision": true,
+        "supports_web_search": true,
+        "input_cost_per_token_above_200k_tokens": 2.5e-06,
+        "output_cost_per_token_above_200k_tokens": 5e-06,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "supports_response_schema": true
+      },
+      "cost_model": "xai/grok-4.20-non-reasoning-latest",
+      "cost_provider": "xai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "reported_charge": {
+        "field": "cost_in_usd_ticks",
+        "units_per_usd": "10000000000"
+      },
+      "grounding_tariff": {
+        "version": "xai-grounding-2026-09-24",
+        "rates": {
+          "web_search_calls": "0.005",
+          "x_posts_fetched": "0.005",
+          "x_users_fetched": "0.010"
+        },
+        "basis": "posted_api_rate",
+        "free_allowance_applied": false
+      }
+    },
+    "litellm:xai/grok-4.20-reasoning-latest@799f35d0e9c13f4d2c81-grounding-20260924": {
+      "version": "litellm:xai/grok-4.20-reasoning-latest@799f35d0e9c13f4d2c81-grounding-20260924",
+      "engine": "litellm",
+      "status": "catalog",
+      "enabled": true,
+      "vendor": "xai",
+      "upstream_model": "xai/grok-4.20-reasoning-latest",
+      "deployment_model": "xai/grok-4.20-reasoning-latest",
+      "served_models": [
+        "grok-4.20-reasoning-latest"
+      ],
+      "currency": "USD",
+      "rate_source": "litellm_catalog",
+      "extractor": "components",
+      "effective_from": "2026-09-16T20:01:32.070273+00:00",
+      "routes": [
+        "completion",
+        "responses"
+      ],
+      "options": {},
+      "defaults": {},
+      "components": [],
+      "evidence": [
+        "pricing/litellm_catalog.json",
+        "pricing/evidence/xai-grounding-2026-09-24.json"
+      ],
+      "acceptance_evidence": [],
+      "catalog_key": "xai/grok-4.20-reasoning-latest",
+      "catalog_source": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+      "catalog_sha256": "bf553e1b7278c9955a1160a049f1300286722590ed447f011f5d10c370834453",
+      "model_info": {
+        "cache_read_input_token_cost": 2e-07,
+        "input_cost_per_token": 1.25e-06,
+        "litellm_provider": "xai",
+        "max_input_tokens": 1000000,
+        "max_output_tokens": 1000000,
+        "max_tokens": 1000000,
+        "mode": "chat",
+        "output_cost_per_token": 2.5e-06,
+        "source": "https://docs.x.ai/docs/models",
+        "supports_function_calling": true,
+        "supports_reasoning": true,
+        "supports_tool_choice": true,
+        "supports_vision": true,
+        "supports_web_search": true,
+        "input_cost_per_token_above_200k_tokens": 2.5e-06,
+        "output_cost_per_token_above_200k_tokens": 5e-06,
+        "cache_read_input_token_cost_above_200k_tokens": 4e-07,
+        "supports_prompt_caching": true,
+        "supports_response_schema": true
+      },
+      "cost_model": "xai/grok-4.20-reasoning-latest",
+      "cost_provider": "xai",
+      "zero_reasons": [
+        "gateway_response_cache",
+        "provider_reported_zero",
+        "provider_filtered_outputs"
+      ],
+      "calculation_version": "litellm-1.95.0-v1",
+      "reported_charge": {
+        "field": "cost_in_usd_ticks",
+        "units_per_usd": "10000000000"
+      },
+      "grounding_tariff": {
+        "version": "xai-grounding-2026-09-24",
+        "rates": {
+          "web_search_calls": "0.005",
+          "x_posts_fetched": "0.005",
+          "x_users_fetched": "0.010"
+        },
+        "basis": "posted_api_rate",
+        "free_allowance_applied": false
+      }
     }
+  },
+  "hosted_tools": {
+    "version": "openai-hosted-2026-09-24",
+    "web_search_call_usd": "0.01",
+    "file_search_call_usd": "0.0025",
+    "batch_multiplier": "0.5",
+    "batch_models": [
+      "gpt-6-astra"
+    ],
+    "evidence": [
+      "pricing/evidence/openai-hosted-tools-2026-09-24.json"
+    ]
   }
 }

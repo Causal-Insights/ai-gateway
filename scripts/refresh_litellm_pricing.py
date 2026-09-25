@@ -42,10 +42,7 @@ def main():
     (ROOT/'pricing/litellm_catalog.json').write_text(json.dumps(snapshot,indent=2)+'\n');catalog.cache_clear()
     for alias in snapshot['models']:
         m=registry['models'][alias];oldp=registry['profiles'][m['profiles'][0]]
-        p=profile_for(alias,{**m,'vendor':oldp['vendor']})
-        if oldp.get('usage_corrections'):
-            p['usage_corrections']=oldp['usage_corrections'];p['correction_reason']=oldp['correction_reason']
-            p['version']+='-cache-'+hashlib.sha256(json.dumps(p['usage_corrections'],sort_keys=True).encode()).hexdigest()[:12]
+        p=profile_for(alias,{**m,'vendor':oldp['vendor']},previous=oldp)
         existing=registry['profiles'].get(p['version'])
         if existing:
             # The same rates retain their original version/effective date.

@@ -29,7 +29,9 @@ def install_catalog():
     litellm.register_model(copy.deepcopy(catalog()["entries"]))
 
 
-def profile_for(alias, model):
+def profile_for(alias, model, *, previous=None):
+    from importlib.metadata import version as installed_version
+
     data = catalog()
     mapping = data["models"][alias]
     info = copy.deepcopy(data["entries"][mapping["catalog_key"]])
@@ -56,12 +58,22 @@ def profile_for(alias, model):
         "catalog_sha256": data["source_sha256"], "model_info": info,
         "cost_model": mapping["resolver_model"], "cost_provider": mapping["provider"],
         "zero_reasons": ["gateway_response_cache", "provider_reported_zero", "provider_filtered_outputs"],
-        "calculation_version": "litellm-1.95.0-v1"}
+        "calculation_version": f"litellm-{installed_version('litellm')}-v1"}
     if mapping["provider"] == "xai":
         result["reported_charge"] = {"field": "cost_in_usd_ticks", "units_per_usd": "10000000000"}
     if info.get("gateway_rate_evidence"):
         result["rate_source"] = "posted_api_rate"
         result["evidence"].append(info["gateway_rate_evidence"])
+    if previous and previous.get("usage_corrections"):
+        result["usage_corrections"] = copy.deepcopy(previous["usage_corrections"])
+        result["correction_reason"] = previous["correction_reason"]
+        result["version"] += "-cache-" + hashlib.sha256(json.dumps(result["usage_corrections"], sort_keys=True).encode()).hexdigest()[:12]
+    if previous and previous.get("grounding_tariff"):
+        # A token catalog refresh does not replace the separately evidenced
+        # hosted-search tariff. New token rates still receive a new digest.
+        result["grounding_tariff"] = copy.deepcopy(previous["grounding_tariff"])
+        result["version"] += "-grounding-" + previous["version"].rsplit("-grounding-", 1)[1]
+        result["evidence"] = list(dict.fromkeys(result["evidence"] + previous["evidence"]))
     return result
 
 
@@ -95,6 +107,10 @@ def _native_numbers(value):
 
 def cost_using_response(profile, response, *, served_options=None):
     """Let the SDK price complete native responses, including hosted tools."""
+    if profile.get("hosted_contract") or profile.get("batch_contract") or profile.get("grounding_contract"):
+        # The numeric journal applies the pinned tool/batch contract, avoiding
+        # SDK heuristics or double-charging hosted calls in a native total.
+        return None
     import litellm
     if getattr(response, "type", None) in {"response.completed", "response.failed", "response.incomplete"}:
         response = getattr(response, "response", None)
@@ -147,6 +163,19 @@ def matches_served_model(profile, served_model):
 
 
 def calculate(profile, usage, *, served_options=None):
+    if profile.get("grounding_contract"):
+        from grounded_pricing import calculate as grounding_calculate
+        return grounding_calculate(profile, usage, calculate, served_options)
+    if profile.get("hosted_contract"):
+        from hosted_tools import calculate as hosted_calculate
+        return hosted_calculate(profile, usage, calculate, served_options)
+    if profile.get("batch_contract"):
+        base = {key: value for key, value in profile.items() if key != "batch_contract"}
+        raw = {key: value for key, value in usage.items() if key != "gateway_native_cost_usd"}
+        amount, breakdown = calculate(base, raw, served_options=served_options)
+        multiplier = decimal(profile["batch_contract"]["multiplier"])
+        return amount * multiplier, [{**part, "cost_usd": str(decimal(part["cost_usd"]) * multiplier),
+            "batch_pricing_version": profile["batch_contract"]["version"]} for part in breakdown]
     options = {**profile.get("request_options", {}), **(served_options or {})}
     if usage.get("gateway_native_cost_usd") is None:
         for correction in profile.get("usage_corrections", []):

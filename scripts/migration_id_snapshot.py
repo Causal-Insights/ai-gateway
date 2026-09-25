@@ -3,7 +3,7 @@
 
 The report contains counts and SHA-256 digests only; it never prints identifier
 values (including verification tokens). Run it against a restored production
-clone before and after starting the v1.95 migration revision.
+clone before and after starting the migration revision.
 """
 
 from __future__ import annotations

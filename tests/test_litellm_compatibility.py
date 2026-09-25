@@ -2,7 +2,7 @@ import importlib.metadata
 import importlib.util
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 
 def _litellm_is_installed() -> bool:
@@ -18,7 +18,7 @@ def _litellm_is_installed() -> bool:
 @unittest.skipUnless(_litellm_is_installed(), "runs inside the LiteLLM application image")
 class LiteLLMCompatibilityTests(unittest.TestCase):
     def test_exact_litellm_version_is_installed(self):
-        self.assertEqual(importlib.metadata.version("litellm"), "1.95.0")
+        self.assertEqual(importlib.metadata.version("litellm"), "1.102.1")
 
     def test_gateway_private_import_contract(self):
         from litellm.litellm_core_utils.litellm_logging import Logging
@@ -102,6 +102,48 @@ class LiteLLMCompatibilityTests(unittest.TestCase):
         self.assertEqual(payload["size"], "2816x1584")
         self.assertEqual(payload["n"], 1)
         self.assertEqual(payload["output_format"], "png")
+
+
+@unittest.skipUnless(_litellm_is_installed(), "runs inside the LiteLLM application image")
+class BudgetCompatibilityTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        from gateway_accounting import install
+        install()
+
+    async def test_native_key_budget_reads_new_committed_spend(self):
+        from litellm.proxy import proxy_server as proxy
+        with patch.object(proxy, "_read_spend_counter_estimate", AsyncMock(return_value=(0.0, True))), \
+             patch.object(proxy, "_repair_stale_spend_counter", AsyncMock()), \
+             patch.object(proxy.SpendCounterReseed, "from_db", AsyncMock(side_effect=[0.71, 0.93])):
+            for expected in (0.71, 0.93):
+                self.assertEqual(await proxy.get_current_spend(
+                    counter_key="spend:key:fixture", fallback_spend=0, max_budget=1), expected)
+
+    async def test_native_window_budget_uses_gateway_journal(self):
+        from datetime import datetime, timezone
+        from litellm.proxy import proxy_server as proxy
+        start = datetime(2026, 9, 24, tzinfo=timezone.utc)
+        with patch.object(proxy, "_read_spend_counter_estimate", AsyncMock(return_value=(0.0, True))), \
+             patch.object(proxy, "_repair_stale_spend_counter", AsyncMock()), \
+             patch.object(proxy.SpendCounterReseed, "from_db", AsyncMock(return_value=None)), \
+             patch.object(proxy.SpendCounterReseed, "window_from_table", AsyncMock(return_value=0)) as cached, \
+             patch.object(proxy.SpendCounterReseed, "window_from_spend_logs", AsyncMock(return_value=0.71)) as journal:
+            self.assertEqual(await proxy.get_current_spend(
+                counter_key="spend:key:fixture:window:1h", fallback_spend=0, max_budget=1,
+                window_entity_type="key", window_entity_id="fixture", window_duration="1h",
+                window_start=start), 0.71)
+            journal.assert_awaited_once_with(prisma_client=proxy.prisma_client,
+                entity_type="key", entity_id="fixture", window_start=start)
+            cached.assert_not_awaited()
+
+    async def test_native_end_user_budget_reads_current_entity_total(self):
+        from litellm.proxy import proxy_server as proxy
+        with patch.object(proxy, "_read_spend_counter_estimate", AsyncMock(return_value=(0.0, True))), \
+             patch.object(proxy, "_repair_stale_spend_counter", AsyncMock()), \
+             patch.object(proxy.SpendCounterReseed, "end_user_from_db", AsyncMock(return_value=0.37)):
+            self.assertEqual(await proxy.get_current_spend(
+                counter_key=proxy.END_USER_COUNTER_PREFIX + "fixture", fallback_spend=0,
+                max_budget=1), 0.37)
 
 
 if __name__ == "__main__":

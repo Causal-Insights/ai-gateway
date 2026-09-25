@@ -43,7 +43,7 @@ class GenerationJobCreate(BaseModel):
     previous_job_id: Optional[str] = Field(default=None, min_length=5, max_length=200)
     reference_voice_ids: list[str] = Field(default_factory=list, max_length=3)
     prompt: str = Field(default="", max_length=100_000)
-    duration_seconds: Optional[int] = Field(default=None, ge=1, le=60)
+    duration_seconds: Optional[int] = Field(default=None, ge=-1, le=60)
     resolution: Optional[str] = Field(default=None, max_length=32)
     aspect_ratio: Optional[str] = Field(default=None, max_length=32)
     generate_audio: bool = False
@@ -52,6 +52,14 @@ class GenerationJobCreate(BaseModel):
     media_inputs: list[MediaInput] = Field(default_factory=list, max_length=30)
     metadata: dict[str, str] = Field(default_factory=dict)
     _previous_interaction_id: Optional[str] = PrivateAttr(default=None)
+
+    @model_validator(mode="after")
+    def validate_duration(self) -> "GenerationJobCreate":
+        if self.duration_seconds in (-1, 0):
+            model = self.model.removeprefix("seedance/")
+            if self.duration_seconds != -1 or model not in {"seedance-2.5", "dreamina-seedance-2-5-260628"}:
+                raise ValueError("automatic duration (-1) is supported by Seedance 2.5; other durations must be positive")
+        return self
 
     @field_validator("model")
     @classmethod
@@ -85,7 +93,8 @@ class MediaInputV2(BaseModel):
     slot_id: str = Field(min_length=1, max_length=100)
     index: int = Field(default=0, ge=0, le=30)
     kind: Literal["image", "video", "audio"]
-    role: Literal["first_frame", "last_frame", "reference", "source", "reference_video", "reference_audio"] = "reference"
+    role: Literal["first_frame", "last_frame", "reference", "source", "reference_video", "reference_audio", "keyframe"] = "reference"
+    timestamp_seconds: Optional[float] = Field(default=None, gt=0)
     url: Optional[str] = None
     upload_field: Optional[str] = None
 
@@ -108,11 +117,13 @@ class GenerationJobCreateV2(BaseModel):
     operation: Literal["generate", "edit", "extend"]
     prompt: str = Field(default="", max_length=100_000)
     settings: dict[str, Any] = Field(default_factory=dict)
-    media: list[MediaInputV2] = Field(default_factory=list, max_length=30)
+    media: list[MediaInputV2] = Field(default_factory=list, max_length=50)
     voice_ids: list[str] = Field(default_factory=list, max_length=3)
     previous_job_id: Optional[str] = Field(default=None, min_length=5, max_length=200)
     metadata: dict[str, str] = Field(default_factory=dict)
     _previous_interaction_id: Optional[str] = PrivateAttr(default=None)
+    _previous_provider_id: Optional[str] = PrivateAttr(default=None)
+    _previous_metadata: dict[str, Any] = PrivateAttr(default_factory=dict)
 
     @field_validator("model")
     @classmethod
@@ -133,7 +144,9 @@ class GenerationJobCreateV2(BaseModel):
         allowed = {
             "resolution", "duration", "aspectRatio", "aspect_ratio", "generateAudio",
             "generate_audio", "renderQuality", "render_quality", "frameRate", "frame_rate",
-            "outputCount", "output_count"
+            "outputCount", "output_count", "seed", "camera_fixed", "return_last_frame",
+            "draft", "service_tier", "execution_expires_after", "output_format",
+            "priority", "omni_reference_task_type"
         }
         extra = [key for key in value if key not in allowed]
         if extra:
@@ -167,14 +180,14 @@ def v2_to_v1(payload: GenerationJobCreateV2) -> GenerationJobCreate:
     """Translate a V2 body onto the frozen V1 model for adapters that still speak V1."""
     media = []
     for item in payload.media:
-        kind = item.kind if item.kind in {"image", "video"} else "video"
+        kind = item.kind
         role = item.role if item.role in {"first_frame", "last_frame", "reference", "source"} else "reference"
         media.append(MediaInput(type=kind, role=role, url=item.url, upload_field=item.upload_field))
     settings = payload.settings or {}
     duration = settings.get("duration")
     duration_seconds = int(duration) if isinstance(duration, (int, float)) and duration else None
     generate_audio = settings.get("generateAudio", settings.get("generate_audio", False))
-    return GenerationJobCreate(
+    result = GenerationJobCreate(
         model=payload.model,
         operation=payload.operation,
         previous_job_id=payload.previous_job_id,
@@ -187,6 +200,10 @@ def v2_to_v1(payload: GenerationJobCreateV2) -> GenerationJobCreate:
         media_inputs=media,
         metadata=payload.metadata,
     )
+    if "generateAudio" not in settings and "generate_audio" not in settings:
+        result.model_fields_set.discard("generate_audio")
+    result._previous_interaction_id = payload._previous_interaction_id
+    return result
 
 
 class JobError(BaseModel):
@@ -212,6 +229,8 @@ class GenerationJobResponse(BaseModel):
     updated_at: datetime
     poll_after_ms: Optional[int] = None
     result: Optional[JobResult] = None
+    outputs: list[dict[str, Any]] = Field(default_factory=list)
+    generation: dict[str, Any] = Field(default_factory=dict)
     usage: Optional[dict[str, Any]] = None
     cost_usd: Optional[float] = None
     accounting_id: Optional[str] = None
@@ -235,6 +254,7 @@ class ProviderStatus(BaseModel):
     usage: Optional[dict[str, Any]] = None
     cost_usd: Optional[float] = None
     served_model: Optional[str] = None
+    result_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProviderSubmission(BaseModel):

@@ -864,8 +864,8 @@ class GrokImageLLM(CustomLLM):
             payload["resolution"] = resolution
         if self._is_image_2_model(upstream_model):
             quality = str(payload.get("quality") or "medium").strip().lower()
-            if quality not in {"low", "medium"}:
-                raise ValueError("quality must be low or medium for grok-imagine-image-2.0")
+            if quality not in {"low", "medium", "auto"}:
+                raise ValueError("quality must be low, medium or auto for grok-imagine-image-2.0")
             payload["quality"] = quality
 
         headers = {

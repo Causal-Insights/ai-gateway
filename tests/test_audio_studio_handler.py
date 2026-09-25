@@ -71,6 +71,13 @@ class _AsyncClient:
 
 
 class AudioStudioHandlerTests(unittest.IsolatedAsyncioTestCase):
+    def test_music_aliases_keep_exact_distinct_upstream_ids(self):
+        handler = AudioStudioLLM()
+        for alias, upstream in [("elevenlabs-music", "music_v1"), ("elevenlabs-music-2.5", "music_v2_5")]:
+            with patch.dict(os.environ, {"ELEVENLABS_API_KEY": "test"}):
+                request = handler._prepare_request("jazz", alias, {})
+            self.assertEqual(request[1]["model_id"], upstream)
+
     async def test_generates_sound_effect_audio(self):
         request = httpx.Request("POST", "https://api.elevenlabs.io/v1/sound-generation")
         response = httpx.Response(200, content=b"sfx-bytes", request=request, headers={"content-type": "audio/mpeg"})

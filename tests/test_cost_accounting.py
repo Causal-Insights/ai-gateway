@@ -115,6 +115,14 @@ class PricingTests(unittest.TestCase):
         with self.assertRaises(PricingError):
             extract("omni", usage)
 
+    def test_omni_explicit_audio_uses_successor_without_repricing_history(self):
+        prices = PricingRegistry()
+        current = prices.select("gemini-omni-1.1-flash", "generation_job", {"generate_audio": True})
+        historic = prices.select("gemini-omni-1.1-flash", "generation_job", at=datetime(2026, 9, 20, tzinfo=timezone.utc))
+        self.assertNotEqual(current["version"], historic["version"])
+        self.assertEqual(current["components"], historic["components"])
+        self.assertEqual(current["extractor"], "omni")
+
     def test_image_cached_modalities_are_disjoint(self):
         result = extract("openai_image", {"input_tokens": 150, "output_tokens": 20,
             "input_tokens_details": {"text_tokens": 50, "image_tokens": 100, "cached_tokens": 30,

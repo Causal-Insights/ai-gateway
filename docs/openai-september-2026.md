@@ -43,11 +43,13 @@ Image edits preserve uploaded image order and masks through native multipart
 handling. Local request validation also checks multipart scalar settings without
 rewriting the uploaded bytes.
 
-**Images-route streaming is explicitly unavailable in LiteLLM 1.95.0.** Such
-requests fail before provider submission instead of silently dropping streaming
-settings. Use the Responses image-generation tool when streaming is needed.
-Provider access and basic generation are verified as described above. Live
-Gateway streaming/editing and MagicLens workflow verification remain outstanding.
+The September 24 capability rollout adds finite Images SSE handling around the
+pinned LiteLLM 1.102.1 runtime, preserving partial images, completed images and
+terminal usage. Deterministic SDK contract tests cover generations and edits.
+A deployed Flare masked edit succeeded; GPT Image 2.5 upstream streaming has not
+been live verified. Responses image-tool streaming remains available separately.
+See the [current gap table](capability-rollout-gap-table-2026-09-24.md) for the
+release and Magic Lens acceptance status.
 
 ```json
 {
@@ -81,8 +83,8 @@ Served model and service tier must match the accepted profile.
 Image accounting separates text input, cached text input, image input, cached
 image input and output. Missing modality breakdowns remain unresolved. Hosted
 image-tool billing requires separate verification of parent and tool usage to
-prevent double counting. Unsupported tools and profiles without provider-backed
-acceptance are blocked before submission. See [pricing coverage](pricing-coverage.md)
+prevent double counting. Unsupported tool types are rejected; supported outputs remain available when
+provider tool usage is insufficient to reconcile the total charge. See [pricing coverage](pricing-coverage.md)
 and the [accounting guide](cost-accounting.md) for the current release state.
 
 ## Verification

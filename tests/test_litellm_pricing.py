@@ -50,7 +50,7 @@ class CatalogPricingTests(unittest.TestCase):
 
     def test_custom_media_rates_use_actual_counts_and_duration(self):
         cases=[('seedream-5.0',{'output_images':2},'0.070'),('seedream-5.0-lite',{'output_images':2},'0.070'),
-          ('seedream-5.0-pro',{'output_images_small':0,'output_images_large':1,'billable_reference_images':2},'0.096'),
+          ('seedream-5.0-pro',{'output_images_small':0,'output_images_large':1,'layer_images_small':0,'layer_images_large':0,'billable_reference_images':2},'0.096'),
           ('elevenlabs-sfx',{'audio_seconds':10},'0.020'),('elevenlabs-music',{'audio_seconds':60},'0.150')]
         for alias,usage,expected in cases:
             with self.subTest(alias=alias):

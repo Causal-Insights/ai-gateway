@@ -14,7 +14,11 @@ Env:
 
 from __future__ import annotations
 
+import base64
+import inspect
 import logging
+import mimetypes
+import json
 import os
 import re
 import time
@@ -23,6 +27,7 @@ from typing import Any, List, Optional, Union
 import httpx
 from litellm import CustomLLM
 from litellm.types.utils import ImageObject, ImageResponse
+from pydantic import SerializeAsAny
 
 from custom_handler_common import normalize_error
 
@@ -46,6 +51,8 @@ _ARK_PASSTHROUGH_KEYS = (
     "sequential_image_generation_options",
     "tools",
     "optimize_prompt_options",
+    "layer_decomposition",
+    "background",
 )
 
 _PRESERVED_PARAM_ALIASES = {
@@ -59,8 +66,46 @@ _PRESERVED_PARAM_ALIASES = {
 _LOGGER = logging.getLogger(__name__)
 
 
+class SeedreamImageResponse(ImageResponse):
+    # ImageResponse annotates data with OpenAI's narrower Image base class.
+    # Preserve LiteLLM's provider metadata when FastAPI serializes each image.
+    data: List[SerializeAsAny[ImageObject]]
+
+
 class SeedreamException(Exception):
     """Raised when ModelArk Seedream image generation fails."""
+
+
+def parse_image_events(text: str) -> dict:
+    """Collect ModelArk SSE results without losing partial successes or usage."""
+    body: dict[str, Any] = {"data": [], "errors": []}
+    images: dict[int, dict] = {}
+    completed = False
+    # SSE permits comments, CRLF and multiline data. The last event need not
+    # end with a blank line when the upstream connection closes.
+    for block in re.split(r"\n\s*\n", text.replace("\r\n", "\n")):
+        data = "\n".join(line[5:].lstrip(" ") for line in block.splitlines() if line.startswith("data:"))
+        if not data or data == "[DONE]":
+            continue
+        event = json.loads(data)
+        event_type = event.get("type") or next((line[6:].strip() for line in block.splitlines() if line.startswith("event:")), "")
+        for key in ("created", "model", "id"):
+            if key in event:
+                body[key] = event[key]
+        if event_type == "image_generation.partial_succeeded":
+            images[event.get("image_index", len(images))] = {
+                key: value for key, value in event.items()
+                if key not in {"type", "created", "model", "id", "usage"}
+            }
+        elif event_type == "image_generation.completed":
+            completed = True
+            body["usage"] = event.get("usage") or {}
+        elif event_type in {"error", "image_generation.partial_failed"}:
+            body["errors"].append(event)
+            body["error"] = event.get("error") or event
+    body["data"] = [images[index] for index in sorted(images)]
+    body["stream_completed"] = completed
+    return body
 
 
 class SeedreamLLM(CustomLLM):
@@ -107,12 +152,17 @@ class SeedreamLLM(CustomLLM):
                 f"seedream-5.0-pro supports up to {self.MAX_REFERENCE_IMAGES_PRO} reference images"
             )
 
-        raw_size = str(optional_params.get("size") or "1K").strip()
+        layers = optional_params.get("layer_decomposition") is True
+        if layers and reference_count != 1:
+            raise ValueError("seedream-5.0-pro layer decomposition requires exactly one reference image")
+        raw_size = str(optional_params.get("size") or ("auto" if layers else "1K")).strip()
         normalized_size = raw_size.lower()
-        if normalized_size not in {"1k", "2k"}:
+        if layers and normalized_size not in {"1k", "1.5k", "2k", "auto"}:
+            raise ValueError("seedream-5.0-pro layer size must be 1K, 1.5K, 2K, or auto")
+        if normalized_size not in {"1k", "1.5k", "2k"} and not (layers and normalized_size == "auto"):
             match = re.fullmatch(r"(\d+)x(\d+)", normalized_size)
             if not match:
-                raise ValueError("seedream-5.0-pro size must be 1K, 2K, or valid pixel dimensions")
+                raise ValueError("seedream-5.0-pro size must be 1K, 1.5K, 2K, or valid pixel dimensions")
             width, height = (int(value) for value in match.groups())
             pixels = width * height
             ratio = width / height if height else 0
@@ -134,6 +184,11 @@ class SeedreamLLM(CustomLLM):
         output_format = str(optional_params.get("output_format") or "png").strip().lower()
         if output_format not in {"png", "jpeg", "jpg"}:
             raise ValueError("seedream-5.0-pro output_format must be png or jpeg")
+        if optional_params.get("background") == "transparent":
+            if reference_count != 1:
+                raise ValueError("seedream-5.0-pro transparent editing requires exactly one alpha-channel reference image")
+            if output_format != "png":
+                raise ValueError("seedream-5.0-pro transparent output requires png")
         if optional_params.get("stream") is True:
             raise ValueError("seedream-5.0-pro does not support streaming output")
         sequential = optional_params.get("sequential_image_generation")
@@ -233,26 +288,48 @@ class SeedreamLLM(CustomLLM):
                 continue
             url = item.get("url")
             b64 = item.get("b64_json")
-            if url:
-                out.append(ImageObject(url=url))
-            elif b64:
-                out.append(ImageObject(b64_json=b64))
+            if url or b64:
+                details = {key: value for key, value in item.items()
+                           if key not in {"url", "b64_json", "revised_prompt", "provider_specific_fields"}}
+                details = {**(item.get("provider_specific_fields") or {}), **details}
+                # Pinned ImageObject.__init__ discards arbitrary kwargs. Its
+                # explicit provider_specific_fields survives ImageResponse's copy.
+                out.append(ImageObject(url=url, b64_json=b64, revised_prompt=item.get("revised_prompt"),
+                                       provider_specific_fields=details or None))
 
         if not out:
             raise SeedreamException("ModelArk response did not include any image url or b64_json")
 
-        resp = ImageResponse(created=int(body.get("created") or time.time()), data=out)
+        resp = SeedreamImageResponse(created=int(body.get("created") or time.time()), data=out)
+        for item in resp.data:
+            details = item.provider_specific_fields or {}
+            for name in ("size", "output_format", "image_index", "z_index", "bounding_box", "name", "description"):
+                if name in details:
+                    setattr(item, name, details[name])
+        if "stream_completed" in body:
+            resp["stream_completed"] = body["stream_completed"]
+        errors = list(body.get("errors") or [])
+        errors.extend({"image_index": index, "error": item["error"]}
+                      for index, item in enumerate(data) if isinstance(item, dict) and item.get("error"))
+        if errors:
+            resp["errors"] = errors
         usage = dict(body.get("usage") or {})
         usage["output_images"] = len(out)
         sizes = [item.get("size") for item in data if isinstance(item, dict) and (item.get("url") or item.get("b64_json"))]
         try:
             pixels = [int(size.lower().split("x")[0]) * int(size.lower().split("x")[1]) for size in sizes]
-            usage["output_images_small"] = sum(value <= 2610000 for value in pixels)
-            usage["output_images_large"] = sum(value > 2610000 for value in pixels)
+            small = sum(value <= 2610000 for value in pixels)
+            large = sum(value > 2610000 for value in pixels)
+            layers = body.get("_layer_decomposition") is True
+            usage["output_images_small"] = 0 if layers else small
+            usage["output_images_large"] = 0 if layers else large
+            usage["layer_images_small"] = small if layers else 0
+            usage["layer_images_large"] = large if layers else 0
         except (AttributeError, ValueError, IndexError):
             pass  # Missing actual dimensions remain unresolved for Pro pricing.
-        if body.get("_reference_count") is not None:
-            usage["billable_reference_images"] = max(0, body["_reference_count"] - 1)
+        reference_count = usage.get("input_images", body.get("_reference_count"))
+        if reference_count is not None:
+            usage["billable_reference_images"] = max(0, reference_count - 1)
         resp._hidden_params["gateway_usage"] = usage
         resp._hidden_params["gateway_served_model"] = body.get("model")
         resp._hidden_params["gateway_provider_request_id"] = body.get("id")
@@ -280,7 +357,10 @@ class SeedreamLLM(CustomLLM):
 
         ark_model = self._resolve_upstream_model(model)
         prompt_text = (prompt or "").strip()
-        if not prompt_text:
+        layers = optional_params.get("layer_decomposition") is True
+        if layers and not self._is_pro_model(ark_model):
+            raise ValueError("layer decomposition is supported only by seedream-5.0-pro")
+        if not prompt_text and not layers:
             raise ValueError("prompt is required for Seedream image generation")
 
         image_input = self._collect_image_inputs(optional_params, ark_model=ark_model)
@@ -288,10 +368,9 @@ class SeedreamLLM(CustomLLM):
         if self._is_pro_model(ark_model):
             self._validate_pro_params(optional_params, reference_count=reference_count)
 
-        payload: dict[str, Any] = {
-            "model": ark_model,
-            "prompt": prompt_text,
-        }
+        payload: dict[str, Any] = {"model": ark_model}
+        if prompt_text:
+            payload["prompt"] = prompt_text
         if image_input is not None:
             payload["image"] = image_input
 
@@ -349,9 +428,12 @@ class SeedreamLLM(CustomLLM):
                     detail = e.response.text
                 raise SeedreamException(normalize_error(detail)) from e
 
-            body = response.json()
+            body = (parse_image_events(response.text)
+                    if "text/event-stream" in response.headers.get("content-type", "")
+                    or payload.get("stream") is True else response.json())
             cost_body = dict(body)
             cost_body["_requested_size"] = payload.get("size")
+            cost_body["_layer_decomposition"] = payload.get("layer_decomposition") is True
             image_input = payload.get("image")
             cost_body["_reference_count"] = (
                 len(image_input) if isinstance(image_input, list) else int(image_input is not None)
@@ -364,6 +446,53 @@ class SeedreamLLM(CustomLLM):
             )
             cost_body.setdefault("model", payload["model"])
             return self._image_response_from_body(cost_body, response_cost=cost)
+
+    @staticmethod
+    async def _edit_image(value: Any) -> str:
+        """Convert uploaded edit files into ModelArk data URLs without re-encoding."""
+        filename = getattr(value, "filename", None) or getattr(value, "name", None)
+        mime = getattr(value, "content_type", None)
+        if isinstance(value, tuple) and len(value) >= 2:
+            filename, value, *rest = value
+            mime = rest[0] if rest else mime
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            url = value.get("url") or value.get("image_url")
+            if isinstance(url, str):
+                return url
+            raise ValueError("Seedream edit images require a URL or uploaded image bytes")
+        if hasattr(value, "read"):
+            value = value.read()
+            if inspect.isawaitable(value):
+                value = await value
+        if not isinstance(value, (bytes, bytearray, memoryview)):
+            raise ValueError("Seedream edit images require a URL or uploaded image bytes")
+        mime = mime or mimetypes.guess_type(str(filename or ""))[0] or "image/png"
+        return f"data:{mime};base64,{base64.b64encode(bytes(value)).decode('ascii')}"
+
+    async def aimage_edit(
+        self, model: str, image: Any, prompt: Optional[str], model_response: ImageResponse,
+        api_key: Optional[str], api_base: Optional[str], optional_params: dict, logging_obj: Any,
+        timeout: Optional[Union[float, httpx.Timeout]] = None, client: Any = None, **kwargs: Any,
+    ) -> ImageResponse:
+        params = dict(optional_params or {})
+        if params.get("mask") is not None or kwargs.get("mask") is not None:
+            raise ValueError("Seedream edits use prompt coordinates or reference markings; masks are unsupported")
+        if image is None:
+            image = self._collect_image_inputs(params, ark_model=model)
+        if image is None:
+            raise ValueError("image is required for Seedream image editing")
+        sources = image if isinstance(image, list) else [image]
+        if not sources:
+            raise ValueError("image is required for Seedream image editing")
+        # The explicit edit input owns ordering even when legacy aliases coexist.
+        for key in ("image_urls", "images", "image", "reference_image_urls", "referenceImageUrls"):
+            params.pop(key, None)
+        params["image"] = [await self._edit_image(value) for value in sources]
+        return await self.aimage_generation(model=model, prompt=prompt or "", model_response=model_response,
+            api_key=api_key, api_base=api_base, optional_params=params, logging_obj=logging_obj,
+            timeout=timeout, client=client, **kwargs)
 
 
 seedream = SeedreamLLM()

@@ -1,5 +1,8 @@
 # LiteLLM v1.95 rollout runbook
 
+Historical version-specific runbook. The current runtime and validation evidence
+are in [the 1.102.1 upgrade notes](litellm-v1.102-upgrade.md).
+
 The application image is pinned to LiteLLM `v1.95.0` by immutable amd64 digest.
 Roll out the runtime upgrade and the additive model changes as separate Cloud Run
 revisions even when they originate from the same release branch.

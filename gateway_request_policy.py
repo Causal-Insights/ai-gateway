@@ -28,11 +28,11 @@ RESPONSES_PATHS = {"/responses", "/v1/responses"}
 POLICY_PATHS = CHAT_PATHS | RESPONSES_PATHS
 IMAGE_PATHS = {"/images/generations", "/v1/images/generations", "/images/edits", "/v1/images/edits"}
 GROK_IMAGE_2_MODELS = {"grok-imagine-image-2.0", "grok-image/grok-imagine-image-2.0"}
-GROK_IMAGE_2_QUALITIES = {"low", "medium"}
+GROK_IMAGE_2_QUALITIES = {"low", "medium", "auto"}
 GROK_IMAGE_2_RESOLUTIONS = {"1k", "2k"}
 GROK_IMAGE_2_ASPECT_RATIOS = {
     "1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "2:1", "1:2",
-    "19.5:9", "9:19.5", "20:9", "9:20", "auto",
+    "19.5:9", "9:19.5", "20:9", "9:20", "21:9", "5:2", "auto",
 }
 GROK_IMAGE_RESPONSE_FORMATS = {"url", "b64_json"}
 SEEDREAM_IMAGE_MODELS = {
@@ -120,6 +120,13 @@ def _normalize_grok_image_2_size(body: dict[str, Any]) -> PolicyError | None:
         if width > 0 and height > 0:
             divisor = math.gcd(width, height)
             aspect_ratio = f"{width // divisor}:{height // divisor}"
+            # Match equivalent supported ratios, including decimal spellings
+            # such as 19.5:9 and reducible spellings such as 21:9.
+            for candidate in sorted(GROK_IMAGE_2_ASPECT_RATIOS - {"auto"}):
+                left, right = (float(value) for value in candidate.split(":"))
+                if math.isclose(width * right, height * left, rel_tol=1e-12):
+                    aspect_ratio = candidate
+                    break
             if aspect_ratio in GROK_IMAGE_2_ASPECT_RATIOS:
                 body.setdefault("aspect_ratio", aspect_ratio)
                 body.setdefault("resolution", "2k" if max(width, height) >= 2000 else "1k")
@@ -164,19 +171,30 @@ def _seedream_reference_count(body: dict[str, Any]) -> int:
 
 def _validate_seedream_pro_request(body: dict[str, Any]) -> PolicyError | None:
     prompt = body.get("prompt")
-    if not isinstance(prompt, str) or not prompt.strip():
+    layers = body.get("layer_decomposition") is True
+    if not layers and (not isinstance(prompt, str) or not prompt.strip()):
         return PolicyError(
             code="INVALID_IMAGE_PROMPT",
             message="prompt must be a non-empty string.",
         )
 
-    raw_size = str(body.get("size") or "1K").strip().lower()
-    if raw_size not in {"1k", "2k"}:
+    if layers and _seedream_reference_count(body) != 1:
+        return PolicyError(code="INVALID_LAYER_REFERENCE_COUNT",
+                           message="seedream-5.0-pro layer decomposition requires exactly one reference image.")
+    if layers and prompt is None:
+        # LiteLLM Router requires a prompt argument; the handler omits this empty
+        # value upstream so ModelArk can perform automatic decomposition.
+        body["prompt"] = ""
+    raw_size = str(body.get("size") or ("auto" if layers else "1K")).strip().lower()
+    if layers and raw_size not in {"1k", "1.5k", "2k", "auto"}:
+        return PolicyError(code="INVALID_IMAGE_SIZE",
+                           message="seedream-5.0-pro layer size must be 1K, 1.5K, 2K, or auto.")
+    if raw_size not in {"1k", "1.5k", "2k"} and not (layers and raw_size == "auto"):
         match = re.fullmatch(r"(\d+)x(\d+)", raw_size)
         if not match:
             return PolicyError(
                 code="INVALID_IMAGE_SIZE",
-                message="seedream-5.0-pro size must be 1K, 2K, or valid pixel dimensions.",
+                message="seedream-5.0-pro size must be 1K, 1.5K, 2K, or valid pixel dimensions.",
             )
         width, height = (int(value) for value in match.groups())
         pixels = width * height
@@ -241,8 +259,6 @@ def apply_request_policy(path: str, body: Any) -> tuple[Any, PolicyError | None]
         if error:
             return body, PolicyError(code="INVALID_ASTRA_REQUEST", message=error)
     if image_model(model) and path in IMAGE_PATHS:
-        if body.get("stream") not in (None, False) or body.get("partial_images", 0) not in (0, None):
-            return body, PolicyError(code="IMAGE_STREAMING_UNAVAILABLE", message="Image streaming is not available on this Gateway Images route. Use the Responses image-generation tool for streaming.")
         error = validate_image_settings(body)
         if error:
             return body, PolicyError(code="INVALID_IMAGE_REQUEST", message=error)
@@ -267,7 +283,7 @@ def apply_request_policy(path: str, body: Any) -> tuple[Any, PolicyError | None]
         if quality not in GROK_IMAGE_2_QUALITIES:
             return body, PolicyError(
                 code="INVALID_IMAGE_QUALITY",
-                message="quality must be low or medium for grok-imagine-image-2.0.",
+                message="quality must be low, medium or auto for grok-imagine-image-2.0.",
             )
         resolution = str(body.get("resolution") or "1k").strip().lower()
         if resolution not in GROK_IMAGE_2_RESOLUTIONS:
@@ -380,7 +396,8 @@ class GatewayRequestPolicyMiddleware:
                     if name and not part.get_filename():
                         content = part.get_payload(decode=True) or b""
                         fields[name] = content.decode("utf-8", errors="replace").strip()
-                if image_model(fields.get("model")):
+                from openai_model_contracts import image_edit_model
+                if image_edit_model(fields.get("model")):
                     for name in ("n", "partial_images", "output_compression"):
                         if name in fields and re.fullmatch(r"[0-9]+", fields[name]):
                             fields[name] = int(fields[name])
@@ -421,4 +438,9 @@ class GatewayRequestPolicyMiddleware:
             delivered = True
             return {"type": "http.request", "body": raw, "more_body": False}
 
-        await self.app(policy_scope, replay, send)
+        from openai_model_contracts import image_edit_model
+        if isinstance(parsed, dict) and image_edit_model(parsed.get("model")) and parsed.get("stream") is True and scope.get("path") in IMAGE_PATHS:
+            from image_stream_routes import stream_app
+            await stream_app(policy_scope, replay, send)
+        else:
+            await self.app(policy_scope, replay, send)

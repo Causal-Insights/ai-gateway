@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "openai",
+    "api_product": "Responses and Batch APIs",
+    "upstream_model": "openai-responses-hosted-tools",
+    "aliases": [],
+    "account_context": null,
+    "region": "global",
+    "routes": [
+      "responses",
+      "batch"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "retrieved_at": "2026-09-25T00:54:43.827338+00:00",
+      "scope": "pricing",
+      "excerpt": "Web search (all models)"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/tools-web-search",
+      "retrieved_at": "2026-09-25T00:54:43.827339+00:00",
+      "scope": "usage_schema",
+      "excerpt": "Search actions incur a tool call cost"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/batch",
+      "retrieved_at": "2026-09-25T00:54:43.827340+00:00",
+      "scope": "pricing",
+      "excerpt": "50% cost discount compared to synchronous APIs"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+      "retrieved_at": "2026-09-25T00:59:04.555193+00:00",
+      "scope": "pricing",
+      "excerpt": "Batch and Flex are priced at 50% of Standard rates."
+    }
+  ],
+  "retrieved_at": "2026-09-25T00:54:43.827269+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "web_search_calls",
+      "unit": "call",
+      "rate": "0.01",
+      "per": "1",
+      "conditions": {
+        "action": "search",
+        "tool": "web_search"
+      }
+    },
+    {
+      "name": "file_search_calls",
+      "unit": "call",
+      "rate": "0.0025",
+      "per": "1",
+      "conditions": {
+        "tool": "file_search"
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "web_search_calls": "2",
+      "file_search_calls": "1"
+    },
+    "formula": "2 * 0.01 + 1 * 0.0025",
+    "calculated_cost": "0.0225",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "Parent model tokens are separately priced from their pinned profile. Search open_page/find_in_page actions are not charged as new searches.",
+    "Container sessions: table quotes per20minutes, eligible sessions perminute with5minute minimum. Container IDs alone cannot establish billed duration; costs remain unresolved.",
+    "File search storage includes account-level1GB free allocation; individual vector-store size snapshots do not establish billed GB-days. Storage is tracked unresolved.",
+    "Image tool result bytes do not establish independent parent/tool token attribution; outputs retained, cost unresolved without authoritative usage.",
+    "Batch only enabled for exact separately verified model aliases; no tools or streaming in initial text-only interface. No live hosted-tool or batch calls made."
+  ]
+}

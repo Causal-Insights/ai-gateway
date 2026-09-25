@@ -221,7 +221,7 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_image_2_rejects_invalid_quality_before_upstream_call(self):
-        with self.assertRaisesRegex(ValueError, "quality must be low or medium"):
+        with self.assertRaisesRegex(ValueError, "quality must be low, medium or auto"):
             await GrokImageLLM().aimage_generation(
                 model="grok-image/grok-imagine-image-2.0",
                 prompt="Invalid quality",

@@ -6,6 +6,7 @@ IMAGE_MODELS = {
     for name in ("gpt-image-2.5-sunburst", "gpt-image-2.5-flare")
 }
 IMAGE_IDS = set(IMAGE_MODELS) | set(IMAGE_MODELS.values())
+IMAGE_EDIT_IDS = IMAGE_IDS | {"gpt-image-1.5", "gpt-image-2", "gpt-image-2-2026-04-21"}
 REASONING_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 IMAGE_QUALITIES = {"auto", "low", "medium", "high", "xhigh", "max"}
 IMAGE_PRESERVED_FIELDS = ("output_format", "output_compression", "background", "moderation")
@@ -13,6 +14,10 @@ IMAGE_PRESERVED_FIELDS = ("output_format", "output_compression", "background", "
 
 def image_model(value):
     return str(value or "").removeprefix("openai/") in IMAGE_IDS
+
+
+def image_edit_model(value):
+    return str(value or "").removeprefix("openai/") in IMAGE_EDIT_IDS
 
 
 def validate_image_settings(body):
@@ -96,7 +101,7 @@ def validate_astra(body, *, responses):
 
 
 def install_image_adapters():
-    """Fill v1.95's image-edit field gap only for the two pinned models.
+    """Fill the pinned SDK's image-edit field gap for configured GPT image models.
 
     Keep LiteLLM's inference auth, callbacks, request IDs and spend ledger.
     This hook is covered inside the pinned application image.
@@ -116,7 +121,7 @@ def install_image_adapters():
             ]
 
     def select(model, provider):
-        if provider == LlmProviders.OPENAI and image_model(model):
+        if provider == LlmProviders.OPENAI and image_edit_model(model):
             return Image25EditConfig()
         return original(model=model, provider=provider)
 
@@ -129,7 +134,7 @@ def install_image_adapters():
 
     def extract(params):
         selected = original_extract(params)
-        if image_model(params.get("model")):
+        if image_edit_model(params.get("model")):
             for name in ("output_format", "output_compression", "moderation"):
                 if params.get(name) is not None:
                     selected[name] = params[name]
@@ -153,12 +158,6 @@ def install_image_adapters():
                 if private in mapped:
                     mapped[name] = mapped.pop(private)
             return mapped
-
-        def transform_image_generation_response(self, *args, **kwargs):
-            response = super().transform_image_generation_response(*args, **kwargs)
-            optional = kwargs.get("optional_params", args[5] if len(args) > 5 else {})
-            response.output_format = optional.get("output_format", "png")
-            return response
 
     def select_generation(model, provider):
         if provider == LlmProviders.OPENAI and image_model(model):

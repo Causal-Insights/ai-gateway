@@ -1,9 +1,10 @@
 # Gateway consistency assessment and Instant Voice Cloning feasibility
 
-Reviewed September 24, 2026 against the local 52-alias candidate, pinned LiteLLM
-1.95.0, the [provider implementation reference](provider-implementation-reference.md),
-the previous capability audit, and selected Magic Lens consumer code. This is an
-architectural assessment, not a deployment certification or implementation change.
+Current implementation and acceptance status: [staged rollout gap table](capability-rollout-gap-table-2026-09-24.md). Earlier findings below describe the pre-rollout baseline.
+Reviewed September 24, 2026 against the local 52-alias candidate. Updated after
+the LiteLLM 1.102.1 upgrade; see [the upgrade evidence](litellm-v1.102-upgrade.md)
+and [provider implementation reference](provider-implementation-reference.md).
+This is an architectural assessment, not a cloud deployment certification.
 
 ## Rating against the intended goal
 
@@ -19,7 +20,7 @@ of individual providers, endpoints, media representations and contract versions.
 | Uniform multimodal interface | 5/10 | Reference images use different endpoints; audio is wrapped in Images responses; durable jobs only model video. |
 | Executable capability discovery | 4/10 | Config and pricing metadata do not provide a complete, validated operation/parameter/media-role contract for clients. |
 | Consumer independence and compatibility | 5/10 | Magic Lens carries duplicated provider decisions in Studio and Runner, owns a separate registry, and directly discovers ElevenLabs voices. |
-| Upgrade and operational confidence | 6/10 | Pinned builds and tests exist, but SDK monkey-patches, schema coupling, incomplete current workflow evidence and a constrained DB pool need attention. |
+| Upgrade and operational confidence | 7/10 | The 1.102.1 candidate has database migration, budget compatibility, accounting and Magic Lens regression evidence. SDK hooks, production capacity and live provider coverage still need attention. |
 
 A consistent contract should preserve an operation's meaning when selecting
 another model that supports it. It should also declare genuine model differences.
@@ -36,12 +37,12 @@ means a planned feature expansion. Missing features are not all release blockers
 | Priority | Deficiency | Consequence and next action |
 | --- | --- | --- |
 | P1 — before retirement deployment | Magic Lens still offered the retired Flash-Lite Preview at the last dev check. | Retire that picker entry, reconcile the fallback and inspect saved/pinned references before deploying the Gateway removals. Preserve old IDs and pricing history; no silent successor substitution. |
-| P1 — request correctness | Seedance 2.5 editing cannot represent required automatic duration; frame/extension defaults are unsuitable. | The V1 model rejects `duration_seconds=-1`; the adapter substitutes duration 4 and ratio `1:1` when omitted. Add task-aware translation, validation and pricing before presenting these workflows as supported. |
-| P1 — request correctness | Audio and streaming flags can fail or lose meaning. | Omni rejects explicit `generate_audio=true` at pricing admission; Grok V1 omits the audio control; Seedream Lite forwards `stream=true` but reads the response as JSON. Implement the requested semantics or reject unsupported combinations before provider submission. |
-| P1 — consistency | No complete machine-readable capability contract drives both admission and discovery. | Publish operations, media roles/combinations, limits, defaults, schema revisions, outputs, extension fields and verification scope per exact model. Derive validation/discovery from shared declarations and test their actual translation. Keep product selection and commercial publication in Magic Lens. |
+| P1 — request correctness | Seedance 2.5 editing cannot represent required automatic duration; frame/extension defaults are unsuitable. | Preserve automatic duration and choose provider defaults appropriate to the operation, with corresponding usage accounting. Fix the actual translation without adding unrelated prerequisites. |
+| P1 — request correctness | Audio and streaming flags can fail or lose meaning. | Omni rejects explicit `generate_audio=true` at pricing admission; Grok V1 omits the audio control; Seedream Lite forwards `stream=true` but reads the response as JSON. Implement those requested semantics and preserve usable results. A new blanket rejection layer would not fix these defects. |
+| P2 — consistency | Clients lack a complete description of exposed operations and fields. | Extend the provider inventory with useful discovery metadata as workflows are implemented. Reuse the executing adapters as the source of truth. Missing verification metadata must not become a runtime prerequisite, and a new capability framework is not required for the next fixes. |
 | P1 — consistency | Clients select transport based on provider/model families. | Add a versioned Gateway client contract with operation-specific typed inputs/results and shared errors, request IDs, accounting receipts and media handles. Adapt Gemini chat images, OpenAI edits and custom audio behind it. Keep current endpoints working during migration. |
 | P1 — before another consumer / private voices | Resource and ownership contracts are incomplete beyond video jobs. | Introduce stable project/application authorization for private voice and media resources; support key rotation and revocation. Existing job reads are key-scoped; arbitrary end-user metadata is not authorization. Preserve the existing curated voice paths. |
-| P1 — maintenance | LiteLLM upgrades require a compatibility project. | Evaluate stable 1.102.1 separately; the accounting install guard requires 1.95.0, OpenAI code patches internals, and Prisma changes affect historical null costs. Test a digest-pinned candidate with a cloned DB and both consumers. An upgrade does not complete custom adapters. |
+| Completed locally — maintenance | Upgrade to stable LiteLLM 1.102.1. | Pinned by digest; adapted the changed budget hook, preserved nullable spend and removed redundant image response handling. See the upgrade record for validation and deployment boundaries. Custom adapter gaps remain separate work. |
 | P1 — before scaling / promotion | Capacity and acceptance need to cover the actual shared service. | Deployment defaults permit 10 Gateway and 10 callback instances, while the runbook describes a 15-client session pool and multiple pools per instance. Size pool limits/autoscaling together and test overlap/recovery. Confirm actionable reconciliation alerts and current paid workflow evidence. This is a documented capacity risk, not a claim of a current outage. |
 
 Code anchors: [`GenerationJobCreate`](../generation_job_models.py:37),
@@ -73,7 +74,7 @@ corresponding official API and implementation sources.
 | Grok Image 2.0 | Automatic quality rejected; `size` rejects some wide ratios while explicit `aspect_ratio` is a workaround. Default quality is forced to medium. | P2 normalization |
 | ElevenLabs | Voice creation/lifecycle missing; multi-speaker dialogue, timestamps/incremental WebSocket speech, full music composition/sections/seeds/editing, and SFX/music output-format selection absent. | Private voice foundation then IVC; other audio P2 |
 | GPT-5.6 | Only named fixed reasoning efforts exposed. This can remain an intentional preset restriction, but must be discoverable; add a flexible alias only if wanted. | Product choice |
-| Gemini 3.8 Flash | Absent from the special Gemini request policy; pinned thinking-level translation needs alignment with the current exact model. | P1 compatibility |
+| Gemini 3.8 Flash | Rechecked on 1.102.1: native Vertex translation supports the model's reasoning-effort to thinking-level mapping. Its absence from the Gateway's special-policy set alone does not establish a failure. | Remove the earlier blanket P1 compatibility recommendation; verify any additional control when implementing it |
 | Advanced tool/media workflows | Hosted tools, video-conditioned Gemini images, batch and native service APIs lack comprehensive current Gateway/consumer evidence. | Verify selected workflows before expanding claims |
 
 Retirement of the four models is completed locally, and the September 24 GPT Image
@@ -95,7 +96,7 @@ system. [Create API](https://elevenlabs.io/docs/api-reference/voices/ivc/create)
 [recording guidance](https://elevenlabs.io/docs/eleven-creative/voices/voice-cloning/instant-voice-cloning),
 [cloning concepts](https://elevenlabs.io/docs/eleven-api/concepts/voice-cloning).
 
-The installed LiteLLM 1.95.0 ElevenLabs speech adapter already preserves a raw
+The installed LiteLLM 1.102.1 ElevenLabs speech adapter preserves a raw
 provider voice ID when it is not a mapped stock voice name. Existing speech
 aliases can therefore be the synthesis path once the clone is accessible to the
 same provider credential and compatible with the chosen model. This was confirmed
@@ -153,16 +154,16 @@ stable identifiers or standardized lifecycle needed by future applications.
 
 ## Recommended sequence and evidence
 
-1. Finish the coordinated retirement rollout and correct the known request defects.
-2. Define executable capabilities and an additive client contract; prove one image and one video workflow through both Magic Lens execution paths.
-3. Add owned voice resources and Instant Voice Cloning as the first resource-management extension.
-4. Expand Veo/Grok video and advanced image/audio features in separate increments; evaluate the LiteLLM upgrade as a separate maintenance candidate. [Verified stable candidate](https://github.com/BerriAI/litellm/releases/tag/v1.102.1).
+1. Checkpoint existing work, upgrade LiteLLM, exercise existing Gateway/Magic Lens behavior, and reassess gaps. This is the approved sequence carried out in the [1.102.1 upgrade](litellm-v1.102-upgrade.md).
+2. Correct the specific Seedance duration/defaults, audio and streaming defects above. Coordinate Magic Lens's retired picker entry before cloud rollout of the model removals.
+3. Add Instant Voice Cloning with owned voice resources, preserving the curated voice path and saved voice IDs. It does not depend on building a general capability framework first.
+4. Expand one requested image/video workflow at a time through Gateway, Studio and Runner. Add useful shared client/discovery metadata alongside working behavior; keep existing inputs and defaults valid.
 
-This review re-read local implementations and previous recommendations, inspected
+The original assessment re-read local implementations and previous recommendations, inspected
 the pinned ElevenLabs adapter, and consulted current official documentation.
 Offline probes reconfirmed Seedance's rejected `-1` duration, missing Omni/Seedance
 2.5 V2 routes, Veo's selected LiteLLM route, Omni's false/true audio admission
 asymmetry, and Gemini 3.8's absence from special request policy. No new paid
 generation, clone, account inspection or live deployment audit was performed.
 Earlier test totals remain dated evidence, not tests rerun for this assessment.
-Only assessment/reference documentation changed in this review.
+The later runtime upgrade and its tests are recorded separately in the linked upgrade evidence.

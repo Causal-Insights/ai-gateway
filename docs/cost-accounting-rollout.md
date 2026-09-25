@@ -26,7 +26,7 @@ mandatory execution writer. Never roll back to an image that hides executions.
 
 - Run registry coverage, evidence schema validation and skill validation. Confirm
   the personal skill matches the canonical repository copy.
-- Run the complete gateway suite in the Dockerfile's pinned LiteLLM 1.95.0 image.
+- Run the complete gateway suite in the Dockerfile's pinned LiteLLM image.
   Set `RUN_COST_DB_TESTS=1` only for isolated PostgreSQL. Supply
   `GATEWAY_DATABASE_URL` pointing to that database, never production for tests.
 - Restore a recent production backup into a separate clone. Record identity/count

@@ -39,7 +39,9 @@ class OpenAIContractsTests(unittest.TestCase):
         self.assertIsNotNone(apply_request_policy("/v1/chat/completions", body)[1])
         for path in ("/v1/images/generations", "/v1/images/edits"):
             body = dict(model="gpt-image-2.5-flare", stream=True)
-            self.assertEqual(apply_request_policy(path, body)[1].code, "IMAGE_STREAMING_UNAVAILABLE")
+            # Gateway SSE dispatch is covered hermetically; this is not proof
+            # that the provider supports streaming for this exact upstream.
+            self.assertIsNone(apply_request_policy(path, body)[1])
         body = dict(model="gpt-6-astra", extra_body=dict(temperature=.4))
         self.assertIsNotNone(apply_request_policy("/v1/responses", body)[1])
 

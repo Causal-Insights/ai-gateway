@@ -96,8 +96,12 @@ def _hash_request(payload: GenerationJobCreate, upload_bytes: dict[str, tuple[st
 
 
 def _hash_request_v2(payload: GenerationJobCreateV2, upload_bytes: dict[str, tuple[str, bytes, str]]) -> str:
+    document = payload.model_dump(mode="json", exclude_none=False)
+    for item in document["media"]:
+        if item.get("timestamp_seconds") is None:
+            item.pop("timestamp_seconds", None)  # Preserve pre-keyframe V2 hashes.
     canonical = json.dumps(
-        payload.model_dump(mode="json", exclude_none=False),
+        document,
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
@@ -210,6 +214,11 @@ def _response(job: dict[str, Any], base_url: str) -> GenerationJobResponse:
         updated_at=job["updated_at"],
         poll_after_ms=poll_after_ms,
         result=result,
+        outputs=[{key: value for key, value in output.items() if key != "url"} | {
+            "content_url": f"{base_url.rstrip('/')}/v1/generation-jobs/{job['id']}/outputs/{index}"
+        } for index, output in enumerate((job.get("request_metadata") or {}).get("outputs", []))],
+        generation={key: value for key, value in (job.get("request_metadata") or {}).items()
+                    if key in {"draft", "duration_seconds", "actual_duration_seconds", "resolution", "has_input_video", "operation", "contract_revision", "profile_id", "audio_mode"}},
         usage=job.get("usage"),
         cost_usd=float(job["cost_contract"]["cost_usd"]) if (job.get("cost_contract") or {}).get("cost_usd") is not None else None,
         accounting_id=job.get("accounting_id"),
@@ -283,23 +292,36 @@ async def create_generation_job(
 ) -> GenerationJobResponse:
     payload, uploads = await _parse_request(request)
     schema_version = 2 if isinstance(payload, GenerationJobCreateV2) else 1
-    if schema_version == 2 and payload.model == "grok-video-1.5":
+    from video_capabilities import REVISION as EXPANDED_REVISION, validate as validate_expanded
+    expanded = schema_version == 2 and payload.contract_revision == EXPANDED_REVISION
+    if expanded:
+        try:
+            validate_expanded(payload)
+        except ValueError as exc:
+            raise HTTPException(422, detail={"code": "INVALID_VIDEO_CONTRACT", "message": str(exc)}) from exc
+    if schema_version == 2 and not expanded and payload.model == "grok-video-1.5":
         try:
             validate_grok_video_v2(payload)
         except ValueError as exc:
             raise HTTPException(422, detail={"code": "INVALID_VIDEO_CONTRACT", "message": str(exc)}) from exc
-    if schema_version == 2 and payload.model in SEEDANCE20_MODELS:
+    if schema_version == 2 and not expanded and payload.model in SEEDANCE20_MODELS:
         try:
             validate_seedance_video_v2(payload)
         except ValueError as exc:
             raise HTTPException(422, detail={"code": "INVALID_VIDEO_CONTRACT", "message": str(exc)}) from exc
     try:
         provider = provider_for_model(payload.model)
-        provider_route = route_for(payload.model, schema_version)
+        provider_route = route_for(payload.model, schema_version, payload.contract_revision if expanded else None)
     except ProviderAdapterError as exc:
         raise HTTPException(422, detail={"code": exc.code, "message": str(exc)}) from exc
     owner_hash, owner_context = _owner(user)
-    if payload.previous_job_id:
+    if payload.previous_job_id and expanded and payload.model == "seedance-2.5":
+        previous = await repository.get(payload.previous_job_id, owner_hash)
+        if not previous or previous.get("model") != payload.model or previous.get("status") != "completed" or not (previous.get("request_metadata") or {}).get("draft"):
+            raise HTTPException(422, detail={"code": "INVALID_PREVIOUS_JOB", "message": "Choose your completed Seedance 2.5 draft job."})
+        payload._previous_provider_id = previous["provider_request_id"]
+        payload._previous_metadata = previous.get("request_metadata") or {}
+    elif payload.previous_job_id:
         if provider != "vertex" or not is_gemini_omni_model(payload.model):
             raise HTTPException(
                 422,
@@ -354,7 +376,7 @@ async def create_generation_job(
         callback_token_hash=callback_hash,
         request_schema_version=schema_version,
         provider_route=provider_route,
-        adapter_revision=GROK15_ADAPTER_REVISION if schema_version == 2 and payload.model == "grok-video-1.5" else SEEDANCE20_ADAPTER_REVISION if schema_version == 2 and payload.model in SEEDANCE20_MODELS else ADAPTER_REVISIONS.get(provider_route, f"{provider_route}@2026-09-03"),
+        adapter_revision=f"{provider_route}@2026-09-24" if expanded else GROK15_ADAPTER_REVISION if schema_version == 2 and payload.model == "grok-video-1.5" else SEEDANCE20_ADAPTER_REVISION if schema_version == 2 and payload.model in SEEDANCE20_MODELS else ADAPTER_REVISIONS.get(provider_route, f"{provider_route}@2026-09-03"),
     )
     if conflict:
         raise HTTPException(
@@ -370,7 +392,10 @@ async def create_generation_job(
 
     from gateway_accounting import check_context, options_for, state
     try:
-        profile = registry().select(payload.model, "generation_job", options_for(payload.model_dump()))
+        billing_options = options_for(payload.model_dump())
+        if expanded and payload.profile_id == "generate.from_draft":
+            billing_options.update(resolution="1080p", input_video=bool(payload._previous_metadata.get("has_input_video")))
+        profile = registry().select(payload.model, "generation_job", billing_options)
         check_context(profile)
         await accounting.check_budgets(owner_context, payload.model)
         accounting_id = await accounting.begin(model=payload.model, route="generation_job",
@@ -480,6 +505,37 @@ async def _remote_content(url: str, incoming_range: Optional[str], maximum: int)
     return body(), response.status_code, response.headers.get("content-type", "video/mp4"), forwarded
 
 
+@router.get("/v1/generation-jobs/{job_id}/outputs/{output_index}")
+async def get_generation_job_output(job_id: str, output_index: int, request: Request,
+                                    user: UserAPIKeyAuth = Depends(user_api_key_auth)):
+    owner_hash, _ = _owner(user)
+    job = await repository.get(job_id, owner_hash)
+    if not job:
+        raise HTTPException(404, "Generation job not found")
+    outputs = (job.get("request_metadata") or {}).get("outputs", [])
+    if job["status"] != "completed" or not 0 <= output_index < len(outputs):
+        raise HTTPException(404, "Generation output not found")
+    output = outputs[output_index]
+    maximum = int(os.environ.get("GENERATION_MAX_CONTENT_BYTES", str(2 * 1024 * 1024 * 1024)))
+    try:
+        if output["url"].startswith(("gateway:", "gs://")):
+            source = await adapter_for_job(job).content({**job, "result_url": output["url"]})
+            return Response(content=source.content, media_type=source.mime_type)
+        body, status, mime, headers = await _remote_content(output["url"], request.headers.get("range"), maximum)
+    except ProviderAdapterError as exc:
+        if exc.code != "CONTENT_URL_EXPIRED":
+            raise HTTPException(502, detail={"code": exc.code, "message": str(exc)}) from exc
+        refreshed = await adapter_for_job(job).retrieve(job)
+        renewed = (refreshed.result_metadata or {}).get("outputs") or []
+        if refreshed.status != "completed" or output_index >= len(renewed):
+            raise HTTPException(502, detail={"code": exc.code, "message": str(exc)}) from exc
+        pool = await repository.pool()
+        await pool.execute("update gateway_generation_jobs set request_metadata=request_metadata || $2::jsonb where id=$1",
+                           job_id, json.dumps({"outputs": renewed}))
+        body, status, mime, headers = await _remote_content(renewed[output_index]["url"], request.headers.get("range"), maximum)
+    return StreamingResponse(body, status_code=status, media_type=mime, headers=headers)
+
+
 @router.get("/v1/generation-jobs/{job_id}/content")
 async def get_generation_job_content(
     job_id: str,
@@ -497,7 +553,8 @@ async def get_generation_job_content(
     except ProviderAdapterError as exc:
         raise HTTPException(502, detail={"code": exc.code, "message": str(exc)}) from exc
     maximum = int(os.environ.get("GENERATION_MAX_CONTENT_BYTES", str(2 * 1024 * 1024 * 1024)))
-    headers = {"Content-Disposition": f'attachment; filename="{job_id}.mp4"'}
+    extension = "mov" if source.mime_type == "video/quicktime" else "mp4"
+    headers = {"Content-Disposition": f'attachment; filename="{job_id}.{extension}"'}
     if source.url:
         try:
             body, status, mime, forwarded = await _remote_content(

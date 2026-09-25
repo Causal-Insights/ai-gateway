@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 import yaml
 
 from generation_job_adapters import ProviderAdapterError, route_for
+from video_capabilities import MODELS as VIDEO_MODELS, REVISION as VIDEO_REVISION
 
 START = "<!-- BEGIN GENERATED PROVIDER INVENTORY -->"
 END = "<!-- END GENERATED PROVIDER INVENTORY -->"
@@ -68,6 +69,8 @@ def render(config, registry, document):
                         raise
                     route = "unavailable"
                 durable.append(f"V{version}: {route}")
+            if alias in VIDEO_MODELS:
+                durable.append(f"V2 {code(VIDEO_REVISION)}: {code(route_for(alias, 2, VIDEO_REVISION))}")
         settings = [f"{key}: {code(params[key])}" for key in ("vertex_location", "reasoning_effort") if key in params]
         identity = code(upstream)
         if deployment != upstream:

@@ -221,8 +221,8 @@ class GenerationJobRepository:
                 consecutive_poll_errors=0, last_polled_at=now(),
                 next_poll_at=case when $12 then null else next_poll_at end,
                 completed_at=case when $12 then coalesce(completed_at,now()) else completed_at end,
-                request_metadata=case when $13::text is null then request_metadata
-                    else coalesce(request_metadata,'{}'::jsonb) || jsonb_build_object('served_model',$13::text) end,
+                request_metadata=(case when $13::text is null then coalesce(request_metadata,'{}'::jsonb)
+                    else coalesce(request_metadata,'{}'::jsonb) || jsonb_build_object('served_model',$13::text) end) || $14::jsonb,
                 updated_at=now()
             where id=$1 and status not in ('completed','failed','expired','cancelled')
             returning *
@@ -240,6 +240,7 @@ class GenerationJobRepository:
             status.cost_usd,
             terminal,
             status.served_model,
+            _json(status.result_metadata),
         )
         return _row(row) or (await self.get(job_id) or {})
 
