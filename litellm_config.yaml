@@ -1,9 +1,19 @@
+# Billing authority: pricing/registry.json. No unversioned price overrides belong here.
 model_list:
   # ── OpenAI ───────────────────────────────────────────────────────────────
   - model_name: gpt-latest
     litellm_params:
-      model: openai/gpt-5.5
+      model: openai/gpt-6-astra
       api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+    model_info:
+      mode: chat
+      max_input_tokens: 922000
+      max_output_tokens: 128000
+      supports_vision: true
+      supports_function_calling: true
+      supports_response_schema: true
 
   - model_name: gpt-5.5
     litellm_params:
@@ -13,6 +23,69 @@ model_list:
   - model_name: gpt-5.5-thinking
     litellm_params:
       model: openai/gpt-5.5
+      api_key: os.environ/OPENAI_API_KEY
+      reasoning_effort: high
+
+  # Adding Astra
+  - model_name: gpt-6-astra
+    litellm_params:
+      model: openai/gpt-6-astra
+      api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+    model_info:
+      mode: chat
+      max_input_tokens: 922000
+      max_output_tokens: 128000
+      supports_vision: true
+      supports_function_calling: true
+      supports_response_schema: true
+
+  # Flexible efforts; omission retains the provider default. Fixed presets remain below.
+  - model_name: gpt-5.6-sol
+    litellm_params:
+      model: openai/gpt-5.6-sol
+      api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+
+  - model_name: gpt-5.6-terra
+    litellm_params:
+      model: openai/gpt-5.6-terra
+      api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+
+  - model_name: gpt-5.6-luna
+    litellm_params:
+      model: openai/gpt-5.6-luna
+      api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+
+  # Fixed-effort GPT-5.6 aliases. gateway_request_policy.py prevents callers
+  # from overriding the effort encoded by the public alias.
+  - model_name: gpt-5.6-sol-medium
+    litellm_params:
+      model: openai/gpt-5.6-sol
+      api_key: os.environ/OPENAI_API_KEY
+      reasoning_effort: medium
+
+  - model_name: gpt-5.6-terra-medium
+    litellm_params:
+      model: openai/gpt-5.6-terra
+      api_key: os.environ/OPENAI_API_KEY
+      reasoning_effort: medium
+
+  - model_name: gpt-5.6-luna-medium
+    litellm_params:
+      model: openai/gpt-5.6-luna
+      api_key: os.environ/OPENAI_API_KEY
+      reasoning_effort: medium
+
+  - model_name: gpt-5.6-luna-high
+    litellm_params:
+      model: openai/gpt-5.6-luna
       api_key: os.environ/OPENAI_API_KEY
       reasoning_effort: high
 
@@ -41,6 +114,25 @@ model_list:
       model: openai/gpt-image-2
       api_key: os.environ/OPENAI_API_KEY
 
+  # Exact image snapshots; catalog presence does not establish project access.
+  - model_name: gpt-image-2.5-sunburst
+    litellm_params:
+      model: openai/gpt-image-2.5-sunburst-2026-09-08
+      api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+    model_info:
+      mode: image_generation
+
+  - model_name: gpt-image-2.5-flare
+    litellm_params:
+      model: openai/gpt-image-2.5-flare-2026-09-08
+      api_key: os.environ/OPENAI_API_KEY
+      num_retries: 0
+      max_retries: 0
+    model_info:
+      mode: image_generation
+
   # ── Gemini text ──────────────────────────────────────────────────────────
   - model_name: gemini-latest
     litellm_params:
@@ -66,16 +158,21 @@ model_list:
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
+  - model_name: gemini-3.8-flash
+    litellm_params:
+      model: vertex_ai/gemini-3.8-flash
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: global
+
+  - model_name: gemini-3.5-flash-lite
+    litellm_params:
+      model: vertex_ai/gemini-3.5-flash-lite
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: global
+
   - model_name: gemini-3-flash-preview
     litellm_params:
       model: vertex_ai/gemini-3-flash-preview
-      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
-
-  # Optional: keep only if you explicitly want the older preview endpoint
-  - model_name: gemini-3.1-flash-lite-preview
-    litellm_params:
-      model: vertex_ai/gemini-3.1-flash-lite-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
       vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
 
@@ -125,32 +222,30 @@ model_list:
 
   - model_name: gemini-omni-flash
     litellm_params:
-      model: vertex_ai/gemini-omni-flash-preview
+      model: vertex_ai/gemini-omni-1.1-flash-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+      vertex_location: global
 
-  # ── Imagen 4 ─────────────────────────────────────────────────────────────
-  - model_name: imagen-4.0
+  - model_name: gemini-omni-flash-preview
     litellm_params:
-      model: vertex_ai/imagen-4.0-generate-001
+      model: vertex_ai/gemini-omni-1.1-flash-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+      vertex_location: global
 
-  - model_name: imagen-4.0-fast
+  - model_name: gemini-omni-1.1-flash
     litellm_params:
-      model: vertex_ai/imagen-4.0-fast-generate-001
+      model: vertex_ai/gemini-omni-1.1-flash-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+      vertex_location: global
 
-  - model_name: imagen-4.0-ultra
+  - model_name: gemini-omni-1.1-flash-preview
     litellm_params:
-      model: vertex_ai/imagen-4.0-ultra-generate-001
+      model: vertex_ai/gemini-omni-1.1-flash-preview
       vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
-      vertex_location: os.environ/GOOGLE_CLOUD_LOCATION
+      vertex_location: global
 
   # ── xAI (custom: video) ─────────────────────────────────────────────────
-  # grok-imagine-video: output billed per generated second (480p $0.05/s, 720p $0.07/s).
-  # Handler prefers xAI usage.cost_in_usd_ticks from poll responses; rates below are fallback.
+  # The journal uses verified xAI usage.cost_in_usd_ticks; missing charges stay unknown.
   - model_name: grok-video
     litellm_params:
       model: grok-video/grok-imagine-video
@@ -158,19 +253,32 @@ model_list:
       timeout: 1260
     model_info:
       mode: image_generation
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      output_cost_per_second: 0.05
-      output_cost_per_second_720p: 0.07
-      output_cost_per_second_1080p: 0.07
+      supported_openai_params:
+        - duration
+        - seconds
+        - aspect_ratio
+        - resolution
+        - image
+        - image_url
+        - image_file_id
+        - video
+        - video_url
+        - video_file_id
+        - reference_images
+        - reference_image_urls
+        - referenceImageUrls
+        - reference_image_file_ids
+        - reference_audios
+        - reference_voice_ids
+        - operation
+        - output
+        - storage_options
+        - user
       metadata:
         grok_imagine_video_upstream: grok-imagine-video
-        grok_video_price_per_second_480p: 0.05
-        grok_video_price_per_second_720p: 0.07
         grok_video_reference_image_usd: 0.002
         grok_video_input_video_per_second_usd: 0.01
 
-  # grok-imagine-video-1.5-preview (alias grok-imagine-video-1.5-2026-05-30): 480p $0.08/s, 720p $0.14/s; input image $0.01.
   - model_name: grok-video-1.5
     litellm_params:
       model: grok-video/grok-imagine-video-1.5
@@ -178,14 +286,29 @@ model_list:
       timeout: 1260
     model_info:
       mode: image_generation
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      output_cost_per_second: 0.08
-      output_cost_per_second_720p: 0.14
+      supported_openai_params:
+        - duration
+        - seconds
+        - aspect_ratio
+        - resolution
+        - image
+        - image_url
+        - image_file_id
+        - video
+        - video_url
+        - video_file_id
+        - reference_images
+        - reference_image_urls
+        - referenceImageUrls
+        - reference_image_file_ids
+        - reference_audios
+        - reference_voice_ids
+        - operation
+        - output
+        - storage_options
+        - user
       metadata:
         grok_imagine_video_upstream: grok-imagine-video-1.5
-        grok_video_price_per_second_480p: 0.08
-        grok_video_price_per_second_720p: 0.14
         grok_video_reference_image_usd: 0.01
         grok_video_input_video_per_second_usd: 0.01
 
@@ -196,14 +319,29 @@ model_list:
       timeout: 1260
     model_info:
       mode: image_generation
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      output_cost_per_second: 0.08
-      output_cost_per_second_720p: 0.14
+      supported_openai_params:
+        - duration
+        - seconds
+        - aspect_ratio
+        - resolution
+        - image
+        - image_url
+        - image_file_id
+        - video
+        - video_url
+        - video_file_id
+        - reference_images
+        - reference_image_urls
+        - referenceImageUrls
+        - reference_image_file_ids
+        - reference_audios
+        - reference_voice_ids
+        - operation
+        - output
+        - storage_options
+        - user
       metadata:
         grok_imagine_video_upstream: grok-imagine-video-1.5-2026-05-30
-        grok_video_price_per_second_480p: 0.08
-        grok_video_price_per_second_720p: 0.14
         grok_video_reference_image_usd: 0.01
         grok_video_input_video_per_second_usd: 0.01
 
@@ -214,12 +352,24 @@ model_list:
       api_key: os.environ/GROK_API_KEY
     model_info:
       mode: image_generation
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      # Approx xAI Grok Imagine Image Quality combined 1K edit/reference cost:
-      # $0.01 input image + $0.05 output image. Text/thinking pricing is not published separately.
-      # Text-only generation is $0.05/image; 2K output with one input image is $0.08/image.
-      input_cost_per_image: 0.06
+      supported_openai_params:
+        - image
+        - images
+        - image_url
+        - image_urls
+        - image_file_id
+        - image_file_ids
+        - n
+        - size
+        - resolution
+        - aspect_ratio
+        - response_format
+        - output_format
+        - storage_options
+        - quality
+        - style
+        - background
+        - user
 
   - model_name: grok-imagine-image-quality
     litellm_params:
@@ -227,12 +377,55 @@ model_list:
       api_key: os.environ/GROK_API_KEY
     model_info:
       mode: image_generation
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      # Approx xAI Grok Imagine Image Quality combined 1K edit/reference cost:
-      # $0.01 input image + $0.05 output image. Text/thinking pricing is not published separately.
-      # Text-only generation is $0.05/image; 2K output with one input image is $0.08/image.
-      input_cost_per_image: 0.06
+      supported_openai_params:
+        - image
+        - images
+        - image_url
+        - image_urls
+        - image_file_id
+        - image_file_ids
+        - n
+        - size
+        - resolution
+        - aspect_ratio
+        - response_format
+        - output_format
+        - storage_options
+        - quality
+        - style
+        - background
+        - user
+
+  - model_name: grok-imagine-image-2.0
+    litellm_params:
+      model: grok-image/grok-imagine-image-2.0
+      api_key: os.environ/GROK_API_KEY
+    model_info:
+      mode: image_generation
+      supported_openai_params:
+        - image
+        - images
+        - image_url
+        - image_urls
+        - image_file_id
+        - image_file_ids
+        - n
+        - size
+        - resolution
+        - aspect_ratio
+        - response_format
+        - output_format
+        - storage_options
+        - quality
+        - style
+        - background
+        - user
+        # Copies populated by gateway_request_policy.py because LiteLLM consumes
+        # the corresponding standard image fields before custom-provider dispatch.
+        - xai_output_count
+        - xai_render_quality
+        - xai_response_format
+      # resolution and quality and prefers exact xAI usage when it is returned.
 
   # ── Seedance 2.0 (BytePlus ARK) ───────────────────────────────────────────
   # The custom handler submits an ARK task, then waits up to SEEDANCE_SYNC_WAIT_S
@@ -265,14 +458,6 @@ model_list:
         - resolution
         - ratio
         - duration
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      # BytePlus ARK rate for Seedance 2.0 (480p/720p, no input video):
-      # $7.00 per 1M output tokens. tokens ≈ width × height × fps × seconds / 1024.
-      # The handler computes the actual response cost from the upstream usage block.
-      metadata:
-        seedance_price_per_mtok: 7.00
-        seedance_price_per_mtok_with_input_video: 4.30
 
   - model_name: seedance-2.0-fast
     litellm_params:
@@ -297,13 +482,19 @@ model_list:
         - resolution
         - ratio
         - duration
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      # BytePlus ARK rate for Seedance 2.0 Fast (480p/720p, no input video):
-      # $5.60 per 1M output tokens. Handler computes per-response cost.
+
+  # Catalog/discovery alias only for the retained Images surface. Request
+  # policy rejects legacy submission; Magic Lens uses /v1/generation-jobs.
+  - model_name: seedance-2.5
+    litellm_params:
+      model: seedance/dreamina-seedance-2-5-260628
+      api_key: os.environ/BYTEDANCE_API_KEY
+      timeout: 1800
+    model_info:
+      mode: image_generation
+      supported_openai_params: []
       metadata:
-        seedance_price_per_mtok: 5.60
-        seedance_price_per_mtok_with_input_video: 3.30
+        durable_jobs_only: true
 
   # ── Seedream 5 (BytePlus ModelArk) ───────────────────────────────────────
   # Sync POST /images/generations — handler sets x-litellm-response-cost from
@@ -333,12 +524,13 @@ model_list:
         - sequential_image_generation_options
         - tools
         - optimize_prompt_options
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      input_cost_per_image: 0.035
-      metadata:
-        seedream_price_per_image: 0.035
-        seedream_web_search_price_per_request: 0.0006
+        # Private copies populated by gateway_request_policy.py because
+        # LiteLLM consumes standard image fields before custom dispatch.
+        - seedream_size
+        - seedream_output_count
+        - seedream_response_format
+        - seedream_output_format
+        - seedream_stream
 
   - model_name: seedream-5.0-lite
     litellm_params:
@@ -364,12 +556,38 @@ model_list:
         - sequential_image_generation_options
         - tools
         - optimize_prompt_options
-      input_cost_per_token: 0
-      output_cost_per_token: 0
-      input_cost_per_image: 0.035
+        - seedream_size
+        - seedream_output_count
+        - seedream_response_format
+        - seedream_output_format
+        - seedream_stream
+
+  - model_name: seedream-5.0-pro
+    litellm_params:
+      model: seedream/dola-seedream-5-0-pro-260628
+      api_key: os.environ/BYTEDANCE_API_KEY
+      timeout: 300
+    model_info:
+      mode: image_generation
+      supported_openai_params:
+        - image
+        - images
+        - image_urls
+        - reference_image_urls
+        - referenceImageUrls
+        - size
+        - n
+        - response_format
+        - output_format
+        - watermark
+        - optimize_prompt_options
+        - seedream_size
+        - seedream_output_count
+        - seedream_response_format
+        - seedream_output_format
+        - seedream_stream
       metadata:
-        seedream_price_per_image: 0.035
-        seedream_web_search_price_per_request: 0.0006
+        seedream_additional_input_price: 0.003
 
   # ── xAI ──────────────────────────────────────────────────────────────────
   - model_name: grok-latest
@@ -425,12 +643,25 @@ model_list:
         - music_length_ms
         - force_instrumental
 
+  - model_name: elevenlabs-music-2.5
+    litellm_params:
+      model: audio-studio/elevenlabs-music-2.5
+      timeout: 300
+    model_info:
+      mode: image_generation
+      supported_openai_params:
+        - prompt
+        - music_length_ms
+        - force_instrumental
+
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   database_url: os.environ/DATABASE_URL
   # disable_health_check: true
 
 litellm_settings:
+  # gateway_server installs the awaited accounting integration exactly once.
+  # Listing it here as well duplicates request hooks during proxy startup.
   drop_params: true
   # Upper bound on a single proxy request; Seedance submit+poll is bounded by
   # SEEDANCE_SYNC_WAIT_S in the handler (default 240s) to avoid hitting 300s

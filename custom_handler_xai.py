@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 import mimetypes
 import os
 import time
@@ -21,10 +22,15 @@ from custom_handler_common import normalize_error
 from legacy_usage import log_legacy_video_usage
 
 
+logger = logging.getLogger("ai_gateway.xai")
+
+
 class GrokVideoException(Exception):
     """Raised when xAI Grok video generation submission or polling fails."""
 
-    pass
+    def __init__(self, message, *, body=None):
+        super().__init__(message)
+        self.body = body
 
 
 class GrokImageException(Exception):
@@ -42,8 +48,8 @@ class GrokVideoLLM(CustomLLM):
       - https://api.x.ai/v1/videos/edits
     Auth: GROK_API_KEY
 
-    Billing: prefers ``usage.cost_in_usd_ticks`` from xAI poll responses; falls back to
-    duration × per-second rate by resolution (see ``litellm_config.yaml`` / env overrides).
+    Billing: retain explicit ``usage.cost_in_usd_ticks`` only. Missing charges are
+    unknown. The gateway journal owns pricing and durable accounting.
     """
 
     XAI_BASE = "https://api.x.ai/v1"
@@ -55,14 +61,6 @@ class GrokVideoLLM(CustomLLM):
 
     # xAI: 1 USD = 10_000_000_000 ticks (see GET /v1/videos/{request_id} usage)
     USD_TICKS_PER_DOLLAR = 10_000_000_000
-    DEFAULT_PRICE_PER_SECOND_480P = 0.05
-    DEFAULT_PRICE_PER_SECOND_720P = 0.07
-    DEFAULT_PRICE_PER_SECOND_1080P = 0.07
-    DEFAULT_PRICE_PER_REFERENCE_IMAGE = 0.002
-    DEFAULT_PRICE_PER_SECOND_480P_15 = 0.08
-    DEFAULT_PRICE_PER_SECOND_720P_15 = 0.14
-    DEFAULT_PRICE_PER_SECOND_1080P_15 = 0.14
-    DEFAULT_PRICE_PER_REFERENCE_IMAGE_15 = 0.01
 
     @staticmethod
     def _strip_provider_prefix(model: str) -> str:
@@ -80,6 +78,10 @@ class GrokVideoLLM(CustomLLM):
     @staticmethod
     def _is_video_15_model(upstream_model: str) -> bool:
         return "1.5" in (upstream_model or "").lower()
+
+    @staticmethod
+    def _env_enabled(name: str) -> bool:
+        return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
     @staticmethod
     def _coerce_int(name: str, value: Any) -> int:
@@ -151,34 +153,7 @@ class GrokVideoLLM(CustomLLM):
         except (TypeError, ValueError):
             return None
 
-    def _price_per_second(self, resolution: Optional[str], upstream_model: str) -> float:
-        res = (resolution or "480p").strip().lower()
-        if self._is_video_15_model(upstream_model):
-            if res == "720p":
-                return self._env_float(
-                    "GROK_VIDEO_15_PRICE_PER_SECOND_720P", self.DEFAULT_PRICE_PER_SECOND_720P_15
-                )
-            if res == "1080p":
-                return self._env_float(
-                    "GROK_VIDEO_15_PRICE_PER_SECOND_1080P", self.DEFAULT_PRICE_PER_SECOND_1080P_15
-                )
-            return self._env_float(
-                "GROK_VIDEO_15_PRICE_PER_SECOND_480P", self.DEFAULT_PRICE_PER_SECOND_480P_15
-            )
-        if res == "720p":
-            return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_720P", self.DEFAULT_PRICE_PER_SECOND_720P)
-        if res == "1080p":
-            return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_1080P", self.DEFAULT_PRICE_PER_SECOND_1080P)
-        return self._env_float("GROK_VIDEO_PRICE_PER_SECOND_480P", self.DEFAULT_PRICE_PER_SECOND_480P)
 
-    def _reference_image_price(self, upstream_model: str) -> float:
-        if self._is_video_15_model(upstream_model):
-            return self._env_float(
-                "GROK_VIDEO_15_PRICE_PER_REFERENCE_IMAGE", self.DEFAULT_PRICE_PER_REFERENCE_IMAGE_15
-            )
-        return self._env_float(
-            "GROK_VIDEO_PRICE_PER_REFERENCE_IMAGE", self.DEFAULT_PRICE_PER_REFERENCE_IMAGE
-        )
 
     def _estimate_cost(
         self,
@@ -187,17 +162,11 @@ class GrokVideoLLM(CustomLLM):
         resolution: Optional[str],
         reference_image_count: int,
         has_image_input: bool,
+        has_video_input: bool,
         upstream_model: str,
     ) -> float:
-        """Fallback when xAI does not return usage.cost_in_usd_ticks."""
-        seconds = max(0, int(duration_seconds))
-        cost = seconds * self._price_per_second(resolution, upstream_model)
-        ref_price = self._reference_image_price(upstream_model)
-        if reference_image_count > 0:
-            cost += reference_image_count * ref_price
-        elif has_image_input:
-            cost += ref_price
-        return cost
+        """Deprecated: unverified quantity/rate guesses cannot be billed."""
+        return None
 
     @staticmethod
     def _video_response(video_url: str, *, response_cost: Optional[float] = None) -> ImageResponse:
@@ -218,28 +187,10 @@ class GrokVideoLLM(CustomLLM):
         resolution: Optional[str],
         reference_image_count: int,
         has_image_input: bool,
+        has_video_input: bool,
         upstream_model: str,
     ) -> Optional[float]:
-        usage_cost = self._cost_from_usd_ticks(status_data.get("usage"))
-        if usage_cost is not None:
-            return usage_cost
-
-        video_meta = status_data.get("video") or {}
-        billed_seconds = video_meta.get("duration")
-        if billed_seconds is None:
-            billed_seconds = requested_duration if requested_duration is not None else 8
-        try:
-            billed_seconds = int(billed_seconds)
-        except (TypeError, ValueError):
-            billed_seconds = requested_duration or 8
-
-        return self._estimate_cost(
-            duration_seconds=billed_seconds,
-            resolution=resolution,
-            reference_image_count=reference_image_count,
-            has_image_input=has_image_input,
-            upstream_model=upstream_model,
-        )
+        return self._cost_from_usd_ticks(status_data.get("usage"))
 
     async def aimage_generation(
         self,
@@ -255,6 +206,15 @@ class GrokVideoLLM(CustomLLM):
         **kwargs: Any,
     ) -> ImageResponse:
         optional_params = dict(optional_params or {})
+
+        logger.warning(
+            "xai.image.optional_params model=%s keys=%s quality=%s response_format=%s resolution=%s",
+            model,
+            sorted(optional_params),
+            optional_params.get("quality"),
+            optional_params.get("response_format"),
+            optional_params.get("resolution"),
+        )
         log_legacy_video_usage(provider="xai", model=model, operation="submit_and_poll")
         api_key = os.environ.get("GROK_API_KEY")
         if not api_key:
@@ -288,6 +248,10 @@ class GrokVideoLLM(CustomLLM):
             else:
                 optional_params.pop("video_file_id")
 
+        raw_operation = str(optional_params.pop("operation", "auto") or "auto").strip().lower()
+        if raw_operation not in {"auto", "generate", "edit", "extend"}:
+            raise ValueError("operation must be auto, generate, edit, or extend")
+
         raw_duration = optional_params.pop("duration", None)
         raw_seconds = optional_params.pop("seconds", None)
         duration = raw_duration if raw_duration is not None else raw_seconds
@@ -299,19 +263,63 @@ class GrokVideoLLM(CustomLLM):
 
         raw_reference_images = optional_params.pop("reference_images", None)
         raw_reference_image_urls = optional_params.pop("reference_image_urls", None)
+        raw_reference_image_file_ids = optional_params.pop("reference_image_file_ids", None)
         if raw_reference_images is None and raw_reference_image_urls is not None:
             raw_reference_images = raw_reference_image_urls
+        if raw_reference_images is None and raw_reference_image_file_ids is not None:
+            if not isinstance(raw_reference_image_file_ids, list):
+                raise ValueError("reference_image_file_ids must be a list")
+            raw_reference_images = [{"file_id": item} for item in raw_reference_image_file_ids]
         reference_images = self._normalize_reference_images(raw_reference_images)
 
+        raw_reference_audios = optional_params.pop("reference_audios", None)
+        raw_voice_ids = optional_params.pop("reference_voice_ids", None)
+        if raw_reference_audios is not None and raw_voice_ids is not None:
+            raise ValueError("use reference_audios or reference_voice_ids, not both")
+        if raw_voice_ids is not None:
+            if not isinstance(raw_voice_ids, list):
+                raise ValueError("reference_voice_ids must be a list")
+            raw_reference_audios = [{"voice_id": item} for item in raw_voice_ids]
+        reference_audios: list[dict[str, str]] = []
+        if raw_reference_audios is not None:
+            if not isinstance(raw_reference_audios, list) or not 1 <= len(raw_reference_audios) <= 3:
+                raise ValueError("reference_audios supports one to three preset voices")
+            for index, audio in enumerate(raw_reference_audios):
+                voice_id = audio.get("voice_id") if isinstance(audio, dict) else audio
+                voice_id = str(voice_id or "").strip().lower()
+                if not voice_id:
+                    raise ValueError(f"reference_audios[{index}] requires voice_id")
+                reference_audios.append({"voice_id": voice_id})
+
         prompt_text = (prompt or "").strip()
-        endpoint = "/videos/edits" if video_input is not None else "/videos/generations"
+        if self._is_video_15_model(upstream_model) and video_input is not None:
+            if not self._env_enabled("GROK_VIDEO_15_VIDEO_OPERATIONS_VERIFIED"):
+                raise ValueError(
+                    "grok-imagine-video-1.5 editing and extension are disabled until the exact "
+                    "1.5 endpoint passes the paid staging contract probes; use grok-imagine-video"
+                )
+        if raw_operation == "generate" and video_input is not None:
+            raise ValueError("operation=generate cannot include a video")
+        if raw_operation in {"edit", "extend"} and video_input is None:
+            raise ValueError(f"operation={raw_operation} requires a video")
+        if reference_audios and not self._is_video_15_model(upstream_model):
+            raise ValueError("preset voice references require grok-imagine-video-1.5")
+        operation = raw_operation if raw_operation != "auto" else "edit" if video_input is not None else "generate"
+        endpoint = (
+            "/videos/extensions"
+            if operation == "extend"
+            else "/videos/edits"
+            if video_input is not None
+            else "/videos/generations"
+        )
         resolution = optional_params.get("resolution")
         reference_image_count = len(reference_images)
         has_image_input = image_input is not None
+        has_video_input = video_input is not None
 
-        if endpoint == "/videos/edits":
+        if video_input is not None:
             if not prompt_text:
-                raise ValueError("prompt is required for /v1/videos/edits")
+                raise ValueError(f"prompt is required for {endpoint}")
             if image_input is not None:
                 raise ValueError("image is not supported for /v1/videos/edits")
             if reference_images:
@@ -322,6 +330,14 @@ class GrokVideoLLM(CustomLLM):
                 "prompt": prompt_text,
                 "video": video_obj,
             }
+            if operation == "extend" and duration is not None:
+                if not 2 <= duration <= 10:
+                    raise ValueError("extension duration must be between 2 and 10 seconds")
+                payload["duration"] = duration
+            elif operation != "extend" and duration is not None:
+                raise ValueError("video editing does not accept a custom duration")
+            if optional_params.get("aspect_ratio") is not None or optional_params.get("resolution") is not None:
+                raise ValueError("video editing and extension preserve the source format")
             for key in ("output", "storage_options", "user"):
                 if key in optional_params:
                     payload[key] = optional_params.pop(key)
@@ -333,10 +349,8 @@ class GrokVideoLLM(CustomLLM):
                 raise ValueError("prompt is required when using reference_images")
             if duration is not None and not (1 <= duration <= 15):
                 raise ValueError("duration must be between 1 and 15 seconds")
-            if reference_images and duration is not None and duration > self.MAX_REFERENCE_DURATION:
-                raise ValueError(
-                    f"duration must be <= {self.MAX_REFERENCE_DURATION} when using reference_images"
-                )
+            if image_obj is not None and reference_images:
+                raise ValueError("image and reference_images cannot be combined in one xAI request")
             payload = {
                 "model": upstream_model,
             }
@@ -346,11 +360,18 @@ class GrokVideoLLM(CustomLLM):
                 payload["image"] = image_obj
             if reference_images:
                 payload["reference_images"] = reference_images
+            if reference_audios:
+                payload["reference_audios"] = reference_audios
+                if "<AUDIO_" not in prompt_text.upper():
+                    voices = ", ".join(f"<AUDIO_{index}>" for index in range(len(reference_audios)))
+                    payload["prompt"] = f"{payload['prompt'].rstrip()}\n\nPreset voices in order: {voices}."
             if duration is not None:
                 payload["duration"] = duration
             for key in ("aspect_ratio", "resolution", "output", "storage_options", "user"):
                 if key in optional_params:
                     payload[key] = optional_params.pop(key)
+            if reference_images and str(payload.get("resolution") or "").lower() == "1080p":
+                raise ValueError("reference-to-video is capped at 720p")
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -375,6 +396,12 @@ class GrokVideoLLM(CustomLLM):
             data = response.json()
             request_id = data.get("request_id")
 
+            returned_model = data.get("model")
+            if returned_model and returned_model != upstream_model:
+                raise GrokVideoException(
+                    f"xAI returned model {returned_model!r}; expected {upstream_model!r}", body=data,
+                )
+
             direct_video_url = (data.get("video") or {}).get("url")
             if direct_video_url:
                 cost = self._resolve_response_cost(
@@ -383,9 +410,13 @@ class GrokVideoLLM(CustomLLM):
                     resolution=resolution,
                     reference_image_count=reference_image_count,
                     has_image_input=has_image_input,
+                    has_video_input=has_video_input,
                     upstream_model=upstream_model,
                 )
-                return self._video_response(direct_video_url, response_cost=cost)
+                result = self._video_response(direct_video_url, response_cost=cost)
+                result._hidden_params.update(gateway_usage=data.get("usage") or {},
+                    gateway_provider_request_id=request_id, gateway_served_model=returned_model or upstream_model)
+                return result
 
             if not request_id:
                 raise GrokVideoException(normalize_error(data.get("error", {}).get("message", data)))
@@ -409,28 +440,38 @@ class GrokVideoLLM(CustomLLM):
                 status_data = status_response.json()
                 status = status_data.get("status")
 
+                returned_model = status_data.get("model")
+                if returned_model and returned_model != upstream_model:
+                    raise GrokVideoException(
+                        f"xAI returned model {returned_model!r}; expected {upstream_model!r}", body=status_data,
+                    )
+
                 if status == "done":
                     video_url = (status_data.get("video") or {}).get("url")
                     if not video_url:
-                        raise GrokVideoException("missing video url in completed Grok request")
+                        raise GrokVideoException("missing video url in completed Grok request", body=status_data)
                     cost = self._resolve_response_cost(
                         status_data=status_data,
                         requested_duration=duration,
                         resolution=resolution,
                         reference_image_count=reference_image_count,
                         has_image_input=has_image_input,
+                        has_video_input=has_video_input,
                         upstream_model=upstream_model,
                     )
-                    return self._video_response(video_url, response_cost=cost)
+                    response = self._video_response(video_url, response_cost=cost)
+                    response._hidden_params.update(gateway_usage=status_data.get("usage") or {},
+                        gateway_provider_request_id=request_id, gateway_served_model=returned_model or upstream_model)
+                    return response
                 if status in {"failed", "expired"}:
                     err = status_data.get("error") or {}
                     err_code = err.get("code")
                     err_msg = normalize_error(err.get("message", status))
                     if err_code:
                         raise GrokVideoException(
-                            f"Grok request {request_id} failed ({err_code}): {err_msg}"
+                            f"Grok request {request_id} failed ({err_code}): {err_msg}", body=status_data,
                         )
-                    raise GrokVideoException(f"Grok request {request_id} failed: {err_msg}")
+                    raise GrokVideoException(f"Grok request {request_id} failed: {err_msg}", body=status_data)
 
         raise GrokVideoException(f"Grok request {request_id} timed out after {self.POLL_TIMEOUT}s")
 
@@ -453,6 +494,20 @@ class GrokImageLLM(CustomLLM):
 
     XAI_BASE = "https://api.x.ai/v1"
     DEFAULT_XAI_MODEL = "grok-imagine-image-quality"
+    USD_TICKS_PER_DOLLAR = 10_000_000_000
+    IMAGE_2_MODEL = "grok-imagine-image-2.0"
+    MAX_BASE64_IMAGE_BYTES = 25 * 1024 * 1024
+
+    @staticmethod
+    def _strip_provider_prefix(model: str) -> str:
+        value = (model or "").strip()
+        return value.removeprefix("grok-image/").strip()
+
+    def _resolve_upstream_model(self, model: str) -> str:
+        stripped = self._strip_provider_prefix(model)
+        if stripped and stripped != "grok-image":
+            return stripped
+        return os.environ.get("GROK_IMAGE_MODEL") or self.DEFAULT_XAI_MODEL
 
     @staticmethod
     def _unwrap_openai_file_tuple(value: Any) -> tuple[Any, Optional[str]]:
@@ -505,11 +560,6 @@ class GrokImageLLM(CustomLLM):
         """
         if value is None:
             raise ValueError(f"{name} is None")
-
-        if isinstance(value, list):
-            if len(value) != 1:
-                raise ValueError(f"{name}: expected a single image, got {len(value)}")
-            return cls._normalize_image_object(name, value[0])
 
         value, tuple_name = cls._unwrap_openai_file_tuple(value)
         filename_hint = tuple_name
@@ -569,25 +619,137 @@ class GrokImageLLM(CustomLLM):
             f"OpenAI (filename, file) tuple, or dict with url/file_id"
         )
 
+    @classmethod
+    def _normalize_image_inputs(cls, name: str, value: Any, *, max_images: int = 3) -> list[dict]:
+        values = value if isinstance(value, list) else [value]
+        if not 1 <= len(values) <= max_images:
+            raise ValueError(f"{name} supports one to {max_images} images")
+        return [cls._normalize_image_object(f"{name}[{index}]", item) for index, item in enumerate(values)]
+
+    @classmethod
+    def _is_image_2_model(cls, model: Any) -> bool:
+        return str(model or "").strip().lower() == cls.IMAGE_2_MODEL
+
+    @classmethod
+    def _max_input_images(cls, model: Any) -> int:
+        return 5 if cls._is_image_2_model(model) else 3
+
+
     @staticmethod
-    def _image_response_from_http_body(body: dict) -> ImageResponse:
+    def _requests_base64(request_payload: dict[str, Any]) -> bool:
+        response_format = str(request_payload.get("response_format") or "").strip().lower()
+        output_format = str(request_payload.get("output_format") or "").strip().lower()
+        return response_format in {"b64_json", "base64"} or output_format in {"b64_json", "base64"}
+
+    @classmethod
+    def _base64_item(cls, item: dict[str, Any], content: bytes, content_type: str) -> None:
+        if len(content) > cls.MAX_BASE64_IMAGE_BYTES:
+            raise GrokImageException("xAI image output exceeded the gateway base64 size limit")
+        if not content_type.lower().startswith("image/"):
+            raise GrokImageException("xAI image output URL did not return image content")
+        item["b64_json"] = base64.standard_b64encode(content).decode("ascii")
+        item["mime_type"] = content_type.split(";", 1)[0].strip().lower()
+        item.pop("url", None)
+
+    @classmethod
+    async def _materialize_requested_base64_async(
+        cls,
+        body: dict[str, Any],
+        request_payload: dict[str, Any],
+        http: httpx.AsyncClient,
+    ) -> dict[str, Any]:
+        if not cls._requests_base64(request_payload):
+            return body
+        for raw_item in body.get("data") or []:
+            item = raw_item if isinstance(raw_item, dict) else {}
+            if item.get("b64_json") or not item.get("url"):
+                continue
+            response = await http.get(str(item["url"]))
+            response.raise_for_status()
+            cls._base64_item(item, response.content, response.headers.get("content-type", ""))
+        return body
+
+    @classmethod
+    def _materialize_requested_base64_sync(
+        cls,
+        body: dict[str, Any],
+        request_payload: dict[str, Any],
+        http: httpx.Client,
+    ) -> dict[str, Any]:
+        if not cls._requests_base64(request_payload):
+            return body
+        for raw_item in body.get("data") or []:
+            item = raw_item if isinstance(raw_item, dict) else {}
+            if item.get("b64_json") or not item.get("url"):
+                continue
+            response = http.get(str(item["url"]))
+            response.raise_for_status()
+            cls._base64_item(item, response.content, response.headers.get("content-type", ""))
+        return body
+
+    @classmethod
+    def _image_response_from_http_body(cls, body: dict, request_payload: dict[str, Any]) -> ImageResponse:
         data = body.get("data") or []
         if not data:
             raise GrokImageException(normalize_error(body.get("error", {}).get("message", body)))
 
         out = []
+        passthrough: list[dict[str, Any]] = []
         for item in data:
-            url = (item or {}).get("url")
-            if url:
-                out.append(ImageObject(url=url))
+            item = item or {}
+            values = {
+                key: item.get(key)
+                for key in ("url", "b64_json", "revised_prompt")
+                if item.get(key) is not None
+            }
+            if values.get("url") or values.get("b64_json"):
+                try:
+                    image = ImageObject(**values)
+                except (TypeError, ValueError):
+                    image = ImageObject(url=values.get("url"))
+                for key in ("b64_json", "revised_prompt", "mime_type", "file_output", "public_url"):
+                    if item.get(key) is not None:
+                        try:
+                            setattr(image, key, item[key])
+                        except (AttributeError, TypeError, ValueError):
+                            pass
+                out.append(image)
+                passthrough.append(
+                    {
+                        key: item[key]
+                        for key in ("mime_type", "file_output", "public_url")
+                        if key in item
+                    }
+                )
 
         if not out:
             raise GrokImageException("xAI image response did not include any output url")
 
-        return ImageResponse(created=int(time.time()), data=out)
+        response = ImageResponse(created=int(time.time()), data=out)
+        hidden = getattr(response, "_hidden_params", None)
+        if not isinstance(hidden, dict):
+            hidden = {}
+            response._hidden_params = hidden
+        usage = body.get("usage") if isinstance(body.get("usage"), dict) else None
+        cost = None
+        if usage and usage.get("cost_in_usd_ticks") is not None:
+            try:
+                cost = int(usage["cost_in_usd_ticks"]) / cls.USD_TICKS_PER_DOLLAR
+            except (TypeError, ValueError):
+                pass
+        if cost is not None:
+            hidden["response_cost"] = float(cost)
+        hidden["gateway_served_model"] = body.get("model") or request_payload.get("model")
+        if usage:
+            hidden["xai_usage"] = usage
+            hidden["gateway_usage"] = usage
+        if any(passthrough):
+            hidden["xai_image_outputs"] = passthrough
+        return response
 
     def _prepare_xai_image_request_parts(
         self,
+        model: str,
         prompt: str,
         optional_params: dict[str, Any],
         *,
@@ -605,9 +767,18 @@ class GrokImageLLM(CustomLLM):
         upstream_model = (
             optional_params.pop("xai_model", None)
             or optional_params.pop("upstream_model", None)
-            or os.environ.get("GROK_IMAGE_MODEL")
-            or self.DEFAULT_XAI_MODEL
+            or self._resolve_upstream_model(model)
         )
+
+        # LiteLLM consumes these standard OpenAI image fields before invoking a
+        # custom provider. The request-policy middleware duplicates them under
+        # private names so the xAI transport can still honor the client request.
+        if "xai_output_count" in optional_params:
+            optional_params["n"] = optional_params.pop("xai_output_count")
+        if "xai_render_quality" in optional_params:
+            optional_params["quality"] = optional_params.pop("xai_render_quality")
+        if "xai_response_format" in optional_params:
+            optional_params["response_format"] = optional_params.pop("xai_response_format")
 
         if "image_url" in optional_params and "image" not in optional_params:
             optional_params["image"] = optional_params.pop("image_url")
@@ -615,18 +786,33 @@ class GrokImageLLM(CustomLLM):
         if "image_file_id" in optional_params and "image" not in optional_params:
             optional_params["image"] = {"file_id": optional_params.pop("image_file_id")}
 
+        if "image_urls" in optional_params and "images" not in optional_params:
+            optional_params["images"] = optional_params.pop("image_urls")
+        if "image_file_ids" in optional_params and "images" not in optional_params:
+            raw_ids = optional_params.pop("image_file_ids")
+            if not isinstance(raw_ids, list):
+                raise ValueError("image_file_ids must be a list")
+            optional_params["images"] = [{"file_id": item} for item in raw_ids]
+
         prompt_text = (prompt or "").strip()
         image_input = optional_params.pop("image", None)
-        image_obj = (
-            self._normalize_image_object("image", image_input)
-            if image_input is not None
-            else None
+        images_input = optional_params.pop("images", None)
+        if image_input is not None and images_input is not None:
+            raise ValueError("use image or images, not both")
+        normalized_images = (
+            self._normalize_image_inputs(
+                "images",
+                images_input if images_input is not None else image_input,
+                max_images=self._max_input_images(upstream_model),
+            )
+            if images_input is not None or image_input is not None
+            else []
         )
 
-        if require_image and image_obj is None:
+        if require_image and not normalized_images:
             raise ValueError("image is required for /v1/images/edits")
 
-        endpoint = "/images/edits" if image_obj is not None else "/images/generations"
+        endpoint = "/images/edits" if normalized_images else "/images/generations"
 
         if not prompt_text:
             if endpoint == "/images/edits":
@@ -637,8 +823,10 @@ class GrokImageLLM(CustomLLM):
             "model": upstream_model,
             "prompt": prompt_text,
         }
-        if image_obj is not None:
-            payload["image"] = image_obj
+        if len(normalized_images) == 1:
+            payload["image"] = normalized_images[0]
+        elif normalized_images:
+            payload["images"] = normalized_images
 
         for key in (
             "n",
@@ -647,19 +835,57 @@ class GrokImageLLM(CustomLLM):
             "response_format",
             "style",
             "background",
+            "aspect_ratio",
+            "resolution",
+            "output_format",
+            "storage_options",
             "user",
         ):
             if key in optional_params:
                 payload[key] = optional_params.pop(key)
+        # xAI's image-quality API accepts only the lowercase enum values
+        # ``1k`` and ``2k``.  Keep accepting either casing at the gateway so
+        # existing OpenAI-style clients do not need to change.
+        size = str(payload.get("size") or "").strip().lower()
+        if size in {"1k", "2k"}:
+            payload.pop("size")
+            payload["resolution"] = size
+        elif self._is_image_2_model(upstream_model) and size:
+            # Request-policy middleware normally translates OpenAI-style sizes
+            # before LiteLLM dispatch. Keep the custom transport safe for direct
+            # callers too: xAI ignores OpenAI dimension strings instead of
+            # rejecting them, which can otherwise produce the wrong aspect ratio.
+            raise ValueError(
+                "size must be normalized to xAI aspect_ratio and resolution for "
+                "grok-imagine-image-2.0"
+            )
+        resolution = str(payload.get("resolution") or "").strip().lower()
+        if resolution in {"1k", "2k"}:
+            payload["resolution"] = resolution
+        if self._is_image_2_model(upstream_model):
+            quality = str(payload.get("quality") or "medium").strip().lower()
+            if quality not in {"low", "medium", "auto"}:
+                raise ValueError("quality must be low, medium or auto for grok-imagine-image-2.0")
+            payload["quality"] = quality
 
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
+        logger.warning(
+            "xai.image.request model=%s endpoint=%s resolution=%s quality=%s response_format=%s input_count=%s",
+            upstream_model,
+            endpoint,
+            payload.get("resolution"),
+            payload.get("quality"),
+            payload.get("response_format"),
+            len(normalized_images),
+        )
         return f"{self.XAI_BASE}{endpoint}", payload, headers
 
     async def _image_request(
         self,
+        model: str,
         prompt: str,
         optional_params: dict,
         timeout: Optional[Union[float, httpx.Timeout]],
@@ -667,7 +893,7 @@ class GrokImageLLM(CustomLLM):
         require_image: bool,
     ) -> ImageResponse:
         url, payload, headers = self._prepare_xai_image_request_parts(
-            prompt, optional_params, require_image=require_image
+            model, prompt, optional_params, require_image=require_image
         )
 
         async with httpx.AsyncClient(timeout=timeout or 120) as http:
@@ -685,10 +911,12 @@ class GrokImageLLM(CustomLLM):
                     detail = e.response.text
                 raise GrokImageException(normalize_error(detail)) from e
 
-            return self._image_response_from_http_body(response.json())
+            body = await self._materialize_requested_base64_async(response.json(), payload, http)
+            return self._image_response_from_http_body(body, payload)
 
     def _image_request_sync(
         self,
+        model: str,
         prompt: str,
         optional_params: dict,
         timeout: Optional[Union[float, httpx.Timeout]],
@@ -696,7 +924,7 @@ class GrokImageLLM(CustomLLM):
         require_image: bool,
     ) -> ImageResponse:
         url, payload, headers = self._prepare_xai_image_request_parts(
-            prompt, dict(optional_params or {}), require_image=require_image
+            model, prompt, dict(optional_params or {}), require_image=require_image
         )
 
         with httpx.Client(timeout=timeout or 120) as http:
@@ -714,7 +942,25 @@ class GrokImageLLM(CustomLLM):
                     detail = e.response.text
                 raise GrokImageException(normalize_error(detail)) from e
 
-            return self._image_response_from_http_body(response.json())
+            body = self._materialize_requested_base64_sync(response.json(), payload, http)
+            return self._image_response_from_http_body(body, payload)
+
+    def image_generation(
+        self,
+        model: str,
+        prompt: str,
+        model_response: ImageResponse,
+        api_key: Optional[str],
+        api_base: Optional[str],
+        optional_params: dict,
+        logging_obj: Any,
+        timeout: Optional[Union[float, httpx.Timeout]] = None,
+        client: Optional[HTTPHandler] = None,
+        **kwargs: Any,
+    ) -> ImageResponse:
+        return self._image_request_sync(
+            model, prompt, optional_params, timeout, require_image=False
+        )
 
     async def aimage_generation(
         self,
@@ -730,6 +976,7 @@ class GrokImageLLM(CustomLLM):
         **kwargs: Any,
     ) -> ImageResponse:
         return await self._image_request(
+            model,
             prompt,
             optional_params,
             timeout,
@@ -749,11 +996,11 @@ class GrokImageLLM(CustomLLM):
         timeout: Optional[Union[float, httpx.Timeout]] = None,
         client: Optional[HTTPHandler] = None,
     ) -> ImageResponse:
-        image_value = image[0] if isinstance(image, list) and image else image
         params = dict(optional_params or {})
-        if image_value is not None and "image" not in params and "image_url" not in params:
-            params["image"] = image_value
+        if image is not None and "image" not in params and "images" not in params and "image_url" not in params:
+            params["images" if isinstance(image, list) else "image"] = image
         return self._image_request_sync(
+            model,
             prompt or "",
             params,
             timeout,
@@ -774,13 +1021,11 @@ class GrokImageLLM(CustomLLM):
         client: Optional[AsyncHTTPHandler] = None,
         **kwargs: Any,
     ) -> ImageResponse:
-        # LiteLLM wraps the caller's image into a list before passing it here.
-        # Unwrap to a single value so _image_request can normalise it.
-        image_value = image[0] if isinstance(image, list) and image else image
         params = dict(optional_params or {})
-        if image_value is not None and "image" not in params and "image_url" not in params:
-            params["image"] = image_value
+        if image is not None and "image" not in params and "images" not in params and "image_url" not in params:
+            params["images" if isinstance(image, list) else "image"] = image
         return await self._image_request(
+            model,
             prompt or "",
             params,
             timeout,

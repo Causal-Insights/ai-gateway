@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI model price verification evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "identity", "sources", "retrieved_at", "effective_from", "effective_to", "currency", "rate_basis", "dimensions", "calculation", "differences", "limitations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"enum": ["verified", "mismatch", "unverified"]},
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["vendor", "api_product", "upstream_model", "aliases", "account_context", "region", "routes"],
+      "properties": {
+        "vendor": {"type": "string"}, "api_product": {"type": "string"},
+        "upstream_model": {"type": "string"}, "aliases": {"type": "array", "items": {"type": "string"}},
+        "account_context": {"type": ["string", "null"]}, "region": {"type": ["string", "null"]},
+        "routes": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "sources": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["url", "retrieved_at", "scope", "excerpt"],
+      "properties": {
+        "url": {"type": "string", "format": "uri"}, "retrieved_at": {"type": "string", "format": "date-time"},
+        "scope": {"enum": ["pricing", "usage_schema", "account_rate", "invoice", "provider_usage"]},
+        "excerpt": {"type": "string", "maxLength": 250}
+      }
+    }},
+    "retrieved_at": {"type": "string", "format": "date-time"},
+    "effective_from": {"type": ["string", "null"], "format": "date-time"},
+    "effective_to": {"type": ["string", "null"], "format": "date-time"},
+    "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+    "rate_basis": {"enum": ["provider_reported", "account_rate", "posted_api_rate", "unknown"]},
+    "dimensions": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "unit", "rate", "per", "conditions"],
+      "properties": {
+        "name": {"type": "string"}, "unit": {"type": "string"},
+        "rate": {"type": ["string", "null"], "pattern": "^[0-9]+(\\.[0-9]+)?$"},
+        "per": {"type": ["string", "null"], "pattern": "^[0-9]+(\\.[0-9]+)?$"},
+        "conditions": {"type": "object"}
+      }
+    }},
+    "calculation": {
+      "type": ["object", "null"], "additionalProperties": false,
+      "required": ["usage", "formula", "calculated_cost", "provider_reported_cost", "evidence_kind"],
+      "properties": {
+        "usage": {"type": "object", "additionalProperties": {"type": "string"}},
+        "formula": {"type": "string"}, "calculated_cost": {"type": ["string", "null"]},
+        "provider_reported_cost": {"type": ["string", "null"]},
+        "evidence_kind": {"enum": ["provider_response", "official_example", "synthetic"]}
+      }
+    },
+    "differences": {"type": "array", "items": {"type": "object", "required": ["field", "configured", "verified"],
+      "properties": {"field": {"type": "string"}, "configured": {}, "verified": {}}, "additionalProperties": false}},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "allOf": [{"if": {"properties": {"status": {"const": "verified"}}},
+    "then": {"properties": {"sources": {"minItems": 1}, "dimensions": {"minItems": 1}, "calculation": {"type": "object"}, "rate_basis": {"enum": ["provider_reported", "account_rate", "posted_api_rate"]}}}}]
+}

@@ -1,0 +1,11 @@
+{
+  "body": {
+    "model": "seedance-2.0",
+    "prompt": "a conservatory dolly",
+    "duration_seconds": 8,
+    "resolution": "720p",
+    "aspect_ratio": "16:9",
+    "generate_audio": true
+  },
+  "request_hash": "040f9e572aefe4e248fabf1951eba12d3bbd945e6b5df67d584ef521df1826b1"
+}

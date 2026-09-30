@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "byteplus",
+    "api_product": "ModelArk",
+    "upstream_model": "dola-seedream-5-0-pro-260628",
+    "aliases": [
+      "seedream-5.0-pro"
+    ],
+    "account_context": null,
+    "region": "ap-southeast-1",
+    "routes": [
+      "image_generation",
+      "image_edit"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.byteplus.com/en/docs/ModelArk/1544106",
+      "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+      "scope": "pricing",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "output_images_small",
+      "unit": "image",
+      "rate": "0.045",
+      "per": "1",
+      "conditions": {}
+    },
+    {
+      "name": "output_images_large",
+      "unit": "image",
+      "rate": "0.09",
+      "per": "1",
+      "conditions": {}
+    },
+    {
+      "name": "billable_reference_images",
+      "unit": "image",
+      "rate": "0.003",
+      "per": "1",
+      "conditions": {}
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "output_images_small": "1",
+      "output_images_large": "1",
+      "billable_reference_images": "1"
+    },
+    "formula": "1 * 0.045 / 1 + 1 * 0.09 / 1 + 1 * 0.003 / 1",
+    "calculated_cost": "0.138",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "Single image generation: small <= 2610000 pixels; large > 2610000 pixels. First input image free, subsequent inputs billed. Layer decomposition is not exposed by this handler."
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "openai",
+    "api_product": "OpenAI direct API Standard",
+    "upstream_model": "gpt-5.6-luna",
+    "aliases": [
+      "gpt-5.6-luna-medium",
+      "gpt-5.6-luna-high"
+    ],
+    "account_context": null,
+    "region": "global",
+    "routes": [
+      "completion",
+      "responses"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "pricing",
+      "excerpt": ""
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "usage_schema",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "input_tokens",
+      "unit": "token",
+      "rate": "0.2",
+      "per": "1000000",
+      "conditions": {
+        "service_tier": "default",
+        "long_context": {
+          "usage": "total_input_tokens",
+          "above": "272000",
+          "rate": "0.4"
+        }
+      }
+    },
+    {
+      "name": "cached_tokens",
+      "unit": "token",
+      "rate": "0.02",
+      "per": "1000000",
+      "conditions": {
+        "service_tier": "default",
+        "long_context": {
+          "usage": "total_input_tokens",
+          "above": "272000",
+          "rate": "0.04"
+        }
+      }
+    },
+    {
+      "name": "cache_write_tokens",
+      "unit": "token",
+      "rate": "0.25",
+      "per": "1000000",
+      "conditions": {
+        "service_tier": "default",
+        "long_context": {
+          "usage": "total_input_tokens",
+          "above": "272000",
+          "rate": "0.50"
+        }
+      }
+    },
+    {
+      "name": "output_tokens",
+      "unit": "token",
+      "rate": "1.2",
+      "per": "1000000",
+      "conditions": {
+        "service_tier": "default",
+        "long_context": {
+          "usage": "total_input_tokens",
+          "above": "272000",
+          "rate": "1.80"
+        }
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "input_tokens": "1000",
+      "cached_tokens": "0",
+      "cache_write_tokens": "0",
+      "output_tokens": "0"
+    },
+    "formula": "1000 * 0.2 / 1000000",
+    "calculated_cost": "0.0002",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "Public Standard pricing only; account contract and provider-backed route fixtures remain outstanding.",
+    "Hosted tool costs, Batch, Flex, Fast and regional premiums are separate profiles and not admitted by this profile.",
+    "Current verification does not authorize historical repricing."
+  ]
+}

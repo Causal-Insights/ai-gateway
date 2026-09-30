@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "xai",
+    "api_product": "xAI direct API",
+    "upstream_model": "grok-imagine-image-2.0",
+    "aliases": [
+      "grok-imagine-image-2.0"
+    ],
+    "account_context": null,
+    "region": null,
+    "routes": [
+      "image_generation",
+      "image_edit"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.x.ai/developers/cost-tracking",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "usage_schema",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "provider_reported",
+  "dimensions": [
+    {
+      "name": "reported_charge",
+      "unit": "USD tick",
+      "rate": "1",
+      "per": "10000000000",
+      "conditions": {
+        "scope": "inclusive actual request charge"
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "cost_in_usd_ticks": "10000000000"
+    },
+    "formula": "10000000000 / 10000000000",
+    "calculated_cost": "1",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "The official charge-unit contract applies to xAI direct inference responses; this arithmetic example is synthetic.",
+    "Actual model availability, identity and route acceptance still need provider evidence. No fallback tariff is admitted."
+  ]
+}

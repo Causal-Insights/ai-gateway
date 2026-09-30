@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "openai",
+    "api_product": "OpenAI direct API Fast",
+    "upstream_model": "gpt-5.6-terra",
+    "aliases": [
+      "gpt-5.6-terra-medium"
+    ],
+    "account_context": null,
+    "region": "global",
+    "routes": [
+      "completion",
+      "responses"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "pricing",
+      "excerpt": ""
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "usage_schema",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "input_tokens",
+      "rate": "4.00",
+      "per": "1000000",
+      "unit": "token",
+      "conditions": {
+        "service_tier": [
+          "fast",
+          "priority"
+        ],
+        "long_context": {
+          "usage": "total_input_tokens",
+          "above": "272000",
+          "rate": "8.00"
+        }
+      }
+    },
+    {
+      "name": "cached_tokens",
+      "rate": "0.40",
+      "per": "1000000",
+      "unit": "token",
+      "conditions": {
+        "service_tier": [
+          "fast",
+          "priority"
+        ],
+        "long_context": {
+          "usage": "total_input_tokens",
+          "above": "272000",
+          "rate": "0.80"
+        }
+      }
+    },
+    {
+      "name": "cache_write_tokens",
+      "rate": "5.00",
+      "per": "1000000",
+      "unit": "token",
+      "conditions": {
+        "service_tier": [
+          "fast",
+          "priority"
+        ],
+        "long_context": {
+          "usage": "total_input_tokens",
+          "above": "272000",
+          "rate": "10.00"
+        }
+      }
+    },
+    {
+      "name": "output_tokens",
+      "rate": "24.00",
+      "per": "1000000",
+      "unit": "token",
+      "conditions": {
+        "service_tier": [
+          "fast",
+          "priority"
+        ],
+        "long_context": {
+          "usage": "total_input_tokens",
+          "above": "272000",
+          "rate": "36.00"
+        }
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "input_tokens": "1000",
+      "cached_tokens": "0",
+      "cache_write_tokens": "0",
+      "output_tokens": "0"
+    },
+    "formula": "1000 * 4.00 / 1000000",
+    "calculated_cost": "0.004",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "Posted Fast prices; account applicability and provider-backed acceptance remain outstanding.",
+    "Unexpected served tiers, regional endpoints and hosted tools are not covered."
+  ]
+}

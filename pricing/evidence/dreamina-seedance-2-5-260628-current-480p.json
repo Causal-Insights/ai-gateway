@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "byteplus",
+    "api_product": "LAS",
+    "upstream_model": "dreamina-seedance-2-5-260628",
+    "aliases": [
+      "seedance-2.5"
+    ],
+    "account_context": null,
+    "region": "ap-southeast-1",
+    "routes": [
+      "generation_job"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.byteplus.com/en/docs/Byteplus_LAS/video_gen_enhanced",
+      "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+      "scope": "pricing",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "output_video_seconds",
+      "unit": "second",
+      "rate": "0.2055855",
+      "per": "1",
+      "conditions": {
+        "resolution": [
+          "480p"
+        ],
+        "input_video": [
+          false
+        ],
+        "tools": [
+          false
+        ]
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "output_video_seconds": "1"
+    },
+    "formula": "1 * 0.2055855 / 1",
+    "calculated_cost": "0.2055855",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "LAS Enhanced version: USD 0.303 per converted second. No-input-video conversion factors: 480p 0.6785; 720p 1.525. Only successful generated output is billable.",
+    "Current adapter exposes text/image inputs. Input-video profiles are not enabled by this change."
+  ]
+}

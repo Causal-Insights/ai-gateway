@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "status": "mismatch",
+  "identity": {
+    "vendor": "byteplus",
+    "api_product": "ModelArk standard online inference",
+    "upstream_model": "dreamina-seedance-2-0-fast-260128",
+    "aliases": [
+      "seedance-2.0-fast"
+    ],
+    "account_context": null,
+    "region": "ap-southeast-1",
+    "routes": [
+      "generation_job"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.byteplus.com/en/docs/ModelArk/1544106",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "pricing",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": "2026-08-07T06:00:00Z",
+  "effective_to": "2026-10-07T06:00:00Z",
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "4.2",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "480p",
+          "720p"
+        ],
+        "input_video": false
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "2.475",
+      "per": "1000000",
+      "conditions": {
+        "resolution": [
+          "480p",
+          "720p"
+        ],
+        "input_video": true
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "5.6",
+      "per": "1000000",
+      "conditions": {
+        "effective_from": "2026-10-07T06:00:00Z",
+        "input_video": false
+      }
+    },
+    {
+      "name": "completion_tokens",
+      "unit": "token",
+      "rate": "3.3",
+      "per": "1000000",
+      "conditions": {
+        "effective_from": "2026-10-07T06:00:00Z",
+        "input_video": true
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "completion_tokens": "40594"
+    },
+    "formula": "40594 * 4.2 / 1000000",
+    "calculated_cost": "0.1704948",
+    "provider_reported_cost": null,
+    "evidence_kind": "provider_response"
+  },
+  "differences": [
+    {
+      "field": "480p/720p no-video-input USD/M tokens",
+      "configured": "5.6",
+      "verified": "4.2"
+    }
+  ],
+  "limitations": [
+    "Account terms unconfirmed. Acceptance must include actual served resolution and source-video classification.",
+    "Completion tokens include minimum consumption; do not recompute from requested duration.",
+    "Displayed promotional examples can show undiscounted prices; explicit dated rate terms govern."
+  ]
+}

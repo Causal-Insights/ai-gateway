@@ -1,0 +1,11 @@
+{
+  "body": {
+    "model": "grok-video-1.5",
+    "prompt": "a lantern in rain",
+    "duration_seconds": 6,
+    "resolution": "720p",
+    "aspect_ratio": "16:9",
+    "generate_audio": true
+  },
+  "request_hash": "e8ca4a68e2ebec3f6a1c35713ab2155465591e338ce7756e226f379a4f35198b"
+}

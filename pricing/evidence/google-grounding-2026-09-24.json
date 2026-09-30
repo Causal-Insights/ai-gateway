@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "google",
+    "api_product": "Vertex generateContent",
+    "upstream_model": "exact configured aliases listed",
+    "aliases": [
+      "gemini-latest",
+      "gemini-3.1-pro",
+      "gemini-3.5-flash",
+      "gemini-3.8-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-3-flash-preview",
+      "nano-banana",
+      "nano-banana-2",
+      "nano-banana-pro"
+    ],
+    "account_context": null,
+    "region": "global",
+    "routes": [
+      "completion"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing",
+      "retrieved_at": "2026-09-25T01:37:54.389980+00:00",
+      "scope": "pricing",
+      "excerpt": "each individual Grounding Query"
+    },
+    {
+      "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/grounding/grounding-with-google-search",
+      "retrieved_at": "2026-09-25T01:37:54.389980+00:00",
+      "scope": "usage_schema",
+      "excerpt": "these three search queries are charged"
+    }
+  ],
+  "retrieved_at": "2026-09-25T01:37:54.389980+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "google_search_queries",
+      "unit": "query",
+      "rate": "0.014",
+      "per": "1",
+      "conditions": {}
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "google_search_queries": "3"
+    },
+    "formula": "3 * 0.014",
+    "calculated_cost": "0.042",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "Parent tokens retain the original immutable catalog rates. Missing counters leave combined cost unresolved; valid output and citations remain intact.",
+    "Posted rates exclude account-specific free quota allocation and negotiated discounts. No paid/live grounding calls made.",
+    "5,000 monthly queries are shared across Gemini 3 models; per-request accounting does not assume any unused allowance. LiteLLM terminal prompt_tokens_details.web_search_requests is retained; a missing counter is not zero.",
+    "Flash-Lite Image and customtools aliases are excluded pending exact support evidence.",
+    "LiteLLM 1.102.1 calculate_grounding_requests deduplicates nonempty webSearchQueries across candidates. This measures distinct query strings, not an authoritative count of individually billed queries. Gateway labels it sdk_query_count_estimate and leaves combined cost unresolved; the published tariff itself is verified."
+  ]
+}

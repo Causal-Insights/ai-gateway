@@ -4,6 +4,7 @@ Tests for Grok image custom handler.
 Uses unittest + mocks only. Stubs ``litellm`` so CI/local runs need not install it.
 """
 
+import base64
 import io
 import os
 import sys
@@ -22,6 +23,8 @@ def _ensure_litellm_stubs():
     class ImageObject:
         def __init__(self, url=None, **kwargs):
             self.url = url
+            for key, value in kwargs.items():
+                setattr(self, key, value)
 
     class ImageResponse:
         def __init__(self, created=0, data=None, **kwargs):
@@ -102,6 +105,144 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
         submit_body = client_instance.post.call_args.kwargs["json"]
         self.assertEqual(submit_url, "https://api.x.ai/v1/images/generations")
         self.assertEqual(submit_body["model"], "grok-imagine-image-quality")
+
+    async def test_image_2_generation_preserves_model_quality_without_guessed_cost(self):
+        response = MagicMock()
+        response.raise_for_status = MagicMock()
+        response.json = MagicMock(
+            return_value={"data": [{"b64_json": "ZmFrZS1pbWFnZQ==", "mime_type": "image/jpeg"}]}
+        )
+        client_instance = self._mock_async_client(response)
+
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance):
+            out = await GrokImageLLM().aimage_generation(
+                model="grok-image/grok-imagine-image-2.0",
+                prompt="A precise concert poster with sharp small print",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"resolution": "2K", "quality": "medium", "response_format": "b64_json"},
+                logging_obj=None,
+            )
+
+        submit_body = client_instance.post.call_args.kwargs["json"]
+        self.assertEqual(submit_body["model"], "grok-imagine-image-2.0")
+        self.assertEqual(submit_body["resolution"], "2k")
+        self.assertEqual(submit_body["quality"], "medium")
+        self.assertEqual(submit_body["response_format"], "b64_json")
+        self.assertEqual(out.data[0].b64_json, "ZmFrZS1pbWFnZQ==")
+        self.assertNotIn("response_cost", out._hidden_params)
+
+    async def test_image_2_restores_request_policy_private_fields(self):
+        response = MagicMock()
+        response.raise_for_status = MagicMock()
+        response.json = MagicMock(return_value={"data": [{"b64_json": "ZmFrZQ=="}]})
+        client_instance = self._mock_async_client(response)
+
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance):
+            out = await GrokImageLLM().aimage_generation(
+                model="grok-image/grok-imagine-image-2.0",
+                prompt="A low-cost draft",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={
+                    "resolution": "1K",
+                    "xai_output_count": 1,
+                    "xai_render_quality": "low",
+                    "xai_response_format": "b64_json",
+                },
+                logging_obj=None,
+            )
+
+        submit_body = client_instance.post.call_args.kwargs["json"]
+        self.assertEqual(submit_body["n"], 1)
+        self.assertEqual(submit_body["quality"], "low")
+        self.assertEqual(submit_body["response_format"], "b64_json")
+        self.assertNotIn("response_cost", out._hidden_params)
+
+    async def test_image_2_materializes_ignored_base64_request_from_temporary_url(self):
+        response = MagicMock()
+        response.raise_for_status = MagicMock()
+        response.json = MagicMock(return_value={"data": [{"url": "https://imgen.x.ai/temporary.jpg"}]})
+        download = MagicMock()
+        download.raise_for_status = MagicMock()
+        download.content = b"generated-image"
+        download.headers = {"content-type": "image/jpeg"}
+        client_instance = self._mock_async_client(response)
+        client_instance.get = AsyncMock(return_value=download)
+
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance):
+            out = await GrokImageLLM().aimage_generation(
+                model="grok-image/grok-imagine-image-2.0",
+                prompt="Return base64",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"response_format": "b64_json"},
+                logging_obj=None,
+            )
+
+        client_instance.get.assert_awaited_once_with("https://imgen.x.ai/temporary.jpg")
+        self.assertEqual(out.data[0].b64_json, base64.standard_b64encode(b"generated-image").decode("ascii"))
+        self.assertIsNone(out.data[0].url)
+
+    async def test_image_2_accepts_five_inputs_and_rejects_six(self):
+        response = MagicMock()
+        response.raise_for_status = MagicMock()
+        response.json = MagicMock(return_value={"data": [{"url": "https://cdn.example/edited.jpg"}]})
+        client_instance = self._mock_async_client(response)
+        images = [f"https://cdn.example/{index}.png" for index in range(5)]
+
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance):
+            out = await GrokImageLLM().aimage_edit(
+                model="grok-image/grok-imagine-image-2.0",
+                image=images,
+                prompt="Combine all five references",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"quality": "low"},
+                logging_obj=None,
+            )
+        self.assertEqual(len(client_instance.post.call_args.kwargs["json"]["images"]), 5)
+        self.assertNotIn("response_cost", out._hidden_params)
+
+        with self.assertRaisesRegex(ValueError, "one to 5 images"):
+            await GrokImageLLM().aimage_edit(
+                model="grok-image/grok-imagine-image-2.0",
+                image=images + ["https://cdn.example/extra.png"],
+                prompt="Too many references",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={},
+                logging_obj=None,
+            )
+
+    async def test_image_2_rejects_invalid_quality_before_upstream_call(self):
+        with self.assertRaisesRegex(ValueError, "quality must be low, medium or auto"):
+            await GrokImageLLM().aimage_generation(
+                model="grok-image/grok-imagine-image-2.0",
+                prompt="Invalid quality",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"quality": "high"},
+                logging_obj=None,
+            )
+
+    async def test_image_2_rejects_unnormalized_openai_size_before_upstream_call(self):
+        with self.assertRaisesRegex(ValueError, "normalized to xAI aspect_ratio"):
+            await GrokImageLLM().aimage_generation(
+                model="grok-image/grok-imagine-image-2.0",
+                prompt="A square poster",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"size": "1024x1024"},
+                logging_obj=None,
+            )
 
     async def test_image_url_routes_to_images_edits(self):
         response = MagicMock()
@@ -267,3 +408,64 @@ class TestGrokImageHandler(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertIn("internal error", str(ctx.exception))
+
+    async def test_multi_image_edit_preserves_model_and_exact_usage_cost(self):
+        response = MagicMock()
+        response.raise_for_status = MagicMock()
+        response.json = MagicMock(
+            return_value={
+                "data": [
+                    {
+                        "b64_json": "ZmFrZS1pbWFnZQ==",
+                        "mime_type": "image/jpeg",
+                        "revised_prompt": "revised",
+                        "file_output": {"file_id": "file_123"},
+                    }
+                ],
+                "usage": {"cost_in_usd_ticks": 900_000_000},
+            }
+        )
+        client_instance = self._mock_async_client(response)
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance):
+            out = await GrokImageLLM().aimage_edit(
+                model="grok-image/future-official-model",
+                image=[
+                    "https://cdn.example/one.png",
+                    {"file_id": "file_two"},
+                    io.BytesIO(b"third"),
+                ],
+                prompt="Combine them",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"resolution": "2K", "storage_options": {"filename": "out.jpg"}},
+                logging_obj=None,
+            )
+        payload = client_instance.post.call_args.kwargs["json"]
+        self.assertEqual(payload["model"], "future-official-model")
+        self.assertEqual(len(payload["images"]), 3)
+        self.assertEqual(payload["resolution"], "2k")
+        self.assertEqual(out.data[0].b64_json, "ZmFrZS1pbWFnZQ==")
+        self.assertEqual(out.data[0].revised_prompt, "revised")
+        self.assertAlmostEqual(out._hidden_params["response_cost"], 0.09)
+
+    async def test_two_k_without_provider_usage_has_no_cost(self):
+        response = MagicMock()
+        response.raise_for_status = MagicMock()
+        response.json = MagicMock(
+            return_value={"data": [{"url": "https://cdn.example/one.jpg"}, {"url": "https://cdn.example/two.jpg"}]}
+        )
+        client_instance = self._mock_async_client(response)
+        with patch("custom_handler_xai.httpx.AsyncClient", return_value=client_instance):
+            out = await GrokImageLLM().aimage_edit(
+                model="grok-image/grok-imagine-image-quality",
+                image=["https://cdn.example/input.png"],
+                prompt="Two variants",
+                model_response=None,
+                api_key=None,
+                api_base=None,
+                optional_params={"size": "2K", "n": 2},
+                logging_obj=None,
+            )
+        self.assertEqual(client_instance.post.call_args.kwargs["json"]["resolution"], "2k")
+        self.assertNotIn("response_cost", out._hidden_params)

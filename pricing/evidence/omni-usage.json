@@ -1,0 +1,29 @@
+{
+  "model": "gemini-omni-1.1-flash",
+  "usage": {
+    "total_tokens": 31817,
+    "total_input_tokens": 2405,
+    "total_output_tokens": 28960,
+    "total_thought_tokens": 452,
+    "total_tool_use_tokens": 0,
+    "input_tokens_by_modality": [
+      {
+        "tokens": 227,
+        "modality": "text"
+      },
+      {
+        "tokens": 2178,
+        "modality": "image"
+      }
+    ],
+    "output_tokens_by_modality": [
+      {
+        "tokens": 28960,
+        "modality": "video"
+      }
+    ]
+  },
+  "created_at": "2026-09-15T03:08:42.23765+00:00",
+  "upstream_model": "gemini-omni-1.1-flash-preview",
+  "evidence_origin": "Read-only retained provider usage in gateway_generation_jobs, retrieved 2026-09-16. No new provider request."
+}

@@ -1,0 +1,128 @@
+{
+  "checked_at": "2026-09-24T20:38:52.192212+00:00",
+  "credential_source": "Gateway .env OPENAI_API_KEY; secret omitted",
+  "api_origin": "https://api.openai.com",
+  "scope": "Direct provider access and minimal generation, not deployed Gateway end-to-end",
+  "results": [
+    {
+      "alias": "gpt-image-2.5-sunburst",
+      "requested_model": "gpt-image-2.5-sunburst",
+      "method": "GET",
+      "path": "models/gpt-image-2.5-sunburst",
+      "http_status": 200,
+      "request_id": "b0c44f7c-8f51-46e1-ad4c-a4997883eeef",
+      "elapsed_seconds": 0.63,
+      "error_code": null,
+      "error_type": null,
+      "served_model": "gpt-image-2.5-sunburst",
+      "generated_image_count": null,
+      "usage": null
+    },
+    {
+      "alias": "gpt-image-2.5-sunburst",
+      "requested_model": "gpt-image-2.5-sunburst-2026-09-08",
+      "method": "GET",
+      "path": "models/gpt-image-2.5-sunburst-2026-09-08",
+      "http_status": 200,
+      "request_id": "57c38bd2-251f-4443-b4f4-3b9360176af5",
+      "elapsed_seconds": 0.54,
+      "error_code": null,
+      "error_type": null,
+      "served_model": "gpt-image-2.5-sunburst-2026-09-08",
+      "generated_image_count": null,
+      "usage": null
+    },
+    {
+      "alias": "gpt-image-2.5-sunburst",
+      "requested_model": "gpt-image-2.5-sunburst-2026-09-08",
+      "request_settings": {
+        "model": "gpt-image-2.5-sunburst-2026-09-08",
+        "size": "1024x1024",
+        "quality": "low",
+        "n": 1
+      },
+      "method": "POST",
+      "path": "images/generations",
+      "http_status": 200,
+      "request_id": "req_0654de1ca6c3425286f635bd453dcc8e",
+      "elapsed_seconds": 8.21,
+      "error_code": null,
+      "error_type": null,
+      "served_model": null,
+      "generated_image_count": 1,
+      "usage": {
+        "input_tokens": 17,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 17
+        },
+        "output_tokens": 196,
+        "output_tokens_details": {
+          "image_tokens": 196,
+          "text_tokens": 0
+        },
+        "total_tokens": 213
+      }
+    },
+    {
+      "alias": "gpt-image-2.5-flare",
+      "requested_model": "gpt-image-2.5-flare",
+      "method": "GET",
+      "path": "models/gpt-image-2.5-flare",
+      "http_status": 200,
+      "request_id": "e772f11b-2454-4262-a6e8-ba1746ce9f5e",
+      "elapsed_seconds": 0.41,
+      "error_code": null,
+      "error_type": null,
+      "served_model": "gpt-image-2.5-flare",
+      "generated_image_count": null,
+      "usage": null
+    },
+    {
+      "alias": "gpt-image-2.5-flare",
+      "requested_model": "gpt-image-2.5-flare-2026-09-08",
+      "method": "GET",
+      "path": "models/gpt-image-2.5-flare-2026-09-08",
+      "http_status": 200,
+      "request_id": "61a33f80-f2ae-4f68-bd20-e8142f58db35",
+      "elapsed_seconds": 0.5,
+      "error_code": null,
+      "error_type": null,
+      "served_model": "gpt-image-2.5-flare-2026-09-08",
+      "generated_image_count": null,
+      "usage": null
+    },
+    {
+      "alias": "gpt-image-2.5-flare",
+      "requested_model": "gpt-image-2.5-flare-2026-09-08",
+      "request_settings": {
+        "model": "gpt-image-2.5-flare-2026-09-08",
+        "size": "1024x1024",
+        "quality": "low",
+        "n": 1
+      },
+      "method": "POST",
+      "path": "images/generations",
+      "http_status": 200,
+      "request_id": "req_ddbead2b797841c3ba4d11dea86f54b9",
+      "elapsed_seconds": 7.98,
+      "error_code": null,
+      "error_type": null,
+      "served_model": null,
+      "generated_image_count": 1,
+      "usage": {
+        "input_tokens": 17,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 17
+        },
+        "output_tokens": 196,
+        "output_tokens_details": {
+          "image_tokens": 196,
+          "text_tokens": 0
+        },
+        "total_tokens": 213
+      }
+    }
+  ]
+}

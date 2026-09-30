@@ -77,6 +77,8 @@ Logical alias → endpoint → upstream (for debugging). Credentials are on the 
 | `gemini-3.1-pro` | `vertex_ai/gemini-3.1-pro-preview` | same |
 | `gemini-3.1-pro-customtools` | `vertex_ai/gemini-3.1-pro-preview-customtools` | same |
 | `gemini-3.5-flash` | `vertex_ai/gemini-3.5-flash` | same |
+| `gemini-3.7-flash` | `vertex_ai/gemini-3.7-flash` (global) | same |
+| `gemini-3.5-flash-lite` | `vertex_ai/gemini-3.5-flash-lite` (global) | same |
 | `gemini-3-flash-preview` | `vertex_ai/gemini-3-flash-preview` | same |
 | `gemini-3.1-flash-lite-preview` | `vertex_ai/gemini-3.1-flash-lite-preview` | same |
 | `grok-latest` | `xai/grok-4.20-non-reasoning-latest` | `GROK_API_KEY` |
@@ -109,6 +111,7 @@ OpenAI SDKs: `base_url=LITELLM_BASE_URL`, `api_key=LITELLM_MASTER_KEY`, standard
 | `imagen-4.0-ultra` | Image | `vertex_ai/imagen-4.0-ultra-generate-001` | GCP + Vertex |
 | `grok-image` | Image | custom → `grok-imagine-image-quality` | `GROK_API_KEY` |
 | `grok-imagine-image-quality` | Image | same as `grok-image` | `GROK_API_KEY` |
+| `grok-imagine-image-2.0` | Image | custom → exact xAI Image 2.0 model | `GROK_API_KEY` |
 | `grok-video` | **Video (MP4)** | custom → `grok-imagine-video`; text-to-video or image-to-video | `GROK_API_KEY` (proxy) |
 | `grok-video-1.5` | **Video (MP4)** | custom → `grok-imagine-video-1.5-preview`; **image-to-video only** | `GROK_API_KEY` (proxy + client file upload) |
 | `grok-imagine-video-1.5-2026-05-30` | **Video (MP4)** | same handler/pricing as `grok-video-1.5` (dated xAI model id) | same |
@@ -116,8 +119,10 @@ OpenAI SDKs: `base_url=LITELLM_BASE_URL`, `api_key=LITELLM_MASTER_KEY`, standard
 See [xAI Grok video](#xai-grok-video) for modes, file upload, and pricing.
 | `seedance-2.0` | **Video (MP4)** | custom → ARK `dreamina-seedance-2-0-260128` | `BYTEDANCE_API_KEY` |
 | `seedance-2.0-fast` | **Video (MP4)** | custom → ARK `dreamina-seedance-2-0-fast-260128` | `BYTEDANCE_API_KEY` |
+| `seedance-2.5` | **Video (MP4, durable only)** | ModelArk → `dreamina-seedance-2-5-260628` | `BYTEDANCE_API_KEY` |
 | `seedream-5.0` | Image | custom → ModelArk `seedream-5-0-260128` | `BYTEDANCE_API_KEY` |
 | `seedream-5.0-lite` | Image | custom → ModelArk `seedream-5-0-lite-260128` | `BYTEDANCE_API_KEY` |
+| `seedream-5.0-pro` | Image | custom → ModelArk `dola-seedream-5-0-pro-260628` | `BYTEDANCE_API_KEY` |
 
 Standard image body: `prompt`, optional `n`, `size`, `quality`, etc. (provider-dependent).
 
@@ -206,7 +211,7 @@ These use the same OpenAI **Images** path but implement vendor-specific async vi
 | Storyboard | `reference_images` (optional) | `reference_images` (optional); use with `image` for base frame + storyboard |
 | Video edit | `video` / `video_url` → `/v1/videos/edits` | Same |
 | Typical resolutions | `480p`, `720p` | `480p`, `720p` (per xAI pricing tiers) |
-| xAI list pricing (fallback) | $0.05/s @ 480p, $0.07/s @ 720p | $0.08/s @ 480p, $0.14/s @ 720p; input image $0.01 |
+| Cost authority | Verified provider-reported usage charge | Verified provider-reported usage charge |
 
 **Request fields (all Grok video aliases)**
 
@@ -274,48 +279,28 @@ curl -sS --max-time 660 "${LITELLM_BASE_URL}/v1/images/generations" \
 
 #### Pricing
 
-The handler bills using xAI’s **`usage.cost_in_usd_ticks`** from `GET /v1/videos/{request_id}` when the job completes (1 USD = 10,000,000,000 ticks). That value is exposed as `x-litellm-response-cost`. If ticks are missing, cost is estimated from **`video.duration`** × per-second rate by **`resolution`** (rates depend on upstream model).
+Use xAI's inclusive `usage.cost_in_usd_ticks` from the completed provider response
+(10,000,000,000 ticks per USD). The versioned registry verifies that unit and the
+exact upstream identity. Missing charge evidence remains an unknown cost; duration,
+resolution and requested image counts do not substitute for a reported charge.
+Legacy price environment variables no longer determine costs.
 
-**`grok-imagine-video`** (`grok-video`):
-
-| Resolution | USD / generated second (output) |
-|------------|----------------------------------|
-| `480p` (default) | $0.05 |
-| `720p` | $0.07 |
-| `1080p` | $0.07 (720p fallback) |
-
-| Input | USD |
-|-------|-----|
-| Reference / input image (each) | $0.002 |
-| Input video (edit path) | $0.01 / second |
-
-Env: `GROK_VIDEO_PRICE_PER_SECOND_480P`, `GROK_VIDEO_PRICE_PER_SECOND_720P`, `GROK_VIDEO_PRICE_PER_SECOND_1080P`, `GROK_VIDEO_PRICE_PER_REFERENCE_IMAGE`.
-
-**`grok-imagine-video-1.5-preview`** (`grok-video-1.5`, alias `grok-imagine-video-1.5-2026-05-30`):
-
-| Resolution | USD / generated second (output) |
-|------------|----------------------------------|
-| `480p` (default) | $0.08 |
-| `720p` | $0.14 |
-| `1080p` | $0.14 (720p fallback) |
-
-| Input | USD |
-|-------|-----|
-| Image (reference / input) | $0.01 |
-| Input video (edit path) | $0.01 / second |
-
-Env: `GROK_VIDEO_15_PRICE_PER_SECOND_480P`, `GROK_VIDEO_15_PRICE_PER_SECOND_720P`, `GROK_VIDEO_15_PRICE_PER_SECOND_1080P`, `GROK_VIDEO_15_PRICE_PER_REFERENCE_IMAGE`.
+The authoritative amount is available through the [cost contract](docs/cost-accounting.md).
+`x-litellm-response-cost` is present only after a known amount is committed.
+See [pricing coverage](docs/pricing-coverage.md) for currently admitted routes and
+profiles; capability examples here do not override pricing admission.
 
 **Client timeout:** Prefer **≥ 660s** HTTP timeout (generation + poll ceiling ~600s).
 
 ---
 
-### xAI Grok image (`grok-image`, `grok-imagine-image-quality`)
+### xAI Grok image (`grok-image`, `grok-imagine-image-quality`, `grok-imagine-image-2.0`)
 
 - **Generate:** `POST /v1/images/generations` with `prompt`
 - **Edit:** `POST /v1/images/edits` multipart with `image` + `prompt`
 - **Proxy env:** `GROK_API_KEY`
-- **Cost metadata:** `input_cost_per_image: 0.06` (approx combined 1K quality path)
+- **Image 2.0:** 1K/2K, `quality=low|medium`, up to five input images.
+- **Image pricing:** the registry uses the inclusive provider-reported usage charge. Missing charges remain unresolved; see [pricing coverage](docs/pricing-coverage.md) for admission status.
 
 ---
 
@@ -500,14 +485,15 @@ Many clients and load balancers cut idle connections at **~300s**. The handler d
 
 #### Pricing
 
-Cost is computed from ARK `usage.completion_tokens` × rate (in `x-litellm-response-cost`). Re-polling a **completed** task does not double-charge.
+The registry records ModelArk's actual `usage.completion_tokens` rates by exact
+model, resolution, source-video profile and effective date, including time-limited
+promotions. Requested duration is not a billable-token measurement. Price
+environment variables and legacy synchronous polling estimates are no longer
+accepted. Provider-backed usage and account-applicability checks must pass before
+a profile is admitted. See [pricing coverage](docs/pricing-coverage.md).
 
-| Alias | USD / 1M output tokens (no input video) | With input video |
-|-------|----------------------------------------|------------------|
-| `seedance-2.0` | $7.00 | $4.30 |
-| `seedance-2.0-fast` | $5.60 | $3.30 |
-
-Override on proxy: `SEEDANCE_PRICE_PER_MTOK`, `SEEDANCE_PRICE_PER_MTOK_VIDEO`, `SEEDANCE_PRICE_PER_MTOK_FAST`, `SEEDANCE_PRICE_PER_MTOK_FAST_VIDEO`.
+Use durable generation jobs for attributed, idempotent completion accounting.
+Repeated polls reuse the original accounting event. Unknown costs remain null.
 
 ---
 
@@ -517,6 +503,7 @@ Override on proxy: `SEEDANCE_PRICE_PER_MTOK`, `SEEDANCE_PRICE_PER_MTOK_VIDEO`, `
 |---------------|-------------------|-------|
 | `seedream-5.0` | `seedream-5-0-260128` | Seedream 5.0 (2K / 3K) |
 | `seedream-5.0-lite` | `seedream-5-0-lite-260128` | Seedream 5.0 Lite (2K / 3K, web search) |
+| `seedream-5.0-pro` | `dola-seedream-5-0-pro-260628` | Seedream 5.0 Pro (1K / 2K, one output, up to 10 references) |
 
 **Endpoint:** `POST /v1/images/generations` — **synchronous** (one request returns image URL(s); no task polling).
 
@@ -539,6 +526,8 @@ Override on proxy: `SEEDANCE_PRICE_PER_MTOK`, `SEEDANCE_PRICE_PER_MTOK_VIDEO`, `
 | `tools` | `[{ "type": "web_search" }]` — **5.0 Lite** real-time search (adds latency + surcharge) |
 | `optimize_prompt_options` | e.g. `{ "mode": "standard" }` |
 | `stream` | Stream partial results when supported |
+
+Seedream Pro accepts only one output, PNG/JPEG, no streaming, and up to ten references. The Gateway request policy copies `size`, `n`, and format fields into model-scoped private fields so LiteLLM 1.95 cannot consume them before custom-provider dispatch; the handler restores the public ModelArk fields.
 
 **Example (text-to-image)**
 
@@ -569,16 +558,17 @@ curl -sS "${LITELLM_BASE_URL}/v1/images/generations" \
   }'
 ```
 
-#### Pricing (BytePlus ModelArk, Seedream 5.0 family)
+#### Pricing (BytePlus ModelArk, Seedream 5 family)
 
-Handler sets `x-litellm-response-cost` from output image count × per-image rate (+ web search when `tools` includes `web_search`). See [ModelArk pricing](https://docs.byteplus.com/en/docs/ModelArk/1544106).
+Pricing must match the exact model and measured output pixel tier, output count,
+reference inputs and any actually executed billable tools. Configuring a search
+tool does not prove a search charge. The official model table identifies `seedream-5-0-260128` and
+`seedream-5-0-lite-260128` as two IDs of the same Lite model, priced at $0.035 per output image.
 
-| Gateway alias | USD / generated image (2K & 3K) | Web search (per request) |
-|---------------|----------------------------------|---------------------------|
-| `seedream-5.0` | $0.035 | + $0.0006 when `tools: [{ "type": "web_search" }]` |
-| `seedream-5.0-lite` | $0.035 | + $0.0006 when `tools: [{ "type": "web_search" }]` |
-
-Override on proxy: `SEEDREAM_5_0_PRICE_PER_IMAGE`, `SEEDREAM_5_0_LITE_PRICE_PER_IMAGE`, `SEEDREAM_WEB_SEARCH_PRICE_PER_REQUEST`, `SEEDREAM_ARK_BASE`.
+See the registry's [coverage and evidence](docs/pricing-coverage.md). All image profiles are enabled. Only web-search requests remain restricted
+until the separate surcharge is established.
+Legacy `SEEDREAM_*_PRICE_*` overrides no longer determine cost. `SEEDREAM_ARK_BASE`
+controls the endpoint and must still match the verified API product.
 
 **Client timeout:** **≥ 120s** for complex prompts / web search; default handler HTTP timeout is **300s**.
 
@@ -631,3 +621,19 @@ Custom handler modules: `custom_handler.grok_video`, `custom_handler.grok_image`
 - **This file:** client/skill contract for agents calling `LITELLM_BASE_URL`
 
 When adding models, update `litellm_config.yaml` and this document together.
+# Auditable costs
+
+**A billable execution and its cost must always be logged.** Missing user/team
+attribution is reconciliation metadata and cannot suppress LiteLLM Logs. A known
+cost can be `priced` with unresolved attribution and `billing_eligible: false`.
+
+Consume `x-gateway-accounting-id` and query `GET /v1/costs/{accounting_id}` for the
+final cost. `cost_status` is `pending`, `priced` or `unresolved`; only
+`billing_eligible: true` supports automatic settlement. An unknown amount is null,
+and a missing `x-litellm-response-cost` header must not be treated as free.
+Streaming clients retrieve cost after completion. Decimal costs are returned as
+strings by the lookup API; generation-job fields are additive.
+
+Pricing admission can return HTTP 503 `PRICING_UNVERIFIED` before provider spend.
+See [the cost contract](docs/cost-accounting.md) and [onboarding requirements](docs/model-onboarding.md).
+MagicLens retail quotes, markups and credit-settlement rules are unchanged.

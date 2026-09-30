@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "elevenlabs",
+    "api_product": "ElevenAPI",
+    "upstream_model": "eleven_text_to_sound_v2",
+    "aliases": [
+      "elevenlabs-sfx"
+    ],
+    "account_context": null,
+    "region": null,
+    "routes": [
+      "image_generation"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://elevenlabs.io/pricing/api",
+      "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+      "scope": "pricing",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T20:59:41.946189+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "audio_seconds",
+      "unit": "second",
+      "rate": "0.120",
+      "per": "60",
+      "conditions": {}
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "audio_seconds": "1"
+    },
+    "formula": "1 * 0.120 / 60",
+    "calculated_cost": "0.002",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "API price table and the product-specific rates FAQ both specify USD per minute. The generic per-generation FAQ is less specific. Actual output duration is measured; subscription fees are not allocated."
+  ]
+}

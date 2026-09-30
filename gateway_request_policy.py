@@ -1,0 +1,446 @@
+"""Model-scoped request policies applied before LiteLLM route handling."""
+
+from __future__ import annotations
+
+import json
+import math
+import re
+from dataclasses import dataclass
+from typing import Any
+from openai_model_contracts import ASTRA_MODELS, IMAGE_PRESERVED_FIELDS, image_model, validate_astra, validate_image_settings
+
+
+FIXED_REASONING_EFFORT = {
+    "gpt-5.6-sol-medium": "medium",
+    "gpt-5.6-terra-medium": "medium",
+    "gpt-5.6-luna-medium": "medium",
+    "gpt-5.6-luna-high": "high",
+}
+GEMINI_FLASH_MODELS = {"gemini-3.7-flash", "gemini-3.5-flash-lite"}
+OMNI_MODELS = {
+    "gemini-omni-flash",
+    "gemini-omni-flash-preview",
+    "gemini-omni-1.1-flash",
+    "gemini-omni-1.1-flash-preview",
+}
+CHAT_PATHS = {"/chat/completions", "/v1/chat/completions"}
+RESPONSES_PATHS = {"/responses", "/v1/responses"}
+POLICY_PATHS = CHAT_PATHS | RESPONSES_PATHS
+IMAGE_PATHS = {"/images/generations", "/v1/images/generations", "/images/edits", "/v1/images/edits"}
+GROK_IMAGE_2_MODELS = {"grok-imagine-image-2.0", "grok-image/grok-imagine-image-2.0"}
+GROK_IMAGE_2_QUALITIES = {"low", "medium", "auto"}
+GROK_IMAGE_2_RESOLUTIONS = {"1k", "2k"}
+GROK_IMAGE_2_ASPECT_RATIOS = {
+    "1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "2:1", "1:2",
+    "19.5:9", "9:19.5", "20:9", "9:20", "21:9", "5:2", "auto",
+}
+GROK_IMAGE_RESPONSE_FORMATS = {"url", "b64_json"}
+SEEDREAM_IMAGE_MODELS = {
+    "seedream-5.0",
+    "seedream-5.0-lite",
+    "seedream-5.0-pro",
+    "seedream/seedream-5-0-260128",
+    "seedream/seedream-5-0-lite-260128",
+    "seedream/dola-seedream-5-0-pro-260628",
+}
+SEEDREAM_PRO_MODELS = {
+    "seedream-5.0-pro",
+    "seedream/dola-seedream-5-0-pro-260628",
+}
+SEEDREAM_PRESERVED_IMAGE_PARAMS = {
+    "size": "seedream_size",
+    "n": "seedream_output_count",
+    "response_format": "seedream_response_format",
+    "output_format": "seedream_output_format",
+    "stream": "seedream_stream",
+}
+SEEDANCE_DURABLE_ONLY_MODELS = {
+    "seedance-2.5",
+    "seedance/dreamina-seedance-2-5-260628",
+}
+GEMINI_UNSUPPORTED_PARAMS = {
+    "candidate_count",
+    "temperature",
+    "thinking_budget",
+    "top_p",
+    "top_k",
+    "topK",
+    "frequency_penalty",
+    "presence_penalty",
+}
+
+
+@dataclass(frozen=True)
+class PolicyError:
+    code: str
+    message: str
+    status_code: int = 400
+
+
+def _reasoning_efforts(body: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    direct = body.get("reasoning_effort")
+    if direct is not None:
+        values.append(str(direct).strip().lower())
+    reasoning = body.get("reasoning")
+    if isinstance(reasoning, dict) and reasoning.get("effort") is not None:
+        values.append(str(reasoning["effort"]).strip().lower())
+    return values
+
+
+def _strip_gemini_params(body: dict[str, Any]) -> None:
+    for key in GEMINI_UNSUPPORTED_PARAMS:
+        body.pop(key, None)
+    extra_body = body.get("extra_body")
+    if isinstance(extra_body, dict):
+        for key in GEMINI_UNSUPPORTED_PARAMS:
+            extra_body.pop(key, None)
+    generation_config = body.get("generation_config")
+    if isinstance(generation_config, dict):
+        for key in GEMINI_UNSUPPORTED_PARAMS:
+            generation_config.pop(key, None)
+
+
+def _normalize_grok_image_2_size(body: dict[str, Any]) -> PolicyError | None:
+    raw_size = body.get("size")
+    if raw_size is None:
+        return None
+    size = str(raw_size).strip().lower()
+    if size in GROK_IMAGE_2_RESOLUTIONS:
+        body.setdefault("resolution", size)
+        body.pop("size", None)
+        return None
+    if size in GROK_IMAGE_2_ASPECT_RATIOS:
+        body.setdefault("aspect_ratio", size)
+        body.pop("size", None)
+        return None
+    match = re.fullmatch(r"(\d+)x(\d+)", size)
+    if match:
+        width, height = (int(value) for value in match.groups())
+        if width > 0 and height > 0:
+            divisor = math.gcd(width, height)
+            aspect_ratio = f"{width // divisor}:{height // divisor}"
+            # Match equivalent supported ratios, including decimal spellings
+            # such as 19.5:9 and reducible spellings such as 21:9.
+            for candidate in sorted(GROK_IMAGE_2_ASPECT_RATIOS - {"auto"}):
+                left, right = (float(value) for value in candidate.split(":"))
+                if math.isclose(width * right, height * left, rel_tol=1e-12):
+                    aspect_ratio = candidate
+                    break
+            if aspect_ratio in GROK_IMAGE_2_ASPECT_RATIOS:
+                body.setdefault("aspect_ratio", aspect_ratio)
+                body.setdefault("resolution", "2k" if max(width, height) >= 2000 else "1k")
+                body.pop("size", None)
+                return None
+    return PolicyError(
+        code="INVALID_IMAGE_SIZE",
+        message=(
+            "size must be 1k, 2k, a supported aspect ratio, or dimensions whose "
+            "ratio is supported by grok-imagine-image-2.0."
+        ),
+    )
+
+
+def _preserve_seedream_image_params(body: dict[str, Any]) -> None:
+    """Copy fields LiteLLM consumes before custom-provider dispatch.
+
+    The private copies are model-scoped and are reconstructed by the Seedream
+    handler. Keeping the public fields in place preserves the OpenAI-compatible
+    request contract for policy validation and logging.
+    """
+    for public_key, private_key in SEEDREAM_PRESERVED_IMAGE_PARAMS.items():
+        if public_key in body:
+            body[private_key] = body[public_key]
+
+
+def _seedream_reference_count(body: dict[str, Any]) -> int:
+    for key in (
+        "image_urls",
+        "images",
+        "image",
+        "reference_image_urls",
+        "referenceImageUrls",
+    ):
+        value = body.get(key)
+        if isinstance(value, list):
+            return len([item for item in value if item])
+        if isinstance(value, str) and value.strip():
+            return 1
+    return 0
+
+
+def _validate_seedream_pro_request(body: dict[str, Any]) -> PolicyError | None:
+    prompt = body.get("prompt")
+    layers = body.get("layer_decomposition") is True
+    if not layers and (not isinstance(prompt, str) or not prompt.strip()):
+        return PolicyError(
+            code="INVALID_IMAGE_PROMPT",
+            message="prompt must be a non-empty string.",
+        )
+
+    if layers and _seedream_reference_count(body) != 1:
+        return PolicyError(code="INVALID_LAYER_REFERENCE_COUNT",
+                           message="seedream-5.0-pro layer decomposition requires exactly one reference image.")
+    if layers and prompt is None:
+        # LiteLLM Router requires a prompt argument; the handler omits this empty
+        # value upstream so ModelArk can perform automatic decomposition.
+        body["prompt"] = ""
+    raw_size = str(body.get("size") or ("auto" if layers else "1K")).strip().lower()
+    if layers and raw_size not in {"1k", "1.5k", "2k", "auto"}:
+        return PolicyError(code="INVALID_IMAGE_SIZE",
+                           message="seedream-5.0-pro layer size must be 1K, 1.5K, 2K, or auto.")
+    if raw_size not in {"1k", "1.5k", "2k"} and not (layers and raw_size == "auto"):
+        match = re.fullmatch(r"(\d+)x(\d+)", raw_size)
+        if not match:
+            return PolicyError(
+                code="INVALID_IMAGE_SIZE",
+                message="seedream-5.0-pro size must be 1K, 1.5K, 2K, or valid pixel dimensions.",
+            )
+        width, height = (int(value) for value in match.groups())
+        pixels = width * height
+        ratio = width / height if height else 0
+        if not (921_600 <= pixels <= 4_624_220 and 1 / 16 <= ratio <= 16):
+            return PolicyError(
+                code="INVALID_IMAGE_SIZE",
+                message=(
+                    "seedream-5.0-pro pixel dimensions must satisfy its published "
+                    "pixel and aspect-ratio limits."
+                ),
+            )
+
+    output_count = body.get("n", 1)
+    if isinstance(output_count, bool) or output_count != 1:
+        return PolicyError(
+            code="INVALID_IMAGE_COUNT",
+            message="seedream-5.0-pro supports exactly one output image per request.",
+        )
+    output_format = str(body.get("output_format") or "png").strip().lower()
+    if output_format not in {"png", "jpeg", "jpg"}:
+        return PolicyError(
+            code="INVALID_IMAGE_OUTPUT_FORMAT",
+            message="seedream-5.0-pro output_format must be png or jpeg.",
+        )
+    if body.get("stream") is True:
+        return PolicyError(
+            code="IMAGE_STREAMING_UNSUPPORTED",
+            message="seedream-5.0-pro does not support streaming output.",
+        )
+    sequential = body.get("sequential_image_generation")
+    if sequential is not None and sequential is not False and sequential != "disabled":
+        return PolicyError(
+            code="SEQUENTIAL_IMAGE_GENERATION_UNSUPPORTED",
+            message="seedream-5.0-pro does not support sequential multi-image generation.",
+        )
+    if _seedream_reference_count(body) > 10:
+        return PolicyError(
+            code="TOO_MANY_REFERENCE_IMAGES",
+            message="seedream-5.0-pro supports up to 10 reference images.",
+        )
+    return None
+
+
+def apply_request_policy(path: str, body: Any) -> tuple[Any, PolicyError | None]:
+    """Return a policy-normalized request body or a client-facing error."""
+    if not isinstance(body, dict):
+        return body, None
+    model = str(body.get("model") or "").strip()
+    if model in ASTRA_MODELS or image_model(model):
+        extra = body.get("extra_body") or {}
+        if not isinstance(extra, dict):
+            return body, PolicyError(code="INVALID_OPENAI_REQUEST", message="extra_body must be an object.")
+        # LiteLLM merges extra_body at dispatch. Validate the effective request
+        # and reject conflicting duplicates before any provider submission.
+        if any(k in body and body[k] != v for k, v in extra.items()):
+            return body, PolicyError(code="INVALID_OPENAI_REQUEST", message="Conflicting extra_body fields.")
+        body.update(extra)
+        body.pop("extra_body", None)
+    if model in ASTRA_MODELS and path in POLICY_PATHS:
+        error = validate_astra(body, responses=path in RESPONSES_PATHS)
+        if error:
+            return body, PolicyError(code="INVALID_ASTRA_REQUEST", message=error)
+    if image_model(model) and path in IMAGE_PATHS:
+        error = validate_image_settings(body)
+        if error:
+            return body, PolicyError(code="INVALID_IMAGE_REQUEST", message=error)
+        if path.endswith("/generations"):
+            for field in IMAGE_PRESERVED_FIELDS:
+                private = "gateway_openai_image_" + field
+                body.pop(private, None)
+                if field in body:
+                    body[private] = body[field]
+        return body, None
+    if path in IMAGE_PATHS and model in GROK_IMAGE_2_MODELS:
+        size_error = _normalize_grok_image_2_size(body)
+        if size_error is not None:
+            return body, size_error
+        prompt = body.get("prompt")
+        if not isinstance(prompt, str) or not prompt.strip():
+            return body, PolicyError(
+                code="INVALID_IMAGE_PROMPT",
+                message="prompt must be a non-empty string.",
+            )
+        quality = str(body.get("quality") or "medium").strip().lower()
+        if quality not in GROK_IMAGE_2_QUALITIES:
+            return body, PolicyError(
+                code="INVALID_IMAGE_QUALITY",
+                message="quality must be low, medium or auto for grok-imagine-image-2.0.",
+            )
+        resolution = str(body.get("resolution") or "1k").strip().lower()
+        if resolution not in GROK_IMAGE_2_RESOLUTIONS:
+            return body, PolicyError(
+                code="INVALID_IMAGE_RESOLUTION",
+                message="resolution must be 1k or 2k for grok-imagine-image-2.0.",
+            )
+        response_format = str(body.get("response_format") or "url").strip().lower()
+        if response_format not in GROK_IMAGE_RESPONSE_FORMATS:
+            return body, PolicyError(
+                code="INVALID_IMAGE_RESPONSE_FORMAT",
+                message="response_format must be url or b64_json.",
+            )
+        output_count = body.get("n", 1)
+        if isinstance(output_count, bool) or not isinstance(output_count, int) or not 1 <= output_count <= 10:
+            return body, PolicyError(
+                code="INVALID_IMAGE_COUNT",
+                message="n must be an integer from 1 through 10.",
+            )
+        for public_key, private_key in (
+            ("n", "xai_output_count"),
+            ("quality", "xai_render_quality"),
+            ("response_format", "xai_response_format"),
+        ):
+            if public_key in body:
+                body[private_key] = body[public_key]
+        return body, None
+    if path in IMAGE_PATHS and model in SEEDANCE_DURABLE_ONLY_MODELS:
+        return body, PolicyError(
+            code="SEEDANCE_REQUIRES_DURABLE_JOB",
+            message=(
+                "seedance-2.5 must be submitted through /v1/generation-jobs; "
+                "the legacy Images route is not supported for this model."
+            ),
+        )
+    if path in IMAGE_PATHS and model in SEEDREAM_IMAGE_MODELS:
+        if model in SEEDREAM_PRO_MODELS:
+            validation_error = _validate_seedream_pro_request(body)
+            if validation_error is not None:
+                return body, validation_error
+        _preserve_seedream_image_params(body)
+        return body, None
+    if path not in POLICY_PATHS:
+        return body, None
+    if model in OMNI_MODELS:
+        return body, PolicyError(
+            code="OMNI_REQUIRES_DURABLE_JOB",
+            message=(
+                f"{model} is a video generation model. Submit it through "
+                "/v1/generation-jobs instead of Chat Completions or Responses."
+            ),
+        )
+    fixed_effort = FIXED_REASONING_EFFORT.get(model)
+    if fixed_effort:
+        supplied = _reasoning_efforts(body)
+        if any(value != fixed_effort for value in supplied):
+            return body, PolicyError(
+                code="FIXED_REASONING_EFFORT",
+                message=f"{model} always uses reasoning effort {fixed_effort!r}.",
+            )
+        if path in RESPONSES_PATHS:
+            reasoning = dict(body.get("reasoning") or {})
+            reasoning["effort"] = fixed_effort
+            body["reasoning"] = reasoning
+            body.pop("reasoning_effort", None)
+        else:
+            body["reasoning_effort"] = fixed_effort
+    if model in GEMINI_FLASH_MODELS:
+        _strip_gemini_params(body)
+    return body, None
+
+
+class GatewayRequestPolicyMiddleware:
+    """Small ASGI middleware that rewrites only JSON inference requests."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope.get("type") != "http" or scope.get("method") != "POST" or scope.get("path") not in POLICY_PATHS | IMAGE_PATHS:
+            await self.app(scope, receive, send)
+            return
+        chunks: list[bytes] = []
+        while True:
+            message = await receive()
+            if message.get("type") != "http.request":
+                await self.app(scope, receive, send)
+                return
+            chunks.append(message.get("body", b""))
+            if not message.get("more_body", False):
+                break
+        raw = b"".join(chunks)
+        try:
+            parsed = json.loads(raw)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            parsed = None
+        multipart = False
+        if parsed is None:
+            content_type = next((v.decode("latin1") for k, v in scope.get("headers", []) if k.lower() == b"content-type"), "")
+            if content_type.startswith("multipart/form-data"):
+                # Inspect scalar controls without decoding or rewriting image bytes.
+                from email.parser import BytesParser
+                from email.policy import default
+                envelope = BytesParser(policy=default).parsebytes(
+                    b"Content-Type: " + content_type.encode("latin1") + b"\r\nMIME-Version: 1.0\r\n\r\n" + raw
+                )
+                fields = {}
+                for part in envelope.iter_parts():
+                    name = part.get_param("name", header="content-disposition")
+                    if name and not part.get_filename():
+                        content = part.get_payload(decode=True) or b""
+                        fields[name] = content.decode("utf-8", errors="replace").strip()
+                from openai_model_contracts import image_edit_model
+                if image_edit_model(fields.get("model")):
+                    for name in ("n", "partial_images", "output_compression"):
+                        if name in fields and re.fullmatch(r"[0-9]+", fields[name]):
+                            fields[name] = int(fields[name])
+                    if fields.get("stream") in {"true", "false"}:
+                        fields["stream"] = fields["stream"] == "true"
+                    parsed, multipart = fields, True
+        if parsed is not None:
+            parsed, error = apply_request_policy(str(scope.get("path")), parsed)
+            if error:
+                payload = json.dumps(
+                    {"error": {"type": "invalid_request_error", "code": error.code, "message": error.message}},
+                    separators=(",", ":"),
+                ).encode()
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": error.status_code,
+                        "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(payload)).encode())],
+                    }
+                )
+                await send({"type": "http.response.body", "body": payload})
+                return
+            if not multipart:
+                raw = json.dumps(parsed, separators=(",", ":"), ensure_ascii=False).encode()
+        headers = [(key, value) for key, value in scope.get("headers", []) if key.lower() != b"content-length"]
+        headers.append((b"content-length", str(len(raw)).encode()))
+        policy_scope = dict(scope)
+        policy_scope["headers"] = headers
+        delivered = False
+
+        async def replay() -> dict[str, Any]:
+            nonlocal delivered
+            if delivered:
+                # Streaming handlers continue reading the ASGI receive channel
+                # to detect a real client disconnect. Returning a synthetic
+                # disconnect here cancels every otherwise-healthy stream.
+                return await receive()
+            delivered = True
+            return {"type": "http.request", "body": raw, "more_body": False}
+
+        from openai_model_contracts import image_edit_model
+        if isinstance(parsed, dict) and image_edit_model(parsed.get("model")) and parsed.get("stream") is True and scope.get("path") in IMAGE_PATHS:
+            from image_stream_routes import stream_app
+            await stream_app(policy_scope, replay, send)
+        else:
+            await self.app(policy_scope, replay, send)

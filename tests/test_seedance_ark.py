@@ -156,7 +156,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
         self.assertIs(body["watermark"], True)
 
         self.assertEqual(out.data[0].url, "https://cdn.example/out.mp4")
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 100_000 * 7.00 / 1_000_000)
+        self.assertNotIn("response_cost", out._hidden_params)
 
     async def test_submit_fast_model_url_body_and_cost(self):
         submit = self._resp({"id": "task-fast"})
@@ -199,7 +199,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
         self.assertIs(body["watermark"], False)
 
         self.assertEqual(out.data[0].url, "https://cdn.example/fast.mp4")
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 100_000 * 5.60 / 1_000_000)
+        self.assertNotIn("response_cost", out._hidden_params)
 
     async def test_submit_appends_image_content_parts(self):
         submit = self._resp({"id": "task-img"})
@@ -319,7 +319,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body[-1]["type"], "video_url")
         self.assertEqual(body[-1]["role"], "reference_video")
         # has_input_video=True -> uses lower rate ($4.30/M)
-        self.assertAlmostEqual(out._hidden_params["response_cost"], 50_000 * 4.30 / 1_000_000)
+        self.assertNotIn("response_cost", out._hidden_params)
 
     async def test_running_then_succeeded_during_sync_wait(self):
         submit = self._resp({"id": "task-xyz"})
@@ -490,10 +490,8 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(completed.data[0].url, "https://cdn.example/v-async.mp4")
-        # cost computed even on the poll-only path
-        self.assertAlmostEqual(
-            completed._hidden_params["response_cost"], 60_000 * 7.00 / 1_000_000
-        )
+        # No unversioned charge on a poll-only path
+        self.assertNotIn("response_cost", completed._hidden_params)
 
     async def test_poll_ignores_async_submit_false(self):
         """async_submit:false on a poll must not expand wait to POLL_TIMEOUT_S."""
@@ -590,14 +588,14 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
             usage={"completion_tokens": 1_000_000},
             has_input_video=False,
         )
-        self.assertAlmostEqual(cost, 5.60)
+        self.assertIsNone(cost)
 
         cost_with_video = llm._compute_cost(
             ark_model="dreamina-seedance-2-0-fast-260128",
             usage={"completion_tokens": 1_000_000},
             has_input_video=True,
         )
-        self.assertAlmostEqual(cost_with_video, 3.30)
+        self.assertIsNone(cost_with_video)
 
     def test_pro_model_default_rates(self):
         llm = SeedanceLLM()
@@ -606,14 +604,14 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
             usage={"completion_tokens": 1_000_000},
             has_input_video=False,
         )
-        self.assertAlmostEqual(cost, 7.00)
+        self.assertIsNone(cost)
 
         cost_with_video = llm._compute_cost(
             ark_model="dreamina-seedance-2-0-260128",
             usage={"completion_tokens": 1_000_000},
             has_input_video=True,
         )
-        self.assertAlmostEqual(cost_with_video, 4.30)
+        self.assertIsNone(cost_with_video)
 
     async def test_repeated_poll_of_completed_task_does_not_double_bill(self):
         succeeded = self._resp(
@@ -624,7 +622,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
             }
         )
 
-        # First poll -> cost attributed.
+        # Legacy polls never invent cost.
         first = self._mock_async_client(None, [succeeded])
         llm = SeedanceLLM()
         with patch("custom_handler_seedance.httpx.AsyncClient", return_value=first):
@@ -637,7 +635,7 @@ class TestSeedanceARK(unittest.IsolatedAsyncioTestCase):
                 optional_params={"seedance_task_id": "task-dedup", "wait_seconds": 0},
                 logging_obj=None,
             )
-        self.assertAlmostEqual(out1._hidden_params["response_cost"], 100_000 * 7.00 / 1_000_000)
+        self.assertNotIn("response_cost", out1._hidden_params)
 
         # Re-poll same task -> cost not re-attributed.
         succeeded2 = self._resp(

@@ -1,0 +1,17 @@
+{
+  "body": {
+    "request_schema_version": 2,
+    "model": "grok-video-1.5",
+    "contract_revision": "gateway-2026-08-10",
+    "profile_id": "generate.text",
+    "operation": "generate",
+    "prompt": "a lantern in rain",
+    "settings": {
+      "resolution": "720p",
+      "duration": 6,
+      "aspectRatio": "16:9",
+      "generateAudio": true
+    }
+  },
+  "request_hash": "gj2:021158aa5b5e9bc8bcb77ab092977ed7ce7d4a76580097eaa04f05786581c370"
+}

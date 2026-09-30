@@ -1,0 +1,275 @@
+{
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "project": "ai-gateway-495414",
+  "service_id": "C7E2-9256-1C43",
+  "skus": [
+    {
+      "sku_id": "0A59-79A3-584E",
+      "description": "Gemini Omni Flash Global Text Input",
+      "price": {
+        "currencyCode": "USD",
+        "valueType": "rate",
+        "rate": {
+          "tiers": [
+            {
+              "startAmount": {
+                "value": "0"
+              },
+              "listPrice": {
+                "currencyCode": "USD",
+                "units": "1",
+                "nanos": 500000000
+              },
+              "contractPrice": {
+                "currencyCode": "USD",
+                "units": "1",
+                "nanos": 500000000
+              },
+              "effectiveDiscountPercent": {
+                "value": "0"
+              }
+            }
+          ],
+          "unitInfo": {
+            "unit": "count",
+            "unitDescription": "count",
+            "unitQuantity": {
+              "value": "1000000"
+            }
+          },
+          "aggregationInfo": {
+            "level": "LEVEL_ACCOUNT",
+            "interval": "INTERVAL_MONTHLY"
+          }
+        },
+        "priceReason": {
+          "type": "default-price",
+          "defaultPrice": {}
+        }
+      }
+    },
+    {
+      "sku_id": "2826-BFA4-A0A0",
+      "description": "Gemini Omni Flash Global Audio Input",
+      "price": {
+        "currencyCode": "USD",
+        "valueType": "rate",
+        "rate": {
+          "tiers": [
+            {
+              "startAmount": {
+                "value": "0"
+              },
+              "listPrice": {
+                "currencyCode": "USD",
+                "units": "1",
+                "nanos": 500000000
+              },
+              "contractPrice": {
+                "currencyCode": "USD",
+                "units": "1",
+                "nanos": 500000000
+              },
+              "effectiveDiscountPercent": {
+                "value": "0"
+              }
+            }
+          ],
+          "unitInfo": {
+            "unit": "count",
+            "unitDescription": "count",
+            "unitQuantity": {
+              "value": "1000000"
+            }
+          },
+          "aggregationInfo": {
+            "level": "LEVEL_ACCOUNT",
+            "interval": "INTERVAL_MONTHLY"
+          }
+        },
+        "priceReason": {
+          "type": "default-price",
+          "defaultPrice": {}
+        }
+      }
+    },
+    {
+      "sku_id": "434F-BD63-6CA1",
+      "description": "Gemini Omni Flash Global Image Input",
+      "price": {
+        "currencyCode": "USD",
+        "valueType": "rate",
+        "rate": {
+          "tiers": [
+            {
+              "startAmount": {
+                "value": "0"
+              },
+              "listPrice": {
+                "currencyCode": "USD",
+                "units": "1",
+                "nanos": 500000000
+              },
+              "contractPrice": {
+                "currencyCode": "USD",
+                "units": "1",
+                "nanos": 500000000
+              },
+              "effectiveDiscountPercent": {
+                "value": "0"
+              }
+            }
+          ],
+          "unitInfo": {
+            "unit": "count",
+            "unitDescription": "count",
+            "unitQuantity": {
+              "value": "1000000"
+            }
+          },
+          "aggregationInfo": {
+            "level": "LEVEL_ACCOUNT",
+            "interval": "INTERVAL_MONTHLY"
+          }
+        },
+        "priceReason": {
+          "type": "default-price",
+          "defaultPrice": {}
+        }
+      }
+    },
+    {
+      "sku_id": "6FF0-3E82-E46F",
+      "description": "Gemini Omni Flash Global Video Input",
+      "price": {
+        "currencyCode": "USD",
+        "valueType": "rate",
+        "rate": {
+          "tiers": [
+            {
+              "startAmount": {
+                "value": "0"
+              },
+              "listPrice": {
+                "currencyCode": "USD",
+                "units": "1",
+                "nanos": 500000000
+              },
+              "contractPrice": {
+                "currencyCode": "USD",
+                "units": "1",
+                "nanos": 500000000
+              },
+              "effectiveDiscountPercent": {
+                "value": "0"
+              }
+            }
+          ],
+          "unitInfo": {
+            "unit": "count",
+            "unitDescription": "count",
+            "unitQuantity": {
+              "value": "1000000"
+            }
+          },
+          "aggregationInfo": {
+            "level": "LEVEL_ACCOUNT",
+            "interval": "INTERVAL_MONTHLY"
+          }
+        },
+        "priceReason": {
+          "type": "default-price",
+          "defaultPrice": {}
+        }
+      }
+    },
+    {
+      "sku_id": "83E8-F1AB-8C54",
+      "description": "Gemini Omni Flash Global Video Output",
+      "price": {
+        "currencyCode": "USD",
+        "valueType": "rate",
+        "rate": {
+          "tiers": [
+            {
+              "startAmount": {
+                "value": "0"
+              },
+              "listPrice": {
+                "currencyCode": "USD",
+                "units": "17",
+                "nanos": 500000000
+              },
+              "contractPrice": {
+                "currencyCode": "USD",
+                "units": "17",
+                "nanos": 500000000
+              },
+              "effectiveDiscountPercent": {
+                "value": "0"
+              }
+            }
+          ],
+          "unitInfo": {
+            "unit": "count",
+            "unitDescription": "count",
+            "unitQuantity": {
+              "value": "1000000"
+            }
+          },
+          "aggregationInfo": {
+            "level": "LEVEL_ACCOUNT",
+            "interval": "INTERVAL_MONTHLY"
+          }
+        },
+        "priceReason": {
+          "type": "default-price",
+          "defaultPrice": {}
+        }
+      }
+    },
+    {
+      "sku_id": "C238-3A7C-4DB5",
+      "description": "Gemini Omni Flash Global Text Output",
+      "price": {
+        "currencyCode": "USD",
+        "valueType": "rate",
+        "rate": {
+          "tiers": [
+            {
+              "startAmount": {
+                "value": "0"
+              },
+              "listPrice": {
+                "currencyCode": "USD",
+                "units": "9"
+              },
+              "contractPrice": {
+                "currencyCode": "USD",
+                "units": "9"
+              },
+              "effectiveDiscountPercent": {
+                "value": "0"
+              }
+            }
+          ],
+          "unitInfo": {
+            "unit": "count",
+            "unitDescription": "count",
+            "unitQuantity": {
+              "value": "1000000"
+            }
+          },
+          "aggregationInfo": {
+            "level": "LEVEL_ACCOUNT",
+            "interval": "INTERVAL_MONTHLY"
+          }
+        },
+        "priceReason": {
+          "type": "default-price",
+          "defaultPrice": {}
+        }
+      }
+    }
+  ]
+}

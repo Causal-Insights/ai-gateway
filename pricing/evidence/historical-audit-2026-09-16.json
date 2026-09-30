@@ -1,0 +1,288 @@
+{
+  "policy": "Dry run only. Existing amounts are unverified evidence. Historical rates and identity must be verified; settled customer charges are unchanged.",
+  "retained_jobs": [
+    {
+      "model": "gemini-omni-1.1-flash",
+      "completed": 16,
+      "with_usage": 16,
+      "missing_spend": 16,
+      "legacy_cost_evidence": "6.23456049999999932509364697352793882600963115692138671875"
+    },
+    {
+      "model": "gemini-omni-flash",
+      "completed": 4,
+      "with_usage": 4,
+      "missing_spend": 4,
+      "legacy_cost_evidence": "2.397576999999999569634923091143718920648097991943359375"
+    },
+    {
+      "model": "grok-video-1.5",
+      "completed": 41,
+      "with_usage": 41,
+      "missing_spend": 41,
+      "legacy_cost_evidence": "37.0199999999999989630516950001037912443280220031738281250"
+    },
+    {
+      "model": "seedance-2.0",
+      "completed": 1,
+      "with_usage": 1,
+      "missing_spend": 1,
+      "legacy_cost_evidence": "0.28415800000000002167865886804065667092800140380859375"
+    },
+    {
+      "model": "seedance-2.0-fast",
+      "completed": 3,
+      "with_usage": 3,
+      "missing_spend": 3,
+      "legacy_cost_evidence": "1.205086399999999835497277445028885267674922943115234375"
+    },
+    {
+      "model": "veo-3.1-fast",
+      "completed": 3,
+      "with_usage": 0,
+      "missing_spend": 3,
+      "legacy_cost_evidence": "0"
+    }
+  ],
+  "zero_successes": [
+    {
+      "model": "audio-studio/elevenlabs-music",
+      "last_at": "2026-08-08T14:55:59.6",
+      "first_at": "2026-06-11T19:17:13.801",
+      "requests": 7,
+      "with_tokens": 0
+    },
+    {
+      "model": "audio-studio/elevenlabs-sfx",
+      "last_at": "2026-06-19T21:34:37.099",
+      "first_at": "2026-06-11T18:53:54.911",
+      "requests": 11,
+      "with_tokens": 0
+    },
+    {
+      "model": "eleven_flash_v2_5",
+      "last_at": "2026-05-27T02:30:38.883",
+      "first_at": "2026-05-27T02:30:38.883",
+      "requests": 1,
+      "with_tokens": 0
+    },
+    {
+      "model": "eleven_multilingual_v2",
+      "last_at": "2026-06-11T18:40:25.827",
+      "first_at": "2026-06-11T18:40:25.827",
+      "requests": 1,
+      "with_tokens": 0
+    },
+    {
+      "model": "elevenlabs-music",
+      "last_at": "2026-07-11T18:29:28.609",
+      "first_at": "2026-07-11T18:29:28.609",
+      "requests": 1,
+      "with_tokens": 0
+    },
+    {
+      "model": "gemini-3-pro-image",
+      "last_at": "2026-07-11T18:28:23.273",
+      "first_at": "2026-07-11T18:28:23.273",
+      "requests": 1,
+      "with_tokens": 1
+    },
+    {
+      "model": "gemini-3-pro-image-preview",
+      "last_at": "2026-05-13T17:19:06.861",
+      "first_at": "2026-05-13T17:19:06.861",
+      "requests": 1,
+      "with_tokens": 1
+    },
+    {
+      "model": "gemini-3.1-flash-image",
+      "last_at": "2026-07-11T18:28:21.147",
+      "first_at": "2026-07-11T18:28:16.604",
+      "requests": 2,
+      "with_tokens": 2
+    },
+    {
+      "model": "gemini-3.1-flash-image-preview",
+      "last_at": "2026-05-13T17:19:07.955",
+      "first_at": "2026-05-13T17:19:07.083",
+      "requests": 2,
+      "with_tokens": 2
+    },
+    {
+      "model": "gemini-3.1-flash-lite-image",
+      "last_at": "2026-07-11T18:28:29.483",
+      "first_at": "2026-07-11T18:28:29.483",
+      "requests": 1,
+      "with_tokens": 1
+    },
+    {
+      "model": "grok-image",
+      "last_at": "2026-07-14T03:36:27.748",
+      "first_at": "2026-05-14T02:09:04.064",
+      "requests": 11,
+      "with_tokens": 0
+    },
+    {
+      "model": "grok-image/grok-imagine-image-quality",
+      "last_at": "2026-05-15T01:22:39.507",
+      "first_at": "2026-05-14T00:54:24.184",
+      "requests": 8,
+      "with_tokens": 0
+    },
+    {
+      "model": "grok-imagine-image-quality",
+      "last_at": "2026-05-14T01:45:07.511",
+      "first_at": "2026-05-14T01:44:02.496",
+      "requests": 3,
+      "with_tokens": 0
+    },
+    {
+      "model": "grok-video/grok-2-video-generation",
+      "last_at": "2026-05-23T18:30:45.607",
+      "first_at": "2026-05-13T03:06:32.352",
+      "requests": 33,
+      "with_tokens": 0
+    },
+    {
+      "model": "imagen-4.0-fast-generate-001",
+      "last_at": "2026-05-13T17:19:06.957",
+      "first_at": "2026-05-13T17:19:06.957",
+      "requests": 1,
+      "with_tokens": 0
+    },
+    {
+      "model": "imagen-4.0-generate-001",
+      "last_at": "2026-05-13T17:19:08.615",
+      "first_at": "2026-05-13T17:19:08.615",
+      "requests": 1,
+      "with_tokens": 0
+    },
+    {
+      "model": "imagen-4.0-ultra-generate-001",
+      "last_at": "2026-05-13T17:19:07.826",
+      "first_at": "2026-05-13T17:19:07.826",
+      "requests": 1,
+      "with_tokens": 0
+    },
+    {
+      "model": "openai/gpt-6-astra",
+      "last_at": "2026-09-09T14:48:25.076",
+      "first_at": "2026-09-09T14:48:25.076",
+      "requests": 1,
+      "with_tokens": 1
+    },
+    {
+      "model": "openai/gpt-image-2",
+      "last_at": "2026-08-10T14:10:08.388",
+      "first_at": "2026-05-13T02:40:00.33",
+      "requests": 221,
+      "with_tokens": 221
+    },
+    {
+      "model": "seedance/dreamina-seedance-2-0-260128",
+      "last_at": "2026-09-02T03:22:00.87",
+      "first_at": "2026-05-13T16:23:17.622",
+      "requests": 123,
+      "with_tokens": 0
+    },
+    {
+      "model": "seedance/dreamina-seedance-2-0-fast-260128",
+      "last_at": "2026-08-19T22:03:50.182",
+      "first_at": "2026-05-15T01:47:53.392",
+      "requests": 417,
+      "with_tokens": 0
+    },
+    {
+      "model": "vertex_ai/gemini-3.1-flash-lite-image",
+      "last_at": "2026-08-24T15:36:40.287",
+      "first_at": "2026-07-09T20:28:12.641",
+      "requests": 88,
+      "with_tokens": 87
+    },
+    {
+      "model": "vertex_ai/gemini-3.5-flash",
+      "last_at": "2026-05-19T23:05:45.167",
+      "first_at": "2026-05-19T18:58:55.709",
+      "requests": 7,
+      "with_tokens": 7
+    },
+    {
+      "model": "vertex_ai/gemini-3.7-flash",
+      "last_at": "2026-08-28T02:37:06.774",
+      "first_at": "2026-08-28T02:37:06.774",
+      "requests": 1,
+      "with_tokens": 0
+    },
+    {
+      "model": "vertex_ai/gemini-3.8-flash",
+      "last_at": "2026-09-03T18:07:51.646",
+      "first_at": "2026-09-03T14:48:07.595",
+      "requests": 11,
+      "with_tokens": 11
+    },
+    {
+      "model": "vertex_ai/veo-3.1-lite-generate-001",
+      "last_at": "2026-05-27T20:35:40.132",
+      "first_at": "2026-05-15T01:43:36.184",
+      "requests": 8,
+      "with_tokens": 0
+    },
+    {
+      "model": "xai/grok-4.20-reasoning-latest",
+      "last_at": "2026-05-18T18:58:04.506",
+      "first_at": "2026-05-18T13:45:16.266",
+      "requests": 4,
+      "with_tokens": 4
+    }
+  ],
+  "daily_differences": [
+    {
+      "day": "2026-08-17",
+      "model": "seedream/seedream-5-0-lite-260128",
+      "spend_difference": 0.035,
+      "request_difference": 1
+    },
+    {
+      "day": "2026-08-18",
+      "model": "openai/gpt-image-2",
+      "spend_difference": 0.177925,
+      "request_difference": 1
+    },
+    {
+      "day": "2026-08-20",
+      "model": "vertex_ai/gemini-3.1-flash-lite-image",
+      "spend_difference": 0,
+      "request_difference": 1
+    },
+    {
+      "day": "2026-08-23",
+      "model": "openai/gpt-5.6-luna",
+      "spend_difference": 0,
+      "request_difference": 1
+    },
+    {
+      "day": "2026-08-24",
+      "model": "elevenlabs/eleven_v3",
+      "spend_difference": 0.00648,
+      "request_difference": 1
+    },
+    {
+      "day": "2026-09-04",
+      "model": "openai/gpt-image-2",
+      "spend_difference": 0,
+      "request_difference": 1
+    },
+    {
+      "day": "2026-09-09",
+      "model": "openai/gpt-image-2.5-flare-2026-09-08",
+      "spend_difference": 0.006035,
+      "request_difference": 1
+    },
+    {
+      "day": "2026-09-15",
+      "model": "openai/gpt-image-2.5-sunburst-2026-09-08",
+      "spend_difference": 0.0094,
+      "request_difference": 1
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+import importlib.metadata
+import importlib.util
+import os
+import unittest
+from unittest.mock import AsyncMock, patch
+
+
+def _litellm_is_installed() -> bool:
+    # Other isolated unit tests install a lightweight ``litellm`` stub.  Such a
+    # module has no import spec, and find_spec() raises instead of returning
+    # None when unittest discovery happens to import the stub first.
+    try:
+        return importlib.util.find_spec("litellm") is not None
+    except (ImportError, ModuleNotFoundError, ValueError):
+        return False
+
+
+@unittest.skipUnless(_litellm_is_installed(), "runs inside the LiteLLM application image")
+class LiteLLMCompatibilityTests(unittest.TestCase):
+    def test_exact_litellm_version_is_installed(self):
+        self.assertEqual(importlib.metadata.version("litellm"), "1.102.1")
+
+    def test_gateway_private_import_contract(self):
+        from litellm.litellm_core_utils.litellm_logging import Logging
+        from litellm.proxy._types import LiteLLMRoutes
+        from litellm.proxy.auth.user_api_key_auth import UserAPIKeyAuth, user_api_key_auth
+        from litellm.proxy.proxy_server import app, llm_router
+        from litellm.types.utils import ImageObject, ImageResponse
+
+        self.assertTrue(callable(Logging))
+        self.assertTrue(hasattr(LiteLLMRoutes.openai_routes, "value"))
+        self.assertTrue(hasattr(LiteLLMRoutes.llm_api_routes, "value"))
+        self.assertTrue(callable(user_api_key_auth))
+        self.assertIsNotNone(UserAPIKeyAuth)
+        self.assertIsNotNone(app)
+        self.assertTrue(llm_router is None or hasattr(llm_router, "avideo_generation"))
+        self.assertTrue(callable(ImageObject))
+        self.assertTrue(callable(ImageResponse))
+
+    def test_gateway_modules_import_against_target_image(self):
+        import custom_handler  # noqa: F401
+        import gateway_server  # noqa: F401
+        import generation_job_adapters  # noqa: F401
+        import generation_job_routes  # noqa: F401
+
+    def test_image_25_edit_controls_survive_both_parameter_filters(self):
+        from openai_model_contracts import install_image_adapters, IMAGE_MODELS
+        from litellm.images.main import _get_ImageEditRequestUtils
+        from litellm.utils import ProviderConfigManager
+        from litellm.types.utils import LlmProviders
+        install_image_adapters()
+        utils = _get_ImageEditRequestUtils()
+        for model in IMAGE_MODELS.values():
+            config = ProviderConfigManager.get_provider_image_edit_config(model, LlmProviders.OPENAI)
+            params = dict(model=model, quality="max", output_format="webp", output_compression=83,
+                          n=4, background="transparent", size="1536x1024", mask=b"mask")
+            selected = utils.get_requested_image_edit_optional_param(params)
+            mapped = utils.get_optional_params_image_edit(model, config, selected, drop_params=True)
+            for key in params.keys() - {"model"}:
+                self.assertEqual(mapped[key], params[key])
+        selected = utils.get_requested_image_edit_optional_param(dict(model="gpt-image-1", output_format="webp"))
+        self.assertNotIn("output_format", selected)
+
+    def test_seedream_private_fields_survive_litellm_image_dispatch(self):
+        from custom_handler_seedream import SeedreamLLM
+        from gateway_request_policy import apply_request_policy
+        from litellm.utils import get_optional_params_image_gen
+
+        body, error = apply_request_policy(
+            "/v1/images/generations",
+            {
+                "model": "seedream-5.0-pro",
+                "prompt": "A wide editorial illustration",
+                "size": "2816x1584",
+                "n": 1,
+                "response_format": "url",
+                "output_format": "png",
+            },
+        )
+        self.assertIsNone(error)
+        optional = get_optional_params_image_gen(
+            model="dola-seedream-5-0-pro-260628",
+            n=body["n"],
+            response_format=body["response_format"],
+            size=body["size"],
+            custom_llm_provider="seedream",
+            output_format=body["output_format"],
+            seedream_size=body["seedream_size"],
+            seedream_output_count=body["seedream_output_count"],
+            seedream_response_format=body["seedream_response_format"],
+            seedream_output_format=body["seedream_output_format"],
+        )
+        self.assertEqual(optional["seedream_size"], "2816x1584")
+        self.assertEqual(optional["seedream_output_count"], 1)
+
+        with patch.dict(os.environ, {"BYTEDANCE_API_KEY": "test-key"}):
+            _url, payload, _headers = SeedreamLLM()._prepare_request(
+                "A wide editorial illustration",
+                "dola-seedream-5-0-pro-260628",
+                optional,
+            )
+        self.assertEqual(payload["size"], "2816x1584")
+        self.assertEqual(payload["n"], 1)
+        self.assertEqual(payload["output_format"], "png")
+
+
+@unittest.skipUnless(_litellm_is_installed(), "runs inside the LiteLLM application image")
+class BudgetCompatibilityTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        from gateway_accounting import install
+        install()
+
+    async def test_native_key_budget_reads_new_committed_spend(self):
+        from litellm.proxy import proxy_server as proxy
+        with patch.object(proxy, "_read_spend_counter_estimate", AsyncMock(return_value=(0.0, True))), \
+             patch.object(proxy, "_repair_stale_spend_counter", AsyncMock()), \
+             patch.object(proxy.SpendCounterReseed, "from_db", AsyncMock(side_effect=[0.71, 0.93])):
+            for expected in (0.71, 0.93):
+                self.assertEqual(await proxy.get_current_spend(
+                    counter_key="spend:key:fixture", fallback_spend=0, max_budget=1), expected)
+
+    async def test_native_window_budget_uses_gateway_journal(self):
+        from datetime import datetime, timezone
+        from litellm.proxy import proxy_server as proxy
+        start = datetime(2026, 9, 24, tzinfo=timezone.utc)
+        with patch.object(proxy, "_read_spend_counter_estimate", AsyncMock(return_value=(0.0, True))), \
+             patch.object(proxy, "_repair_stale_spend_counter", AsyncMock()), \
+             patch.object(proxy.SpendCounterReseed, "from_db", AsyncMock(return_value=None)), \
+             patch.object(proxy.SpendCounterReseed, "window_from_table", AsyncMock(return_value=0)) as cached, \
+             patch.object(proxy.SpendCounterReseed, "window_from_spend_logs", AsyncMock(return_value=0.71)) as journal:
+            self.assertEqual(await proxy.get_current_spend(
+                counter_key="spend:key:fixture:window:1h", fallback_spend=0, max_budget=1,
+                window_entity_type="key", window_entity_id="fixture", window_duration="1h",
+                window_start=start), 0.71)
+            journal.assert_awaited_once_with(prisma_client=proxy.prisma_client,
+                entity_type="key", entity_id="fixture", window_start=start)
+            cached.assert_not_awaited()
+
+    async def test_native_end_user_budget_reads_current_entity_total(self):
+        from litellm.proxy import proxy_server as proxy
+        with patch.object(proxy, "_read_spend_counter_estimate", AsyncMock(return_value=(0.0, True))), \
+             patch.object(proxy, "_repair_stale_spend_counter", AsyncMock()), \
+             patch.object(proxy.SpendCounterReseed, "end_user_from_db", AsyncMock(return_value=0.37)):
+            self.assertEqual(await proxy.get_current_spend(
+                counter_key=proxy.END_USER_COUNTER_PREFIX + "fixture", fallback_spend=0,
+                max_budget=1), 0.37)
+
+
+if __name__ == "__main__":
+    unittest.main()

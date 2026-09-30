@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "openai",
+    "api_product": "OpenAI direct API Flex",
+    "upstream_model": "gpt-5.4-nano",
+    "aliases": [
+      "gpt-5.4-nano"
+    ],
+    "account_context": null,
+    "region": "global",
+    "routes": [
+      "completion",
+      "responses"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "pricing",
+      "excerpt": ""
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.4-nano",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "usage_schema",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "input_tokens",
+      "rate": "0.10",
+      "per": "1000000",
+      "unit": "token",
+      "conditions": {
+        "service_tier": [
+          "flex"
+        ]
+      }
+    },
+    {
+      "name": "cached_tokens",
+      "rate": "0.01",
+      "per": "1000000",
+      "unit": "token",
+      "conditions": {
+        "service_tier": [
+          "flex"
+        ]
+      }
+    },
+    {
+      "name": "output_tokens",
+      "rate": "0.625",
+      "per": "1000000",
+      "unit": "token",
+      "conditions": {
+        "service_tier": [
+          "flex"
+        ]
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "input_tokens": "1000",
+      "cached_tokens": "0",
+      "output_tokens": "0"
+    },
+    "formula": "1000 * 0.10 / 1000000",
+    "calculated_cost": "0.0001",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "Posted Flex prices; account applicability and provider-backed acceptance remain outstanding.",
+    "Unexpected served tiers, regional endpoints and hosted tools are not covered.",
+    "No verified long-context price in this tier; quantities above 272000 remain unresolved."
+  ]
+}

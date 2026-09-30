@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "google",
+    "api_product": "Vertex AI",
+    "upstream_model": "gemini-omni-1.1-flash-preview",
+    "aliases": [
+      "gemini-omni-flash",
+      "gemini-omni-flash-preview",
+      "gemini-omni-1.1-flash",
+      "gemini-omni-1.1-flash-preview"
+    ],
+    "account_context": null,
+    "region": null,
+    "routes": [
+      "generation_job"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://cloud.google.com/vertex-ai/generative-ai/pricing",
+      "retrieved_at": "2026-09-16T00:00:00Z",
+      "scope": "pricing",
+      "excerpt": ""
+    }
+  ],
+  "retrieved_at": "2026-09-16T00:00:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "input_tokens",
+      "unit": "token",
+      "rate": "1.50",
+      "per": "1000000",
+      "conditions": {}
+    },
+    {
+      "name": "text_output_tokens",
+      "unit": "token",
+      "rate": "9.00",
+      "per": "1000000",
+      "conditions": {}
+    },
+    {
+      "name": "video_tokens",
+      "unit": "token",
+      "rate": "17.50",
+      "per": "1000000",
+      "conditions": {}
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "input_tokens": "2405",
+      "text_output_tokens": "452",
+      "video_tokens": "28960"
+    },
+    "formula": "(2405*1.50 + 452*9.00 + 28960*17.50)/1000000",
+    "calculated_cost": "0.5144755",
+    "provider_reported_cost": null,
+    "evidence_kind": "provider_response"
+  },
+  "differences": [],
+  "limitations": [
+    "Public pricing only; account discounts have not been established.",
+    "Thoughts are separate from modality output in the retained provider usage; total_tokens equals input + output + thoughts.",
+    "Current retrieval does not establish historical effective rates."
+  ]
+}

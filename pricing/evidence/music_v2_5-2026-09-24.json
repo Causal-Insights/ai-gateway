@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "elevenlabs",
+    "api_product": "ElevenAPI",
+    "upstream_model": "music_v2_5",
+    "aliases": [
+      "elevenlabs-music-2.5"
+    ],
+    "account_context": null,
+    "region": null,
+    "routes": [
+      "image_generation"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://elevenlabs.io/pricing/api",
+      "retrieved_at": "2026-09-25T00:25:47.543399+00:00",
+      "scope": "pricing",
+      "excerpt": "Music: $0.15 per minute."
+    },
+    {
+      "url": "https://join.elevenlabs.io/api/developer-api",
+      "retrieved_at": "2026-09-25T00:25:47.543399+00:00",
+      "scope": "pricing",
+      "excerpt": "Music generation API $0.15 per minute."
+    }
+  ],
+  "retrieved_at": "2026-09-25T00:25:47.543399+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "audio_seconds",
+      "unit": "second",
+      "rate": "0.150",
+      "per": "60",
+      "conditions": {}
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "audio_seconds": "1"
+    },
+    "formula": "1 * 0.150 / 60",
+    "calculated_cost": "0.0025",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "The product-specific API rate table and independent official developer page agree on per-minute pricing. Generic billed-per-generation wording describes a charge event without specifying a different fixed rate.",
+    "The model-specific compose API lists music_v2_5. Actual returned duration is measured; subscription fees and tax are not allocated.",
+    "Access is not inferred from price evidence. Source uploads are paid separately; provider copyright rejection may charge half and requires separate usage evidence."
+  ]
+}

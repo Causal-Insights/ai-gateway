@@ -43,9 +43,10 @@ def _database_url() -> str:
 
 
 class GenerationJobRepository:
-    def __init__(self) -> None:
+    def __init__(self, *, read_only: bool = False) -> None:
         self._pool: Optional[asyncpg.Pool] = None
         self._init_lock = asyncio.Lock()
+        self._read_only = read_only
 
     async def pool(self) -> asyncpg.Pool:
         if self._pool is not None:
@@ -57,8 +58,10 @@ class GenerationJobRepository:
                     min_size=1,
                     max_size=max(1, int(os.environ.get("GENERATION_DB_POOL_SIZE", "5"))),
                     command_timeout=30,
+                    server_settings={"default_transaction_read_only": "on"} if self._read_only else None,
                 )
-                await self._migrate()
+                if not self._read_only:
+                    await self._migrate()
         return self._pool
 
     async def close(self) -> None:
@@ -68,11 +71,13 @@ class GenerationJobRepository:
 
     async def _migrate(self) -> None:
         assert self._pool is not None
-        migration = Path(__file__).with_name("migrations").joinpath("001_generation_jobs.sql").read_text()
+        migrations_dir = Path(__file__).with_name("migrations")
+        files = sorted(migrations_dir.glob("*.sql"))
         async with self._pool.acquire() as conn:
             async with conn.transaction():
                 await conn.execute("select pg_advisory_xact_lock($1)", 7_451_913_701)
-                await conn.execute(migration)
+                for path in files:
+                    await conn.execute(path.read_text())
 
     async def create_or_get(
         self,
@@ -88,6 +93,9 @@ class GenerationJobRepository:
         request_metadata: dict,
         deadline_at: datetime,
         callback_token_hash: Optional[str],
+        request_schema_version: int = 1,
+        provider_route: Optional[str] = None,
+        adapter_revision: Optional[str] = None,
     ) -> tuple[dict, bool, bool]:
         pool = await self.pool()
         async with pool.acquire() as conn:
@@ -97,8 +105,8 @@ class GenerationJobRepository:
                     insert into gateway_generation_jobs (
                       id, owner_key_hash, owner_context, idempotency_key, request_hash,
                       modality, model, provider, status, request_metadata, deadline_at,
-                      callback_token_hash
-                    ) values ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,'submitting',$9::jsonb,$10,$11)
+                      callback_token_hash, request_schema_version, provider_route, adapter_revision
+                    ) values ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,'submitting',$9::jsonb,$10,$11,$12,$13,$14)
                     on conflict (owner_key_hash, idempotency_key) do nothing
                     returning *
                     """,
@@ -113,6 +121,9 @@ class GenerationJobRepository:
                     _json(request_metadata),
                     deadline_at,
                     callback_token_hash,
+                    request_schema_version,
+                    provider_route,
+                    adapter_revision,
                 )
                 if row:
                     return _row(row) or {}, True, False
@@ -170,12 +181,21 @@ class GenerationJobRepository:
             raise RuntimeError(f"generation job {job_id} could not be marked submitted")
         return _row(row) or {}
 
-    async def mark_submission_failed(self, job_id: str, *, code: str, message: str) -> dict:
+    async def mark_submission_failed(
+        self,
+        job_id: str,
+        *,
+        code: str,
+        message: str,
+        retryable: bool = False,
+        usage: Optional[dict] = None,
+    ) -> dict:
         pool = await self.pool()
         row = await pool.fetchrow(
             """
             update gateway_generation_jobs
-            set status='failed', error_code=$2, error_message=$3, error_retryable=false,
+            set status='failed', error_code=$2, error_message=$3, error_retryable=$4,
+                usage=coalesce($5::jsonb,usage),
                 completed_at=now(), updated_at=now(), next_poll_at=null
             where id=$1 and status='submitting'
             returning *
@@ -183,6 +203,8 @@ class GenerationJobRepository:
             job_id,
             code,
             message[:4000],
+            retryable,
+            _json(usage) if usage is not None else None,
         )
         return _row(row) or (await self.get(job_id) or {})
 
@@ -199,6 +221,8 @@ class GenerationJobRepository:
                 consecutive_poll_errors=0, last_polled_at=now(),
                 next_poll_at=case when $12 then null else next_poll_at end,
                 completed_at=case when $12 then coalesce(completed_at,now()) else completed_at end,
+                request_metadata=(case when $13::text is null then coalesce(request_metadata,'{}'::jsonb)
+                    else coalesce(request_metadata,'{}'::jsonb) || jsonb_build_object('served_model',$13::text) end) || $14::jsonb,
                 updated_at=now()
             where id=$1 and status not in ('completed','failed','expired','cancelled')
             returning *
@@ -215,6 +239,8 @@ class GenerationJobRepository:
             _json(status.usage) if status.usage is not None else None,
             status.cost_usd,
             terminal,
+            status.served_model,
+            _json(status.result_metadata),
         )
         return _row(row) or (await self.get(job_id) or {})
 
@@ -295,7 +321,13 @@ class GenerationJobRepository:
         rows = await pool.fetch(
             """
             select * from gateway_generation_jobs
-            where status='completed' and response_cost_usd is not null and spend_logged_at is null
+            where status in ('completed','failed','expired','cancelled')
+              and ((accounting_id is not null and (spend_logged_at is null or not exists
+                (select 1 from gateway_cost_attempts a join "LiteLLM_SpendLogs" s on s.request_id=a.attempt_id
+                 where a.accounting_id=gateway_generation_jobs.accounting_id and a.observed_at is not null)))
+                or (accounting_id is null and not exists
+                  (select 1 from "LiteLLM_SpendLogs" s where s.request_id=gateway_generation_jobs.id
+                   or s.metadata->>'generation_job_id'=gateway_generation_jobs.id)))
             order by completed_at asc limit $1
             """,
             limit,
@@ -321,23 +353,8 @@ class GenerationJobRepository:
         )
         return _row(row)
 
-    async def log_spend_once(
-        self, job_id: str, callback: Callable[[dict], Awaitable[None]]
-    ) -> bool:
-        pool = await self.pool()
-        async with pool.acquire() as conn:
-            async with conn.transaction():
-                row = await conn.fetchrow(
-                    "select * from gateway_generation_jobs where id=$1 for update", job_id
-                )
-                if not row or row["spend_logged_at"] is not None:
-                    return False
-                await callback(_row(row) or {})
-                await conn.execute(
-                    "update gateway_generation_jobs set spend_logged_at=now(), updated_at=now() where id=$1",
-                    job_id,
-                )
-                return True
+    async def log_spend_once(self, job_id: str, callback) -> bool:
+        raise RuntimeError("Use CostAccounting.observe; callback completion is not a durable spend receipt")
 
     async def cleanup(self, retention_days: int = 30) -> int:
         pool = await self.pool()
@@ -347,6 +364,10 @@ class GenerationJobRepository:
             delete from gateway_generation_jobs
             where status in ('completed','failed','expired','cancelled')
               and completed_at < $1
+              and accounting_id is not null
+              and exists (select 1 from gateway_cost_attempts a where a.accounting_id=gateway_generation_jobs.accounting_id and a.committed_at is not null)
+              and not exists (select 1 from gateway_cost_attempts a where a.accounting_id=gateway_generation_jobs.accounting_id
+                and (a.cost_status <> 'priced' or a.attribution_status <> 'complete' or a.projection_status <> 'applied' or a.pricing_issue is not null))
             """,
             cutoff,
         )
