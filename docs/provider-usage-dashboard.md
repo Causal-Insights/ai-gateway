@@ -46,3 +46,5 @@ At the owner's request, H3 generation usage now includes estimated spending usin
 Estimates appear in daily and period summaries, provider/model rows, sorting, and charts, with explicit labels and separation from reported charges. Calculations are persisted during collection with their rate basis, never recomputed from future prices on page load. Sixty Python tests and four JavaScript tests passed; the disposable PostgreSQL test remains skipped locally.
 
 Deployed image `20261002-minimax-estimates-v2` to the independent collector and web revision `provider-usage-dashboard-00011-nlg`. A bounded MiniMax refresh confirmed USD 2.30 estimated spending and no reported cost. Authenticated live verification confirmed mixed-provider totals break out reported versus estimated amounts, MiniMax usage/model rows show the estimate, financial comparisons remain unavailable, and the browser has no console errors.
+
+Final visual review found that long estimate notes widened the expanded table. Notes now wrap normally; final image `20261002-minimax-estimates-v3` is deployed on the collector and web revision `provider-usage-dashboard-00012-9sl`.
