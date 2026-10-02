@@ -1,5 +1,9 @@
 name: Accounting contracts
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore: ['apps/provider-usage-dashboard/**', '.github/workflows/provider-usage-dashboard.yml', 'docs/provider-usage-dashboard.md']
+  pull_request:
+    paths-ignore: ['apps/provider-usage-dashboard/**', '.github/workflows/provider-usage-dashboard.yml', 'docs/provider-usage-dashboard.md']
 jobs:
   accounting:
     runs-on: ubuntu-latest
