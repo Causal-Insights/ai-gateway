@@ -22,19 +22,19 @@
     <div id="error" class="error-banner" role="alert" hidden></div>
     <div id="announcement" class="sr-only" aria-live="polite"></div>
     <section class="cards" aria-label="Spending summary">
-      <article class="card"><div class="card-label">Known usage cost today <span class="card-symbol">◷</span></div><div id="today-cost" class="card-value">×</div><div id="today-usage" class="card-detail">Loading reported usage…</div></article>
+      <article class="card"><div class="card-label">Usage cost today <span class="card-symbol">◷</span></div><div id="today-cost" class="card-value">×</div><div id="today-estimate" class="card-detail"></div><div id="today-usage" class="card-detail">Loading reported usage…</div></article>
       <article class="card featured"><div class="card-label">Usage cost · <span id="period-label">last 7 days</span><span class="card-symbol">↗</span></div><div id="period-cost" class="card-value">×</div><div id="coverage" class="card-detail">Loading cost coverage…</div></article>
       <article class="card"><div class="card-label">Reported payments &amp; top-ups <span class="card-symbol">↓</span></div><div id="payments-cost" class="card-value">×</div><div id="payment-coverage" class="card-detail">Reported funds added during the selected period</div></article>
     </section>
     <section id="warnings" class="warnings" aria-label="Reporting notices" hidden></section>
     <section class="panel breakdown">
-      <div class="panel-heading"><div><h2>Usage breakdown</h2><p>Reported amounts, with native usage units preserved.</p></div><div class="tabs" role="tablist" aria-label="Breakdown view"><button id="provider-tab" role="tab" aria-selected="true">By provider</button><button id="model-tab" role="tab" aria-selected="false">By model</button></div></div>
+      <div class="panel-heading"><div><h2>Usage breakdown</h2><p>Reported amounts and labeled estimates, with native usage units preserved.</p></div><div class="tabs" role="tablist" aria-label="Breakdown view"><button id="provider-tab" role="tab" aria-selected="true">By provider</button><button id="model-tab" role="tab" aria-selected="false">By model</button></div></div>
       <div class="table-controls"><label class="search"><span aria-hidden="true">⌕</span><input id="model-search" type="search" placeholder="Search models…" aria-label="Search models"></label><label class="unit-filter">Usage unit <select id="usage-unit"><option value="">Choose a unit</option></select></label><span class="table-note">× = unavailable · monetary sorting uses USD</span></div>
       <div id="breakdown-table" class="table-scroll" aria-live="polite"></div>
       <div class="panel-foot"><span>Balances are the latest snapshots, independent of the selected dates.</span><span id="timezone-note">UTC reporting days · BytePlus: UTC+8. Today follows each provider’s day.</span></div>
     </section>
     <section class="chart-grid">
-      <article class="panel"><div class="panel-heading"><div><h2>Daily usage cost</h2><p>Known cost by provider · USD</p></div></div><div class="chart"><canvas id="cost-chart" aria-label="Daily cost by provider" role="img"></canvas></div><div id="cost-empty" class="chart-note"></div></article>
+      <article class="panel"><div class="panel-heading"><div><h2>Daily usage cost</h2><p>Reported + estimated cost by provider · USD</p></div></div><div class="chart"><canvas id="cost-chart" aria-label="Daily cost by provider" role="img"></canvas></div><div id="cost-empty" class="chart-note"></div></article>
       <article class="panel"><div class="panel-heading"><div><h2>Daily volume</h2><p>Reported counts, kept separate by type</p></div><select id="volume-kind" aria-label="Volume measure"><option value="requests">Requests</option><option value="generations">Generations</option></select></div><div class="chart"><canvas id="volume-chart" aria-label="Daily request or generation volume" role="img"></canvas></div><div id="volume-empty" class="chart-note"></div></article>
     </section>
     <section id="model-contribution" class="panel" hidden><div class="panel-heading"><div><h2 id="model-contribution-title">Model contribution</h2><p>Daily model costs · USD · top 10</p></div></div><div class="chart"><canvas id="model-chart" aria-label="Model cost contribution" role="img"></canvas></div><div id="model-empty" class="chart-note"></div></section>

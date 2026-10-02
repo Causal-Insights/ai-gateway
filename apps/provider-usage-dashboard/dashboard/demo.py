@@ -24,11 +24,12 @@ def demo_store():
                 metrics.update({"credits": 7500 + i * 200} if provider == "elevenlabs" else {"input_tokens": 180000 + i * 4700} if j == 0 else {"generations": 12 + i % 9, "video_seconds": 72 + i % 27})
                 if provider == "minimax":
                     metrics = {"tasks": 3, "generations": 3, "output_video_seconds": 18}
-                batch.rows.append(row(day, model=model, cost=cost, metrics=metrics))
+                batch.rows.append(row(day, model=model, cost=cost, metrics=metrics, **({"estimated_cost": "2.30", "estimate_partial": True} if provider == "minimax" else {})))
             batch.covered[str(day)] = ["usage", "requests", "generations"] + (["cost"] if amount is not None else [])
         if provider == "minimax":
-            batch.covered = {day: ["usage", "generations"] for day in batch.covered}
-            batch.note = "Sample V2 task usage only; costs, balance and payments unavailable."
+            batch.covered = {day: ["usage", "generations", "estimated_cost"] for day in batch.covered}
+            batch.basis = "Sample usage and estimated spending"
+            batch.note = "Sample usage with posted-rate estimated spending; reported costs, balance and payments unavailable."
         if provider == "xai":
             batch.balance = {"amount": "184.62", "unit": "USD", "label": "Prepaid balance"}
             batch.payments = [{"id": "demo-topup", "day": str(today - timedelta(days=2)), "amount": "250", "currency": "USD", "kind": "topup", "description": "Prepaid credit purchase"}]

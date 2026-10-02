@@ -346,14 +346,39 @@ def google_billing(env, start, end):
     return batch
 
 
+# Posted H3 generation rates verified 2026-10-02. Keep this version with cached
+# aggregates; report reads must not reprice historical usage at a future rate.
+# https://platform.minimax.io/docs/guides/pricing-paygo
+MINIMAX_ESTIMATE_BASIS = "MiniMax H3 posted API rates verified 2026-10-02"
+
+
+def minimax_estimate(task):
+    rate = {"768P": Decimal("0.08"), "2K": Decimal("0.13")}.get(task.get("resolution"))
+    if task.get("model") != "MiniMax-H3" or task.get("task_type") != "generation" or rate is None:
+        return None, False
+    usage = task.get("usage") or {}
+    parts = [decimal(usage.get(key)) for key in ("input_seconds", "output_seconds", "input_image_count")]
+    # Preserve known components without treating omitted/invalid metering as zero.
+    parts = [value if value is not None and value >= 0 else None for value in parts]
+    input_seconds, output_seconds, images = parts
+    components = [seconds * rate for seconds in (input_seconds, output_seconds) if seconds is not None]
+    if images is not None:
+        components.append(max(Decimal(0), images - 5) * Decimal("0.04"))
+    return (sum(components, Decimal(0)) if components else None), any(value is None for value in parts)
+
+
 async def minimax(client, env, start, end, category):
     key = require(env, "MINIMAX_USAGE_API_KEY")
     batch = Batch("minimax", "usage", start, end,
         scope="MiniMax V2 tasks visible to reporting key",
-        basis="Provider-metered V2 task usage; no monetary cost reporting")
+        basis="Provider-metered usage; estimated H3 generation cost at posted API rates")
     batch.note = ("V2 video/Context-IR tasks only. API exposes the latest seven days; "
                   "collected daily aggregates are retained. Dates use task creation time in UTC. "
-                  "Task counts are not HTTP request counts. Costs, balance, and payments are unavailable.")
+                  "Task counts are not HTTP request counts. Estimated H3 generation spending uses "
+                  "768p $0.08/sec or 2K $0.13/sec for input + output video, plus $0.04 per image "
+                  "after the first five per task. Rates verified 2026-10-02; token equivalents are not billed again. "
+                  "Missing billable quantities leave a partial estimate; extra-image charges may be absent. "
+                  "Other models/task types are excluded from estimates. Reported costs, balance, and payments remain unavailable.")
     # The API has a rolling seven-day window. Exclude its partially expired UTC
     # boundary day so a later refresh cannot replace a cached full day with less data.
     first_day = max(start, datetime.now(timezone.utc).date() - timedelta(days=6))
@@ -384,17 +409,27 @@ async def minimax(client, env, start, end, category):
                 if value is not None:
                     metrics[unit] = value
             identity = (day, item.get("model"), task_type)
-            target = grouped.setdefault(identity, {})
+            target = grouped.setdefault(identity, {"metrics": {}, "estimates": [], "partial": False, "unpriced": 0})
             for unit, value in metrics.items():
-                target[unit] = target.get(unit, Decimal(0)) + value
+                target["metrics"][unit] = target["metrics"].get(unit, Decimal(0)) + value
+            estimate, partial = minimax_estimate(item)
+            if estimate is not None:
+                target["estimates"].append(estimate)
+                target["partial"] |= partial
+            else:
+                target["unpriced"] += 1
         if len(seen) >= count:
             break
         if len(seen) == previous:
             raise ReportingError("MiniMax returned incomplete task pagination; previous data retained.")
         page += 1
-    for (day, model, task_type), metrics in grouped.items():
-        batch.rows.append(row(day, model=model, service=task_type, metrics=metrics, scope=batch.scope))
+    for (day, model, task_type), item in grouped.items():
+        batch.rows.append(row(day, model=model, service=task_type, metrics=item["metrics"], scope=batch.scope,
+            estimated_cost=str(sum(item["estimates"])) if item["estimates"] else None,
+            estimate_partial=item["partial"], unpriced_tasks=item["unpriced"], estimate_basis=MINIMAX_ESTIMATE_BASIS))
         batch.covered.setdefault(day, ["usage"])
-        if "generations" in metrics and "generations" not in batch.covered[day]:
+        if item["estimates"] and "estimated_cost" not in batch.covered[day]:
+            batch.covered[day].append("estimated_cost")
+        if "generations" in item["metrics"] and "generations" not in batch.covered[day]:
             batch.covered[day].append("generations")
     return batch

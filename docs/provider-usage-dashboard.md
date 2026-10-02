@@ -4,7 +4,7 @@ The independent application is in [`apps/provider-usage-dashboard`](../apps/prov
 
 It consolidates OpenAI, xAI, BytePlus, ElevenLabs, Google Cloud, and MiniMax without changing Gateway inference, pricing, model discovery, job behavior, or Magic Lens consumer contracts. Dashboard-specific dependencies, image, Firestore cache, Cloud Run service/job, identities, and schedule are separate from Gateway.
 
-Provider facts are never replaced with local price estimates. Unavailable fields display ×. Historical source costs and exact model identities remain intact. Gateway and LiteLLM totals describe the same accounting activity and are never added together.
+Provider facts remain separate from explicitly labeled MiniMax posted-rate estimates. Unavailable fields display ×. Historical source costs and exact model identities remain intact. Gateway and LiteLLM totals describe the same accounting activity and are never added together.
 
 ## Deployment verification — 2026-09-30
 
@@ -38,3 +38,11 @@ The local sample preview (`python -m dashboard demo --port 8765`) remains useful
 - The collector skips the partially expired boundary day when replacing daily aggregates and retains older collected history. This source cannot backfill 13 months of earlier activity. Source scope and retention limits appear in the expanded provider view.
 - Regression validation: 52 Python tests passed and one disposable PostgreSQL integration test skipped locally; four JavaScript control tests passed. Pagination, partial-page failure, expired ranges, repeated collection, missing money, task/model totals, and content exclusion are covered.
 - Deployed image `20261002-minimax` to the independent collector and web revision `provider-usage-dashboard-00010-mmk`. Authenticated browser verification confirmed the MiniMax filter, expanded H3 model, three generations, 18 output seconds, reporting-limit notes, unavailable financials, and no console errors. Gateway services were not deployed.
+
+## MiniMax spending estimates — 2026-10-02
+
+At the owner's request, H3 generation usage now includes estimated spending using published per-resolution video-second and extra-image rates. The three visible tasks calculate to USD 2.30 (768p: 19 input/output seconds × USD 0.08; 2K: 6 seconds × USD 0.13). Input image counts are omitted in these responses, so the subtotal is labeled partial and does not assume extra images were free. Reported costs, payments, and balance remain unavailable.
+
+Estimates appear in daily and period summaries, provider/model rows, sorting, and charts, with explicit labels and separation from reported charges. Calculations are persisted during collection with their rate basis, never recomputed from future prices on page load. Sixty Python tests and four JavaScript tests passed; the disposable PostgreSQL test remains skipped locally.
+
+Deployed image `20261002-minimax-estimates-v2` to the independent collector and web revision `provider-usage-dashboard-00011-nlg`. A bounded MiniMax refresh confirmed USD 2.30 estimated spending and no reported cost. Authenticated live verification confirmed mixed-provider totals break out reported versus estimated amounts, MiniMax usage/model rows show the estimate, financial comparisons remain unavailable, and the browser has no console errors.

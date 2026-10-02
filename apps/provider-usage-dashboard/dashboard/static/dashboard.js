@@ -21,6 +21,17 @@ function amounts(values = {}) {
   const currencies = Object.keys(values).sort((a,b) => (a === 'USD' ? -1 : b === 'USD' ? 1 : a.localeCompare(b)));
   return currencies.length ? currencies.map((c,i) => `${i ? '<span class="subvalue">' : ''}${money(values[c],c)}${i ? '</span>' : ''}`).join('') : unavailable;
 }
+function hasEstimate(item) { return Object.keys(item.estimated_cost).length > 0; }
+function spending(item) {
+  const estimated = hasEstimate(item);
+  const mixed = Object.keys(item.cost).length > 0;
+  const caption = estimated ? (mixed ? 'Includes estimates' : 'Estimated') : '';
+  return amounts(item.spending) + (caption ? `<span class="subvalue estimate-label">${caption}${item.estimate_partial || item.unpriced_tasks ? ' · partial' : ''}</span>` : '');
+}
+function estimateDetail(item) {
+  if (!hasEstimate(item)) return '';
+  return `${Object.keys(item.cost).length ? amounts(item.cost) + ' reported + ' : ''}${amounts(item.estimated_cost)} estimated${item.estimate_partial || item.unpriced_tasks ? ' · some charges unavailable' : ''}`;
+}
 function stamp(value) {
   return value ? new Date(value).toLocaleString('en', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'Not yet reported';
 }
@@ -43,8 +54,8 @@ function metric(item) {
 function value(item,key) {
   if (key === 'name') return item.name || item.provider_name;
   if (key === 'model') return item.model;
-  if (key === 'cost') return number(item.cost.USD);
-  if (key === 'today') return number(item.today?.cost.USD);
+  if (key === 'cost') return number(item.spending.USD);
+  if (key === 'today') return number(item.today?.spending.USD);
   if (key === 'payments') return number(item.payments?.USD);
   if (key === 'balance') return item.balance?.unit === 'USD' ? number(item.balance.amount) : null;
   if (key === 'usage') return number(item.metrics[$('usage-unit').value]);
@@ -58,7 +69,7 @@ function modelFilter(items) {
 }
 function modelTable(items) {
   const columns = [['name','Provider'],['model','Model / service'],['cost','Usage cost',true],['requests','Requests',true],['generations','Generations',true],['usage','Native usage',true]];
-  return `<table>${headings(columns)}<tbody>${sorted(modelFilter(items)).map(m => `<tr><td>${providerName(m.provider)}</td><td class="model-name">${e(m.model)}${m.aliases?.length ? `<span class="model-provider">Gateway: ${e(m.aliases.join(", "))}</span>` : ""}${m.service ? `<span class="model-provider">${e(m.service)}</span>` : ''}</td><td class="numeric">${amounts(m.cost)}</td><td class="numeric">${count(m.metrics.requests)}</td><td class="numeric">${count(m.metrics.generations)}</td><td class="numeric">${metric(m)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No reported models match this selection.</td></tr>'}</tbody></table>`;
+  return `<table>${headings(columns)}<tbody>${sorted(modelFilter(items)).map(m => `<tr><td>${providerName(m.provider)}</td><td class="model-name">${e(m.model)}${m.aliases?.length ? `<span class="model-provider">Gateway: ${e(m.aliases.join(", "))}</span>` : ""}${m.service ? `<span class="model-provider">${e(m.service)}</span>` : ''}</td><td class="numeric">${spending(m)}</td><td class="numeric">${count(m.metrics.requests)}</td><td class="numeric">${count(m.metrics.generations)}</td><td class="numeric">${metric(m)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No reported models match this selection.</td></tr>'}</tbody></table>`;
 }
 function renderTable() {
   if (!data) return;
@@ -66,8 +77,8 @@ function renderTable() {
   const columns = [['name','Provider'],['today','Today',true],['cost','Period cost',true],['requests','Requests',true],['generations','Generations',true],['usage','Native usage',true],['balance','Latest balance',true],['payments','Payments / top-ups',true],['status','Status']];
   $('breakdown-table').innerHTML = `<table>${headings(columns)}<tbody>${sorted(data.providers).map(p => {
     const balance = !p.balance ? unavailable : `${p.balance.unit === 'USD' ? money(p.balance.amount) : count(p.balance.amount)}<span class="subvalue">${e(p.balance.unit === 'USD' ? 'USD · prepaid' : p.balance.unit)} · ${e(stamp(p.balance.as_of))}</span>`;
-    const sub = p.coverage.cost < p.days_requested ? `<span class="subvalue">${p.coverage.cost} / ${p.days_requested} days reported</span>` : '';
-    return `<tr><td>${providerName(p.id,true)}</td><td class="numeric">${amounts(p.today.cost)}</td><td class="numeric">${amounts(p.cost)}${sub}</td><td class="numeric">${count(p.metrics.requests)}</td><td class="numeric">${count(p.metrics.generations)}</td><td class="numeric">${metric(p)}</td><td class="numeric">${balance}</td><td class="numeric">${amounts(p.payments)}</td><td>${stateBadge(p.status)}</td></tr>${expanded === p.id ? `<tr class="detail-row"><td colspan="9"><div class="detail-title">${e(p.name)} · ${e(p.time_zones.join(', ') || 'Timezone unavailable')} · ${e(p.basis.join('; ') || 'Provider-native usage')}<br>${p.notes.map(n => `<div>${e(n)}</div>`).join('')}${adjustments(p.adjustments)}${subscription(p.balance)}${p.id === "google" ? `<div>Service subdivisions of this total: ${p.services.map(s => `${e(s.name)} ${amounts(s.cost)}`).join(" · ")}</div>` : ""}</div>${modelTable(data.models.filter(m => m.provider === p.id))}</td></tr>` : ''}`;
+    const sub = hasEstimate(p) ? `<span class="subvalue">${p.coverage.estimated_cost} days with estimates</span>` : p.coverage.cost < p.days_requested ? `<span class="subvalue">${p.coverage.cost} / ${p.days_requested} days reported</span>` : '';
+    return `<tr><td>${providerName(p.id,true)}</td><td class="numeric">${spending(p.today)}</td><td class="numeric">${spending(p)}${sub}</td><td class="numeric">${count(p.metrics.requests)}</td><td class="numeric">${count(p.metrics.generations)}</td><td class="numeric">${metric(p)}</td><td class="numeric">${balance}</td><td class="numeric">${amounts(p.payments)}</td><td>${stateBadge(p.status)}</td></tr>${expanded === p.id ? `<tr class="detail-row"><td colspan="9"><div class="detail-title">${e(p.name)} · ${e(p.time_zones.join(', ') || 'Timezone unavailable')} · ${e(p.basis.join('; ') || 'Provider-native usage')}<br>${p.unpriced_tasks ? `<div>${p.unpriced_tasks} tasks could not be priced; available usage is retained.</div>` : ""}${p.notes.map(n => `<div>${e(n)}</div>`).join('')}${adjustments(p.adjustments)}${subscription(p.balance)}${p.id === "google" ? `<div>Service subdivisions of this total: ${p.services.map(s => `${e(s.name)} ${amounts(s.cost)}`).join(" · ")}</div>` : ""}</div>${modelTable(data.models.filter(m => m.provider === p.id))}</td></tr>` : ''}`;
   }).join('')}</tbody></table>`;
 }
 function subscription(balance) {
@@ -91,8 +102,8 @@ function chart(id,type,labels,datasets,extra={}) {
 }
 function renderCharts() {
   const labels = data.daily.map(d => new Date(d.day+'T12:00:00Z').toLocaleDateString('en',{month:'short',day:'numeric',timeZone:'UTC'}));
-  chart('cost-chart','bar',labels,data.providers.map(p => ({label:names[p.id],data:data.daily.map(d => number(d.providers[p.id])),backgroundColor:colors[p.id],borderRadius:3,maxBarThickness:18})));
-  $('cost-empty').textContent = data.summary.cost.USD == null ? 'No USD usage cost reported for this period.' : 'Gaps indicate unavailable daily data. Today’s charges may still be arriving.';
+  chart('cost-chart','bar',labels,data.providers.map(p => ({label:names[p.id] + (hasEstimate(p) ? " · estimated" : ""),data:data.daily.map(d => number(d.spending_providers[p.id])),backgroundColor:colors[p.id],borderRadius:3,maxBarThickness:18})));
+  $('cost-empty').textContent = data.summary.spending.USD == null ? 'No USD cost available for this period.' : 'Reported charges plus labeled estimates. Gaps indicate unavailable daily data; today may be incomplete.';
   const kind = $('volume-kind').value;
   chart('volume-chart','line',labels,[{label:label(kind),data:data.daily.map(d => number(d.metrics[kind])),borderColor:'#6586ee',backgroundColor:'#eef3ff',fill:true,borderWidth:2,pointRadius:2,tension:.2,spanGaps:false}]);
   $('volume-empty').textContent = data.summary.metrics[kind] == null ? `No ${kind} count reported for this period.` : 'Counts include only what the selected providers report.';
@@ -102,24 +113,25 @@ function renderModelChart() {
   const provider = $('provider').value || expanded;
   $('model-contribution').hidden = !provider;
   if (!provider || !data) return;
-  const models = data.models.filter(m => m.provider === provider && m.model !== 'Unassigned' && m.cost.USD != null).sort((a,b) => Number(b.cost.USD)-Number(a.cost.USD)).slice(0,10);
+  const models = data.models.filter(m => m.provider === provider && m.model !== 'Unassigned' && m.spending.USD != null).sort((a,b) => Number(b.spending.USD)-Number(a.spending.USD)).slice(0,10);
   $('model-contribution-title').textContent = `${names[provider]} · model contribution`;
   const palette = Object.values(colors);
-  chart('model-chart','line',data.daily.map(d => d.day),models.map((m,i) => ({label:m.model,data:data.daily.map(d => number(d.models[provider]?.[m.model])),borderColor:palette[i % palette.length],borderWidth:2,pointRadius:1,spanGaps:false})));
-  $('model-empty').textContent = models.length ? 'Provider-reported attribution only; unassigned charges remain in the table.' : '× Model-level monetary costs are not reported by this source. Available native usage is shown in the model table.';
+  chart('model-chart','line',data.daily.map(d => d.day),models.map((m,i) => ({label:m.model + (hasEstimate(m) ? " · estimated" : ""),data:data.daily.map(d => number(d.spending_models[provider]?.[m.model])),borderColor:palette[i % palette.length],borderWidth:2,pointRadius:1,spanGaps:false})));
+  $('model-empty').textContent = models.length ? 'Reported model costs and labeled posted-rate estimates; unassigned charges remain in the table.' : '× Model-level monetary costs are not reported by this source. Available native usage is shown in the model table.';
 }
 function renderSources() {
   const selected = new Set(data.providers.map(p => p.id));
   $('source-table').innerHTML = `<table><thead><tr><th>Source</th><th>Status</th><th>Last success</th><th>Retained coverage</th><th>Details</th></tr></thead><tbody>${Object.entries(data.source_status).filter(([key]) => selected.has(key.split(':')[1])).map(([key,s]) => `<tr><td>${e(key.replaceAll(':',' · '))}</td><td>${stateBadge(s)}</td><td>${e(stamp(s.last_success))}</td><td>${e(s.earliest || '×')} — ${e(s.latest || '×')}</td><td>${e(s.message || s.basis || '')}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No sources have been collected yet.</td></tr>'}</tbody></table>`;
 }
 function render() {
-  $('today-cost').innerHTML = amounts(data.today_summary.cost);
-  $('period-cost').innerHTML = amounts(data.summary.cost);
+  $('today-cost').innerHTML = spending(data.today_summary);
+  $('today-estimate').innerHTML = estimateDetail(data.today_summary);
+  $('period-cost').innerHTML = spending(data.summary);
   $('payments-cost').innerHTML = amounts(data.payments_summary);
   $('payment-coverage').textContent = `Reported funds · ${data.providers.filter(p => Object.keys(p.payments).length).length} of ${data.providers.length} providers supplied payment amounts`;
   $('today-usage').innerHTML = `${count(data.today_summary.metrics.requests)} requests &nbsp; · &nbsp; ${count(data.today_summary.metrics.generations)} generations`;
   const complete = data.providers.filter(p => p.coverage.cost === p.days_requested).length;
-  $('coverage').innerHTML = `<strong>Known cost</strong> · ${complete} of ${data.providers.length} providers report every selected day`;
+  $('coverage').innerHTML = `${estimateDetail(data.summary)}<div>${complete} of ${data.providers.length} providers report costs for every selected day</div>`;
   const successes = data.providers.map(p => p.status.last_success).filter(Boolean).sort();
   if (!$('refresh').disabled) $('last-refresh').textContent = successes.length ? `Last refresh ${stamp(successes[0])}` : 'No successful refresh yet';
   const units = [...new Set(data.models.flatMap(m => Object.keys(m.metrics)))].filter(k => !['requests','generations'].includes(k)).sort();

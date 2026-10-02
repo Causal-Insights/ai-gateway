@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "minimax",
+    "api_product": "MiniMax hosted Video Generation V2 pay-as-you-go",
+    "upstream_model": "MiniMax-H3",
+    "aliases": [
+      "minimax-h3",
+      "MiniMax-H3"
+    ],
+    "account_context": null,
+    "region": null,
+    "routes": [
+      "generation_job"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://platform.minimax.io/docs/guides/pricing-paygo",
+      "retrieved_at": "2026-10-02T19:30:24.373688+00:00",
+      "scope": "pricing",
+      "excerpt": "First 5 images free; $0.04 per additional image"
+    },
+    {
+      "url": "https://platform.minimax.io/docs/api-reference/video-generation-v2-query",
+      "retrieved_at": "2026-10-02T19:30:24.373688+00:00",
+      "scope": "usage_schema",
+      "excerpt": "Total metered seconds = input seconds + output seconds."
+    },
+    {
+      "url": "https://api.minimax.io/v2/query/video_generation",
+      "retrieved_at": "2026-10-02T19:30:24.373688+00:00",
+      "scope": "provider_usage",
+      "excerpt": "Metered 2k generation: 6 output seconds and 0 input seconds."
+    }
+  ],
+  "retrieved_at": "2026-10-02T19:30:24.373688+00:00",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "output_seconds",
+      "unit": "second",
+      "rate": "0.13",
+      "per": "1",
+      "conditions": {
+        "resolution": "2k"
+      }
+    },
+    {
+      "name": "input_seconds",
+      "unit": "second",
+      "rate": "0.13",
+      "per": "1",
+      "conditions": {
+        "resolution": "2k"
+      }
+    },
+    {
+      "name": "extra_input_images",
+      "unit": "image",
+      "rate": "0.04",
+      "per": "1",
+      "conditions": {
+        "resolution": "2k"
+      }
+    },
+    {
+      "name": "input_audio_seconds",
+      "unit": "second",
+      "rate": "0",
+      "per": "1",
+      "conditions": {
+        "resolution": "2k"
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "output_seconds": "6",
+      "input_seconds": "0"
+    },
+    "formula": "(6 + 0) * 0.13",
+    "calculated_cost": "0.78",
+    "provider_reported_cost": null,
+    "evidence_kind": "provider_response"
+  },
+  "differences": [],
+  "limitations": [
+    "Posted-rate estimate of metered video seconds, not a reported invoice charge.",
+    "Input image count and audio seconds absent in these list responses; extra-image charges are not included.",
+    "Only the three tasks visible in the current rolling seven-day task list are covered.",
+    "Pricing effective date and account discounts are unknown; token equivalents are not billed again."
+  ]
+}

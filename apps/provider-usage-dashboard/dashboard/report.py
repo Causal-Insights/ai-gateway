@@ -14,7 +14,16 @@ def summarize(rows):
     currencies = sorted({r["currency"] for r in rows if r.get("currency") and r.get("cost") is not None})
     metrics = sorted({key for r in rows for key in r.get("metrics", {})})
     adjustment_keys = sorted({key for r in rows for key in r.get("adjustments", {})})
+    # Reported costs win when both exist; estimates never enter reported totals or comparisons.
+    estimated_rows = [r for r in rows if r.get("cost") is None and r.get("estimated_cost") is not None]
+    estimated_currencies = sorted({r["currency"] for r in estimated_rows if r.get("currency")})
+    spending_currencies = sorted(set(currencies) | set(estimated_currencies))
     return {"cost": {currency: total(r["cost"] for r in rows if r.get("currency") == currency) for currency in currencies},
+            "estimated_cost": {c: total(r["estimated_cost"] for r in estimated_rows if r.get("currency") == c) for c in estimated_currencies},
+            "spending": {c: total(r.get("cost") if r.get("cost") is not None else r.get("estimated_cost")
+                                  for r in rows if r.get("currency") == c) for c in spending_currencies},
+            "estimate_partial": any(r.get("estimate_partial", False) for r in estimated_rows),
+            "unpriced_tasks": sum(r.get("unpriced_tasks", 0) for r in rows),
             "metrics": {key: total(r.get("metrics", {}).get(key) for r in rows) for key in metrics},
             "adjustments": {key: {currency: total(r.get("adjustments", {}).get(key) for r in rows if r.get("currency") == currency)
                                   for currency in sorted({r["currency"] for r in rows if r.get("currency") and key in r.get("adjustments", {})})}
@@ -60,14 +69,14 @@ def build_report(data, start, end, providers=None, now=None):
         today_rows = [r for s in all_snapshots if s["provider"] == provider and s["source"] == "provider" and s["day"] == str(now.astimezone(ZoneInfo(s["time_zone"])).date()) for r in s["rows"]]
         statuses = [s for k, s in data["status"].items() if k.startswith(f"provider:{provider}:")]
         coverage = {key: len({s["day"] for s in snapshots if key in s["covered"]})
-                    for key in ("cost", "requests", "generations", "usage", "payments")}
+                    for key in ("cost", "estimated_cost", "requests", "generations", "usage", "payments")}
         paid = [p for p in data["payments"] if p["provider"] == provider and str(start) <= p["day"] <= str(end) and p.get("kind") in ("topup", "payment")]
         provider_rows.append({"id": provider, "name": PROVIDERS[provider], **summarize(rows),
             "today": summarize(today_rows), "balance": data["balances"].get(provider),
             "payments": {c: total(p["amount"] for p in paid if p["currency"] == c) for c in sorted({p["currency"] for p in paid})},
             "coverage": coverage, "days_requested": (end - start).days + 1,
             "time_zones": sorted({s["time_zone"] for s in snapshots}),
-            "basis": sorted({s["basis"] for s in snapshots if "cost" in s["covered"]}),
+            "basis": sorted({s["basis"] for s in snapshots if "cost" in s["covered"] or "estimated_cost" in s["covered"]}),
             "services": [{"name": service, **summarize([r for r in rows if r.get("billing_service", r.get("service")) == service])}
                          for service in sorted({r.get("billing_service", r.get("service")) for r in rows if r.get("service")})],
             "notes": sorted({s["message"] for s in statuses if s.get("state") == "updated" and s.get("message")}),
@@ -100,7 +109,17 @@ def build_report(data, start, end, providers=None, now=None):
     for day in days(start, end):
         ss = [s for s in actual if s["day"] == str(day)]
         rr = [r for s in ss for r in s["rows"]]
-        chart.append({"day": str(day), **summarize(rr), "models": {p: {m: summarize([r for s in ss if s["provider"] == p for r in s["rows"] if r.get("model") == m])["cost"].get("USD") for m in {r["model"] for s in ss if s["provider"] == p for r in s["rows"] if r.get("model")}} for p in providers}, "providers": {p: summarize([r for s in ss if s["provider"] == p for r in s["rows"]])["cost"].get("USD") for p in providers}})
+        daily_providers, daily_models = {}, {}
+        for provider in providers:
+            provider_items = [r for s in ss if s["provider"] == provider for r in s["rows"]]
+            daily_providers[provider] = summarize(provider_items)
+            daily_models[provider] = {model: summarize([r for r in provider_items if r.get("model") == model])
+                                      for model in {r["model"] for r in provider_items if r.get("model")}}
+        chart.append({"day": str(day), **summarize(rr),
+            "models": {p: {m: v["cost"].get("USD") for m, v in mm.items()} for p, mm in daily_models.items()},
+            "spending_models": {p: {m: v["spending"].get("USD") for m, v in mm.items()} for p, mm in daily_models.items()},
+            "providers": {p: v["cost"].get("USD") for p, v in daily_providers.items()},
+            "spending_providers": {p: v["spending"].get("USD") for p, v in daily_providers.items()}})
     warnings = activity_warnings(all_snapshots, providers, now)
     for source in SOURCES[1:]:
         status = source_status([s for k, s in data["status"].items() if k.split(":")[0] == source and k.split(":")[1] in providers], now)

@@ -90,3 +90,79 @@ async def test_minimax_incomplete_pages_and_auth_errors_preserve_unknowns():
         with pytest.raises(ReportingError, match='HTTP 401') as caught:
             await providers.minimax(c, ENV, START, END, 'usage')
     assert 'private-secret' not in str(caught.value)
+
+
+@pytest.mark.asyncio
+async def test_estimates_follow_each_resolution_and_stay_separate():
+    from dashboard.model import Batch, row
+    from dashboard.report import build_report
+    rows = [task('2k', resolution='2K', usage={'input_seconds': 0, 'output_seconds': 6, 'total_tokens': 312468}),
+            task('reference', resolution='768P', usage={'input_seconds': 7, 'output_seconds': 6, 'total_tokens': 423137}),
+            task('768', resolution='768P', usage={'input_seconds': 0, 'output_seconds': 6, 'total_tokens': 195294})]
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200, json={'items': rows, 'total': 3}))) as c:
+        batch = await providers.minimax(c, ENV, START, END, 'usage')
+    assert batch.rows[0]['estimated_cost'] == '2.30'
+    assert batch.rows[0]['cost'] is None and batch.rows[0]['estimate_partial']
+    assert batch.rows[0]['unpriced_tasks'] == 0
+    assert '2026-10-02' in batch.rows[0]['estimate_basis']
+    assert 'estimated_cost' in batch.covered[str(END)] and 'cost' not in batch.covered[str(END)]
+    store = MemoryStore(); store.save(batch); store.save(batch)
+    paid = Batch('xai', 'costs', END, END)
+    paid.rows = [row(END, cost='10.10')]
+    paid.covered = {str(END): ['cost']}
+    paid.payments = [{'id': 'funding', 'day': str(END), 'kind': 'topup', 'amount': '100', 'currency': 'USD'}]
+    store.save(paid)
+    result = build_report(store.read(START, END), END, END, now=datetime(2026, 10, 2, 12, tzinfo=timezone.utc))
+    assert result['summary']['cost'] == {'USD': '10.10'}
+    assert result['summary']['estimated_cost'] == {'USD': '2.30'}
+    assert result['summary']['spending'] == {'USD': '12.40'}
+    assert result['today_summary']['spending'] == {'USD': '12.40'}
+    assert result['payments_summary'] == {'USD': '100'}
+    mini = next(p for p in result['providers'] if p['id'] == 'minimax')
+    assert mini['spending'] == {'USD': '2.30'} and mini['estimate_partial']
+    assert mini['payments'] == {} and mini['balance'] is None
+    assert next(m for m in result['models'] if m['provider'] == 'minimax')['spending'] == {'USD': '2.30'}
+    assert result['daily'][0]['providers']['minimax'] is None
+    assert result['daily'][0]['spending_providers']['minimax'] == '2.30'
+    assert result['daily'][0]['spending_models']['minimax']['MiniMax-H3'] == '2.30'
+    comp = next(c for c in result['comparisons'] if c['provider'] == 'minimax')
+    assert comp['sources']['provider']['cost'] == {}
+    assert comp['differences']['provider_gateway']['absolute'] is None
+    store.failure('provider:minimax:usage', 'HTTP 503')
+    filtered = build_report(store.read(START, END), END, END, ['minimax'])
+    assert filtered['summary']['spending'] == {'USD': '2.30'}
+    assert filtered['providers'][0]['status']['state'] == 'partial'
+
+
+def test_image_allowance_per_task_tokens_not_billed_twice_and_partial_failures():
+    from decimal import Decimal
+    first = task('one', resolution='768P', usage={'input_seconds': 3, 'output_seconds': 4, 'input_image_count': 7, 'total_tokens': 999999999, 'input_audio_seconds': 60})
+    second = task('two', resolution='2K', usage={'input_seconds': 0, 'output_seconds': 6, 'input_image_count': 5})
+    assert providers.minimax_estimate(first) == (Decimal('0.64'), False)
+    assert providers.minimax_estimate(second) == (Decimal('0.78'), False)
+    first['status'] = 'failed'
+    assert providers.minimax_estimate(first) == (Decimal('0.64'), False)
+    first['usage'] = {'input_seconds': 3}
+    assert providers.minimax_estimate(first) == (Decimal('0.24'), True)
+    first['usage'] = {}
+    assert providers.minimax_estimate(first) == (None, True)
+    first['usage'] = {'input_seconds': -1, 'output_seconds': 'NaN'}
+    assert providers.minimax_estimate(first) == (None, True)
+
+
+@pytest.mark.parametrize('fields', [{'resolution': '1080P'}, {'resolution': None}, {'model': 'MiniMax-H3-Max'}, {'task_type': 'regeneration'}, {'task_type': 'h3_context_ir'}])
+def test_unknown_dimensions_never_receive_a_guessed_rate(fields):
+    item = task('unknown', resolution='768P', usage={'input_seconds': 0, 'output_seconds': 6, 'input_image_count': 0})
+    item.update(fields)
+    assert providers.minimax_estimate(item) == (None, False)
+
+
+def test_reported_amounts_override_estimates_without_currency_conversion():
+    from dashboard.model import row
+    from dashboard.report import summarize
+    result = summarize([row(END, cost='1.00', estimated_cost='1.20'), row(END, estimated_cost='2.30'),
+                        row(END, currency='EUR', estimated_cost='4.50'), row(END, unpriced_tasks=1)])
+    assert result['cost'] == {'USD': '1.00'}
+    assert result['estimated_cost'] == {'EUR': '4.50', 'USD': '2.30'}
+    assert result['spending'] == {'EUR': '4.50', 'USD': '3.30'}
+    assert result['unpriced_tasks'] == 1
