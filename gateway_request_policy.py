@@ -27,6 +27,7 @@ CHAT_PATHS = {"/chat/completions", "/v1/chat/completions"}
 RESPONSES_PATHS = {"/responses", "/v1/responses"}
 POLICY_PATHS = CHAT_PATHS | RESPONSES_PATHS
 IMAGE_PATHS = {"/images/generations", "/v1/images/generations", "/images/edits", "/v1/images/edits"}
+VIDEO_PATHS = {"/videos", "/v1/videos"}
 GROK_IMAGE_2_MODELS = {"grok-imagine-image-2.0", "grok-image/grok-imagine-image-2.0"}
 GROK_IMAGE_2_QUALITIES = {"low", "medium", "auto"}
 GROK_IMAGE_2_RESOLUTIONS = {"1k", "2k"}
@@ -254,6 +255,9 @@ def apply_request_policy(path: str, body: Any) -> tuple[Any, PolicyError | None]
             return body, PolicyError(code="INVALID_OPENAI_REQUEST", message="Conflicting extra_body fields.")
         body.update(extra)
         body.pop("extra_body", None)
+    if model in {"minimax-h3", "MiniMax-H3"} and path in POLICY_PATHS | IMAGE_PATHS | VIDEO_PATHS:
+        return body, PolicyError(code="MINIMAX_REQUIRES_DURABLE_JOB",
+            message="MiniMax H3 requires the V2 /v1/generation-jobs contract.")
     if model in ASTRA_MODELS and path in POLICY_PATHS:
         error = validate_astra(body, responses=path in RESPONSES_PATHS)
         if error:
@@ -363,7 +367,7 @@ class GatewayRequestPolicyMiddleware:
         self.app = app
 
     async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
-        if scope.get("type") != "http" or scope.get("method") != "POST" or scope.get("path") not in POLICY_PATHS | IMAGE_PATHS:
+        if scope.get("type") != "http" or scope.get("method") != "POST" or scope.get("path") not in POLICY_PATHS | IMAGE_PATHS | VIDEO_PATHS:
             await self.app(scope, receive, send)
             return
         chunks: list[bytes] = []
@@ -397,7 +401,7 @@ class GatewayRequestPolicyMiddleware:
                         content = part.get_payload(decode=True) or b""
                         fields[name] = content.decode("utf-8", errors="replace").strip()
                 from openai_model_contracts import image_edit_model
-                if image_edit_model(fields.get("model")):
+                if image_edit_model(fields.get("model")) or fields.get("model") in {"minimax-h3", "MiniMax-H3"}:
                     for name in ("n", "partial_images", "output_compression"):
                         if name in fields and re.fullmatch(r"[0-9]+", fields[name]):
                             fields[name] = int(fields[name])

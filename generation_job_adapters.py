@@ -1585,6 +1585,7 @@ _ADAPTERS: dict[str, BaseAdapter] = {
 }
 
 ADAPTER_REVISIONS = {
+    "minimax_h3_v2": "minimax_h3_v2@2026-10-02",
     "xai_videos_v1": "xai_videos_v1@2026-09-03",
     "xai_videos_v2": "xai_videos_v2@2026-09-03",
     "byteplus_las_v1": "byteplus_las_v1@2026-09-03",
@@ -1647,6 +1648,9 @@ def route_for(model: str, schema_version: int = 1, contract_revision: Optional[s
 
 
 def provider_for_model(model: str) -> str:
+    from minimax_video_contract import MODELS as MINIMAX
+    if model in MINIMAX:
+        return "minimax"
     route = legacy_route_for_model(model)
     if route.startswith("xai_"):
         return "xai"
@@ -1661,6 +1665,9 @@ def adapter_for(provider: str) -> BaseAdapter:
 
 
 def adapter_for_route(provider_route: str) -> BaseAdapter:
+    if provider_route == "minimax_h3_v2":
+        from minimax_video_adapter import MiniMaxAdapter
+        return MiniMaxAdapter()
     if provider_route.endswith("_expanded_v2"):
         from expanded_video_adapters import ADAPTERS
         if provider_route in ADAPTERS:

@@ -176,6 +176,15 @@ class DeploymentOrchestrationTests(unittest.TestCase):
         self.assertIn("GENERATION_POLL_TARGET_URL=https://ai-gateway-proxy.example,", callback_env)
         self.assertTrue(any(call[:3] == ["scheduler", "jobs", "update"] for call in calls))
 
+    def test_minimax_secret_binding_is_optional_and_not_sent_to_callback(self):
+        result = self.run_deploy("--candidate-only", MINIMAX_API_KEY_SECRET="h3-paygo-secret")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        deploys = [call for call in self.calls() if call[:2] == ["run", "deploy"]]
+        bindings = [call[call.index("--set-secrets") + 1] for call in deploys]
+        self.assertTrue(any("MINIMAX_API_KEY=h3-paygo-secret:latest" in value for value in bindings))
+        callback = next(call for call in deploys if call[2] == "ai-gateway-callbacks")
+        self.assertNotIn("MINIMAX_API_KEY", callback[callback.index("--set-secrets") + 1])
+
 
 if __name__ == "__main__":
     unittest.main()

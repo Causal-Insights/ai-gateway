@@ -45,6 +45,7 @@ provider supported by LiteLLM.
 | [Google](#provider-google) | Google Cloud Vertex AI; Omni uses Vertex Interactions | Gemini text, Nano Banana/Gemini images, Veo, Gemini Omni | Native Vertex translation plus durable `VertexAdapter` |
 | [xAI](#provider-xai) | Direct xAI API | Grok text, Imagine Image, Imagine Video | Native text; custom image/video handlers and `XAIAdapter` |
 | [BytePlus](#provider-byteplus) | ModelArk, Asia-Pacific endpoint | Seedance and Seedream | Custom handlers and `BytePlusAdapter` |
+| [MiniMax](#provider-minimax) | Direct hosted Video Generation V2 | MiniMax H3 | `MiniMaxAdapter`, V2 durable jobs only |
 | [ElevenLabs](#provider-elevenlabs) | Direct ElevenAPI | Speech, sound effects, music | Native speech; custom Audio Studio handler |
 
 ### OpenAI
@@ -119,6 +120,17 @@ provider supported by LiteLLM.
 - **Exact music and storage boundary:** `elevenlabs-music` stays `music_v1`; the separate `elevenlabs-music-2.5` maps to `music_v2_5`. Music plan drafting is documented free; song import is priced like music generation, and copyright rejection can be partially charged, so missing usage stays unknown. Owned song DELETE purges local reuse/payloads; provider song cleanup is explicitly unsupported because no documented DELETE exists. Account cleanup uses `/v1/audio/owner-data`, preserving accounting history. [Music plans](https://elevenlabs.io/docs/api-reference/music/create-composition-plan), [inpainting chunks](https://elevenlabs.io/docs/eleven-api/guides/how-to/music/inpainting), [paid song upload](https://elevenlabs.io/docs/api-reference/music/upload), [dialogue WebSocket](https://elevenlabs.io/docs/api-reference/text-to-dialogue/ttd-websocket).
 - **Official information:** [speech API](https://elevenlabs.io/docs/api-reference/text-to-speech/convert), [sound effects API](https://elevenlabs.io/docs/api-reference/text-to-sound-effects/convert), [music API](https://elevenlabs.io/docs/api-reference/music/compose), [API pricing](https://elevenlabs.io/pricing/api). [LiteLLM speech translation](https://docs.litellm.ai/docs/providers/elevenlabs); [ElevenLabs billing procedure](../skills/price-verification/references/elevenlabs.md).
 
+### MiniMax
+
+<a id="provider-minimax"></a>
+
+- **Verified 2026-10-02:** aliases `minimax-h3` and `MiniMax-H3` map to exact `MiniMax-H3`, directly at `https://api.minimax.io/v2`. Authentication is the pay-as-you-go `MINIMAX_API_KEY`; no local model, third-party provider, Hailuo, H3 Max, or fallback.
+- **Implementation:** `MiniMaxAdapter` in `minimax_video_adapter.py`, persisted route `minimax_h3_v2`, revision `minimax_h3_v2@2026-10-02`. LiteLLM 1.102.1 accepts catalog identity `minimax/MiniMax-H3` but has no H3 video implementation or pricing. V1 and native synchronous inference endpoints are unsupported.
+- **Contract and limits:** [H3 Gateway contract and live-test procedure](minimax-h3.md), [official request schema](https://platform.minimax.io/docs/api-reference/video-generation-v2-create), [query schema](https://platform.minimax.io/docs/api-reference/video-generation-v2-query). Text, frames, and image/video/audio references return an audiovisual MP4. Provider file IDs, standalone audio, Context-IR and regeneration are not exposed. Last-frame-only documentation inconsistency is recorded in the contract.
+- **Costs:** provider-metered output/input-video seconds plus images above the five-image allowance; free input audio. Per-resolution immutable profiles use [official API prices](https://platform.minimax.io/docs/guides/pricing-paygo). Missing usage stays unresolved. See the [MiniMax verification procedure](../skills/price-verification/references/minimax.md).
+- **Verification boundary:** October 2 authorized local Gateway tests completed 768P text generation, a bicycle-to-bear video-reference edit, and 2K text generation with audiovisual MP4 downloads. Provider-metered costs total $2.30 at posted rates; idempotency replays retained one logged execution per job. The earlier insufficient-balance rejection remains null/unresolved. Other profiles and URL refresh have offline coverage; account-invoice reconciliation and Magic Lens end-to-end acceptance are not claimed. See the [live results](minimax-h3.md#live-local-test-attempt-2026-10-02).
+- **Deployment:** October 2 release `minimax-h3-20261002-r1` is serving 100% of Cloud Run Gateway/callback traffic after candidate and production health/discovery checks. Both H3 aliases are advertised alongside all 56 previous aliases, and the MiniMax secret is bound. No paid cloud generation or Magic Lens end-to-end test was run. See [release details and build limitation](minimax-h3.md#cloud-run-deployment-2026-10-02).
+
 ## Complete configured model inventory
 
 Provider-qualified identities below come from the pricing registry. A second
@@ -130,7 +142,7 @@ selected routes, not every operation accepted on them.
 
 <!-- BEGIN GENERATED PROVIDER INVENTORY -->
 
-**56 configured aliases; 43 distinct upstream identities; 5 serving providers.** Alias counts: byteplus: 6; elevenlabs: 5; google: 18; openai: 18; xai: 9.
+**58 configured aliases; 44 distinct upstream identities; 6 serving providers.** Alias counts: byteplus: 6; elevenlabs: 5; google: 18; minimax: 2; openai: 18; xai: 9.
 
 Generated from `litellm_config.yaml`, `pricing/registry.json`, and the executable `generation_job_adapters.route_for` dispatcher. `priced` means at least one enabled pricing profile; it does not certify access or every request option. The LiteLLM dispatch column identifies configuration, including legacy handlers; durable admission and model-specific restrictions still apply.
 
@@ -192,6 +204,8 @@ Generated from `litellm_config.yaml`, `pricing/registry.json`, and the executabl
 | `elevenlabs-sfx` | [elevenlabs](#provider-elevenlabs) | `elevenlabs/eleven_text_to_sound_v2`<br>Deployment: `audio-studio/elevenlabs-sfx` | `custom_handler.audio_studio` | — | — | priced |
 | `elevenlabs-music` | [elevenlabs](#provider-elevenlabs) | `elevenlabs/music_v1`<br>Deployment: `audio-studio/elevenlabs-music` | `custom_handler.audio_studio` | — | — | priced |
 | `elevenlabs-music-2.5` | [elevenlabs](#provider-elevenlabs) | `elevenlabs/music_v2_5`<br>Deployment: `audio-studio/elevenlabs-music-2.5` | `custom_handler.audio_studio` | — | — | priced |
+| `minimax-h3` | [minimax](#provider-minimax) | `minimax/MiniMax-H3` | LiteLLM `minimax/` | V1: unavailable<br>V2: unavailable<br>V2 `video-contract-v2-2026-09-24`: `minimax_h3_v2` | — | priced |
+| `MiniMax-H3` | [minimax](#provider-minimax) | `minimax/MiniMax-H3` | LiteLLM `minimax/` | V1: unavailable<br>V2: unavailable<br>V2 `video-contract-v2-2026-09-24`: `minimax_h3_v2` | — | priced |
 
 <!-- END GENERATED PROVIDER INVENTORY -->
 

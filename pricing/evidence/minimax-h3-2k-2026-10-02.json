@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "identity": {
+    "vendor": "minimax",
+    "api_product": "MiniMax hosted Video Generation V2 pay-as-you-go",
+    "upstream_model": "MiniMax-H3",
+    "aliases": [
+      "minimax-h3",
+      "MiniMax-H3"
+    ],
+    "account_context": null,
+    "region": null,
+    "routes": [
+      "generation_job"
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://platform.minimax.io/docs/guides/pricing-paygo",
+      "retrieved_at": "2026-10-02T16:55:00Z",
+      "scope": "pricing",
+      "excerpt": "First 5 images free; $0.04 per additional image"
+    },
+    {
+      "url": "https://platform.minimax.io/docs/api-reference/video-generation-v2-query",
+      "retrieved_at": "2026-10-02T16:55:00Z",
+      "scope": "usage_schema",
+      "excerpt": "Total metered seconds = input seconds + output seconds."
+    }
+  ],
+  "retrieved_at": "2026-10-02T16:55:00Z",
+  "effective_from": null,
+  "effective_to": null,
+  "currency": "USD",
+  "rate_basis": "posted_api_rate",
+  "dimensions": [
+    {
+      "name": "output_seconds",
+      "unit": "second",
+      "rate": "0.13",
+      "per": "1",
+      "conditions": {
+        "resolution": "2k"
+      }
+    },
+    {
+      "name": "input_seconds",
+      "unit": "second",
+      "rate": "0.13",
+      "per": "1",
+      "conditions": {
+        "resolution": "2k"
+      }
+    },
+    {
+      "name": "extra_input_images",
+      "unit": "image",
+      "rate": "0.04",
+      "per": "1",
+      "conditions": {
+        "resolution": "2k"
+      }
+    },
+    {
+      "name": "input_audio_seconds",
+      "unit": "second",
+      "rate": "0",
+      "per": "1",
+      "conditions": {
+        "resolution": "2k"
+      }
+    }
+  ],
+  "calculation": {
+    "usage": {
+      "output_seconds": "4",
+      "input_seconds": "3",
+      "input_image_count": "7",
+      "extra_input_images": "2"
+    },
+    "formula": "(4 + 3) * 0.13 + 2 * 0.04",
+    "calculated_cost": "0.99",
+    "provider_reported_cost": null,
+    "evidence_kind": "synthetic"
+  },
+  "differences": [],
+  "limitations": [
+    "Public posted rates, not an account invoice or live generation receipt.",
+    "Provider pricing effective date is not published; profile admission starts on the verification date, without repricing earlier usage.",
+    "No monetary charge field is documented. Failures or partial usage without complete billable quantities remain unresolved; no free-failure assumption.",
+    "Use provider-metered seconds; do not invent rounding or infer seconds from token equivalents.",
+    "Context-IR and regeneration are separately billed APIs and are not invoked by this integration."
+  ]
+}

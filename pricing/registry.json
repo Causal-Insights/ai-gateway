@@ -20,6 +20,10 @@
     "elevenlabs": {
       "source": "https://elevenlabs.io/pricing/api",
       "procedure": "skills/price-verification/references/elevenlabs.md"
+    },
+    "minimax": {
+      "source": "https://platform.minimax.io/docs/guides/pricing-paygo",
+      "procedure": "skills/price-verification/references/minimax.md"
     }
   },
   "models": {
@@ -433,6 +437,22 @@
       "disabled": false,
       "profiles": [
         "litellm:openai/gpt-5.6-luna@58b321e95391892d1a71"
+      ]
+    },
+    "minimax-h3": {
+      "upstream_model": "minimax/MiniMax-H3",
+      "disabled": false,
+      "profiles": [
+        "minimax-h3-768p@2026-10-02",
+        "minimax-h3-2k@2026-10-02"
+      ]
+    },
+    "MiniMax-H3": {
+      "upstream_model": "minimax/MiniMax-H3",
+      "disabled": false,
+      "profiles": [
+        "minimax-h3-768p@2026-10-02",
+        "minimax-h3-2k@2026-10-02"
       ]
     }
   },
@@ -11876,6 +11896,134 @@
         "basis": "posted_api_rate",
         "free_allowance_applied": false
       }
+    },
+    "minimax-h3-768p@2026-10-02": {
+      "version": "minimax-h3-768p@2026-10-02",
+      "status": "verified",
+      "enabled": true,
+      "vendor": "minimax",
+      "upstream_model": "minimax/MiniMax-H3",
+      "served_models": [
+        "MiniMax-H3"
+      ],
+      "currency": "USD",
+      "rate_source": "posted_api_rate",
+      "extractor": "minimax_h3",
+      "effective_from": "2026-10-02T00:00:00Z",
+      "effective_to": null,
+      "verified_at": "2026-10-02T16:55:00Z",
+      "verify_by": "2027-01-02T00:00:00Z",
+      "routes": [
+        "generation_job"
+      ],
+      "options": {
+        "resolution": [
+          "768p"
+        ]
+      },
+      "defaults": {
+        "resolution": "768p"
+      },
+      "require_served_options": [
+        "resolution"
+      ],
+      "metered_options": [
+        "profile_id",
+        "duration_seconds",
+        "output_count",
+        "operation",
+        "input_video"
+      ],
+      "components": [
+        {
+          "unit": "second",
+          "rate": "0.08",
+          "per": "1",
+          "usage": "output_seconds"
+        },
+        {
+          "unit": "second",
+          "rate": "0.08",
+          "per": "1",
+          "usage": "input_seconds"
+        },
+        {
+          "unit": "image",
+          "rate": "0.04",
+          "per": "1",
+          "usage": "extra_input_images"
+        }
+      ],
+      "evidence": [
+        "pricing/evidence/minimax-h3-768p-2026-10-02.json"
+      ],
+      "acceptance_evidence": [],
+      "zero_reasons": [],
+      "calculation_version": "minimax-h3-seconds-images-v1"
+    },
+    "minimax-h3-2k@2026-10-02": {
+      "version": "minimax-h3-2k@2026-10-02",
+      "status": "verified",
+      "enabled": true,
+      "vendor": "minimax",
+      "upstream_model": "minimax/MiniMax-H3",
+      "served_models": [
+        "MiniMax-H3"
+      ],
+      "currency": "USD",
+      "rate_source": "posted_api_rate",
+      "extractor": "minimax_h3",
+      "effective_from": "2026-10-02T00:00:00Z",
+      "effective_to": null,
+      "verified_at": "2026-10-02T16:55:00Z",
+      "verify_by": "2027-01-02T00:00:00Z",
+      "routes": [
+        "generation_job"
+      ],
+      "options": {
+        "resolution": [
+          "2k"
+        ]
+      },
+      "defaults": {
+        "resolution": "768p"
+      },
+      "require_served_options": [
+        "resolution"
+      ],
+      "metered_options": [
+        "profile_id",
+        "duration_seconds",
+        "output_count",
+        "operation",
+        "input_video"
+      ],
+      "components": [
+        {
+          "unit": "second",
+          "rate": "0.13",
+          "per": "1",
+          "usage": "output_seconds"
+        },
+        {
+          "unit": "second",
+          "rate": "0.13",
+          "per": "1",
+          "usage": "input_seconds"
+        },
+        {
+          "unit": "image",
+          "rate": "0.04",
+          "per": "1",
+          "usage": "extra_input_images"
+        }
+      ],
+      "evidence": [
+        "pricing/evidence/minimax-h3-2k-2026-10-02.json"
+      ],
+      "acceptance_evidence": [],
+      "zero_reasons": [],
+      "calculation_version": "minimax-h3-seconds-images-v1"
     }
   },
   "hosted_tools": {
