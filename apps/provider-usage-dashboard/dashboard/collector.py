@@ -16,7 +16,7 @@ STREAMS = {
     "openai": ["costs", "completions", "embeddings", "moderations", "images", "audio_speeches",
                "audio_transcriptions", "vector_stores", "code_interpreter_sessions", "web_searches", "file_searches"],
     "xai": ["costs", "balance"], "byteplus": ["costs", "usage"],
-    "elevenlabs": ["usage", "subscription"], "google": ["costs"],
+    "elevenlabs": ["usage", "subscription"], "google": ["costs"], "minimax": ["usage"],
 }
 
 

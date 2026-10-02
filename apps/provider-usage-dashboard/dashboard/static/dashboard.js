@@ -1,9 +1,9 @@
 import {dateRange, sortedRows, escapeHtml as e} from './controls.mjs';
 
 const $ = id => document.getElementById(id);
-const names = {openai:'OpenAI', xai:'xAI', byteplus:'BytePlus', elevenlabs:'ElevenLabs', google:'Google Cloud'};
-const icons = {openai:'◎', xai:'𝕏', byteplus:'B', elevenlabs:'Ⅱ', google:'G'};
-const colors = {openai:'#40a88b', xai:'#526078', byteplus:'#7891ed', elevenlabs:'#ad89ce', google:'#eab967'};
+const names = {openai:'OpenAI', xai:'xAI', byteplus:'BytePlus', elevenlabs:'ElevenLabs', google:'Google Cloud', minimax:'MiniMax'};
+const icons = {openai:'◎', xai:'𝕏', byteplus:'B', elevenlabs:'Ⅱ', google:'G', minimax:'M'};
+const colors = {openai:'#40a88b', xai:'#526078', byteplus:'#7891ed', elevenlabs:'#ad89ce', google:'#eab967', minimax:'#ee795b'};
 const unavailable = '<span class="unavailable" title="Not available from this reporting source" aria-label="Unavailable">×</span>';
 const number = value => value == null ? null : Number(value);
 const count = value => value == null ? unavailable : new Intl.NumberFormat('en', {maximumFractionDigits:2}).format(Number(value));
@@ -67,7 +67,7 @@ function renderTable() {
   $('breakdown-table').innerHTML = `<table>${headings(columns)}<tbody>${sorted(data.providers).map(p => {
     const balance = !p.balance ? unavailable : `${p.balance.unit === 'USD' ? money(p.balance.amount) : count(p.balance.amount)}<span class="subvalue">${e(p.balance.unit === 'USD' ? 'USD · prepaid' : p.balance.unit)} · ${e(stamp(p.balance.as_of))}</span>`;
     const sub = p.coverage.cost < p.days_requested ? `<span class="subvalue">${p.coverage.cost} / ${p.days_requested} days reported</span>` : '';
-    return `<tr><td>${providerName(p.id,true)}</td><td class="numeric">${amounts(p.today.cost)}</td><td class="numeric">${amounts(p.cost)}${sub}</td><td class="numeric">${count(p.metrics.requests)}</td><td class="numeric">${count(p.metrics.generations)}</td><td class="numeric">${metric(p)}</td><td class="numeric">${balance}</td><td class="numeric">${amounts(p.payments)}</td><td>${stateBadge(p.status)}</td></tr>${expanded === p.id ? `<tr class="detail-row"><td colspan="9"><div class="detail-title">${e(p.name)} · ${e(p.time_zones.join(', ') || 'Timezone unavailable')} · ${e(p.basis.join('; ') || 'Provider-native usage')}<br>${adjustments(p.adjustments)}${subscription(p.balance)}${p.id === "google" ? `<div>Service subdivisions of this total: ${p.services.map(s => `${e(s.name)} ${amounts(s.cost)}`).join(" · ")}</div>` : ""}</div>${modelTable(data.models.filter(m => m.provider === p.id))}</td></tr>` : ''}`;
+    return `<tr><td>${providerName(p.id,true)}</td><td class="numeric">${amounts(p.today.cost)}</td><td class="numeric">${amounts(p.cost)}${sub}</td><td class="numeric">${count(p.metrics.requests)}</td><td class="numeric">${count(p.metrics.generations)}</td><td class="numeric">${metric(p)}</td><td class="numeric">${balance}</td><td class="numeric">${amounts(p.payments)}</td><td>${stateBadge(p.status)}</td></tr>${expanded === p.id ? `<tr class="detail-row"><td colspan="9"><div class="detail-title">${e(p.name)} · ${e(p.time_zones.join(', ') || 'Timezone unavailable')} · ${e(p.basis.join('; ') || 'Provider-native usage')}<br>${p.notes.map(n => `<div>${e(n)}</div>`).join('')}${adjustments(p.adjustments)}${subscription(p.balance)}${p.id === "google" ? `<div>Service subdivisions of this total: ${p.services.map(s => `${e(s.name)} ${amounts(s.cost)}`).join(" · ")}</div>` : ""}</div>${modelTable(data.models.filter(m => m.provider === p.id))}</td></tr>` : ''}`;
   }).join('')}</tbody></table>`;
 }
 function subscription(balance) {

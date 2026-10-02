@@ -166,7 +166,7 @@ def test_app_demo_and_validation_are_cached_only(monkeypatch):
         html = client.get("/")
         assert "sample data" in html.text and "should-never-appear" not in html.text
         response = client.get("/api/report")
-        assert response.status_code == 200 and len(response.json()["providers"]) == 5
+        assert response.status_code == 200 and len(response.json()["providers"]) == 6
         assert "should-never-appear" not in response.text
         assert client.get("/api/report?providers=unknown").status_code == 400
         assert client.get("/api/report?start=2000-01-01&end=2000-01-02").status_code == 400

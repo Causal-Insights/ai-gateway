@@ -66,7 +66,7 @@ async def collect_internal(env, source, start, end):
     for item in results:
         provider = resolve_provider(item["provider"], item["model"], catalog)
         if provider not in batches:
-            # A source may contain services outside these five integrations. Their
+            # A source may contain services outside these integrations. Their
             # supplier identity is not guessed into one of the supported providers.
             continue
         batch = batches[provider]

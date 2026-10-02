@@ -634,5 +634,20 @@
   "vertex_ai/imagen-4.0-ultra-generate-001": {
     "provider": "google",
     "upstream_model": "vertex_ai/imagen-4.0-ultra-generate-001"
+  },
+  "minimax-h3": {
+    "provider": "minimax",
+    "upstream_model": "minimax/MiniMax-H3",
+    "alias": "minimax-h3"
+  },
+  "MiniMax-H3": {
+    "provider": "minimax",
+    "upstream_model": "minimax/MiniMax-H3",
+    "alias": "MiniMax-H3"
+  },
+  "minimax/MiniMax-H3": {
+    "provider": "minimax",
+    "upstream_model": "minimax/MiniMax-H3",
+    "alias": "minimax/MiniMax-H3"
   }
 }

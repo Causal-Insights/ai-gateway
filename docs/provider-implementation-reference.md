@@ -2,6 +2,8 @@
 
 Account-level usage and billing reporting lives in the independent [Provider Usage Dashboard](provider-usage-dashboard.md). Its adapters do not change serving routes, inference credentials, or historical Gateway pricing.
 
+MiniMax reporting uses a separate `MINIMAX_USAGE_API_KEY` for official V2 task usage. Only daily/model aggregates are retained from its rolling seven-day window; account cost, balance, and top-ups remain ×. See the [October 2 live verification](provider-usage-dashboard.md#minimax-reporting--2026-10-02).
+
 Implementation notes reviewed **2026-09-24**. Scope: every model configured in this
 Gateway checkout, its serving provider, and where to verify implementation details.
 The inventory reflects the local retirement changes, not a deployment record.

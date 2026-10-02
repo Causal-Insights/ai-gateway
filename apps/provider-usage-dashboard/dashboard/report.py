@@ -70,6 +70,7 @@ def build_report(data, start, end, providers=None, now=None):
             "basis": sorted({s["basis"] for s in snapshots if "cost" in s["covered"]}),
             "services": [{"name": service, **summarize([r for r in rows if r.get("billing_service", r.get("service")) == service])}
                          for service in sorted({r.get("billing_service", r.get("service")) for r in rows if r.get("service")})],
+            "notes": sorted({s["message"] for s in statuses if s.get("state") == "updated" and s.get("message")}),
             "status": source_status(statuses, now)})
         grouped = defaultdict(list)
         for r in rows:

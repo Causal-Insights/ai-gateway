@@ -2,7 +2,7 @@
 
 The independent application is in [`apps/provider-usage-dashboard`](../apps/provider-usage-dashboard/README.md). That README documents its reporting semantics, source APIs, local preview, credentials, deployment, read-only comparison queries, and tests.
 
-It consolidates the five existing providers without changing Gateway inference, pricing, model discovery, job behavior, or Magic Lens consumer contracts. Dashboard-specific dependencies, image, Firestore cache, Cloud Run service/job, identities, and schedule are separate from Gateway.
+It consolidates OpenAI, xAI, BytePlus, ElevenLabs, Google Cloud, and MiniMax without changing Gateway inference, pricing, model discovery, job behavior, or Magic Lens consumer contracts. Dashboard-specific dependencies, image, Firestore cache, Cloud Run service/job, identities, and schedule are separate from Gateway.
 
 Provider facts are never replaced with local price estimates. Unavailable fields display ×. Historical source costs and exact model identities remain intact. Gateway and LiteLLM totals describe the same accounting activity and are never added together.
 
@@ -29,3 +29,12 @@ Provider facts are never replaced with local price estimates. Unavailable fields
 - Gateway revisions stayed `ai-gateway-proxy-00171-fic` and `ai-gateway-callbacks-00037-pig` throughout deployment.
 
 The local sample preview (`python -m dashboard demo --port 8765`) remains useful while reporting credentials and source configuration are completed. Its illustrative amounts are explicitly labeled and are never loaded into the production cache.
+
+## MiniMax reporting — 2026-10-02
+
+- The dedicated `MINIMAX_USAGE_API_KEY` successfully reads the official [V2 task-list API](https://platform.minimax.io/docs/api-reference/video-generation-v2-list). It is stored in a dashboard-only Secret Manager secret and granted only to the collector identity.
+- The source lists video generation/regeneration and Context-IR tasks visible to the reporting key during the latest rolling seven days. Creation timestamps determine UTC reporting days. Daily/model aggregates retain native usage; task counts are distinct from HTTP requests. Prompts, task identities, and generated media are not persisted.
+- Live October 2 reporting returned three completed `MiniMax-H3` generations, 18 output video seconds, and 7 input video seconds. Exact model names are preserved. No documented pay-as-you-go monetary reporting source was established: cost, balance, and payments remain ×, without estimates or subscription-allowance substitutions.
+- The collector skips the partially expired boundary day when replacing daily aggregates and retains older collected history. This source cannot backfill 13 months of earlier activity. Source scope and retention limits appear in the expanded provider view.
+- Regression validation: 52 Python tests passed and one disposable PostgreSQL integration test skipped locally; four JavaScript control tests passed. Pagination, partial-page failure, expired ranges, repeated collection, missing money, task/model totals, and content exclusion are covered.
+- Deployed image `20261002-minimax` to the independent collector and web revision `provider-usage-dashboard-00010-mmk`. Authenticated browser verification confirmed the MiniMax filter, expanded H3 model, three generations, 18 output seconds, reporting-limit notes, unavailable financials, and no console errors. Gateway services were not deployed.

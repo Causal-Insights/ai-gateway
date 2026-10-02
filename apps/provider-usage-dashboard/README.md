@@ -1,6 +1,6 @@
 # Provider Usage Dashboard
 
-Independent internal reporting for OpenAI, xAI, BytePlus, ElevenLabs, and Google Cloud. The browser reads the reporting cache; only the collector contacts providers or source databases. Nothing imports the Gateway runtime, changes its schema, or sends inference requests.
+Independent internal reporting for OpenAI, xAI, BytePlus, ElevenLabs, Google Cloud, and MiniMax. The browser reads the reporting cache; only the collector contacts providers or source databases. Nothing imports the Gateway runtime, changes its schema, or sends inference requests.
 
 ## Run locally
 
@@ -43,6 +43,7 @@ The local cache is `.local/reporting.json`. The file and credentials are ignored
 | BytePlus | [ListBillDetail](https://docs.byteplus.com/en/docs/byteplus-platform/ListBillDetail) and [GetInferenceUsage](https://docs.byteplus.com/en/docs/modelark/get-inference-usage-api), signed with dedicated international access keys. Billing pagination and model/version columns are preserved. Usage dates are UTC+8. Consumption-bill `PaidAmount` is not a top-up. |
 | ElevenLabs | [Workspace analytics](https://elevenlabs.io/docs/api-reference/analytics/workspace/usage) and [subscription](https://elevenlabs.io/docs/api-reference/user/subscription/get). Model/product usage uses returned column units. Subscription allowance, use, reset, and overage remain snapshot information. A missing dollar cost is ×. |
 | Google Cloud | [Cloud Billing BigQuery export](https://docs.cloud.google.com/billing/docs/how-to/export-data-bigquery). Configure `GOOGLE_BILLING_TABLE=project.dataset.table`. Standard/detailed export cost, service, SKU, project, usage units, explicit model labels, and credits are aggregated. Credits are summed without multiplying the cost rows. Regular usage charges are shown before credits; taxes and adjustments are separate. Export history is not assumed to cover dates before export was enabled. |
+| MiniMax | [Official V2 task list](https://platform.minimax.io/docs/api-reference/video-generation-v2-list), using `MINIMAX_USAGE_API_KEY`. Reports visible video/Context-IR tasks from the latest seven days, exact models, completed video generations, and metered seconds/images/tokens. Daily aggregates use task creation time in UTC; the partially expired boundary day is excluded to preserve cached history. Task counts are not HTTP request counts. Pay-as-you-go costs, balances and payments have no established official reporting endpoint and remain ×; no price estimates, subscription-quota substitution, prompts or media are stored. |
 
 Generated credentials must still pass their reporting endpoints. A successful inference key is not proof of reporting access. Adapters make no test inference calls.
 
@@ -65,7 +66,7 @@ Every required API page is fetched before saving a stream. Daily documents repla
   --provider openai --start 2026-08-01 --end 2026-08-31
 ```
 
-Dates are inclusive and restricted to retained history. Omit `--provider` to refresh all five. This is an operator command, not another dashboard workflow.
+Dates are inclusive and restricted to retained history. Omit `--provider` to refresh all providers. This is an operator command, not another dashboard workflow.
 
 Warnings stay in the dashboard: completed-day cost >2× the prior seven-day mean with a ≥$10 increase; volume >3× with ≥100 additional requests/generations; new model after 30 covered days; comparable discrepancies >$5 and >10%; failed/stale (>2 hours) sources. Missing history prevents a trend conclusion. Discrepancy warnings require a period ending at least 48 hours ago. Available amounts remain displayed regardless.
 

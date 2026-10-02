@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 
 PROVIDERS = {"openai": "OpenAI", "xai": "xAI", "byteplus": "BytePlus / ModelArk",
-             "elevenlabs": "ElevenLabs", "google": "Google Cloud"}
+             "elevenlabs": "ElevenLabs", "google": "Google Cloud", "minimax": "MiniMax"}
 SOURCES = ("provider", "gateway", "litellm", "magiclens")
 
 

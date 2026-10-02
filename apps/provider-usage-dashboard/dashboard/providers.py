@@ -344,3 +344,57 @@ def google_billing(env, start, end):
     if not batch.rows:
         batch.note = "No exported billing rows for this period yet. Initial export can take up to five days; unavailable amounts remain ×."
     return batch
+
+
+async def minimax(client, env, start, end, category):
+    key = require(env, "MINIMAX_USAGE_API_KEY")
+    batch = Batch("minimax", "usage", start, end,
+        scope="MiniMax V2 tasks visible to reporting key",
+        basis="Provider-metered V2 task usage; no monetary cost reporting")
+    batch.note = ("V2 video/Context-IR tasks only. API exposes the latest seven days; "
+                  "collected daily aggregates are retained. Dates use task creation time in UTC. "
+                  "Task counts are not HTTP request counts. Costs, balance, and payments are unavailable.")
+    # The API has a rolling seven-day window. Exclude its partially expired UTC
+    # boundary day so a later refresh cannot replace a cached full day with less data.
+    first_day = max(start, datetime.now(timezone.utc).date() - timedelta(days=6))
+    if end < first_day:
+        return batch
+    page, seen, grouped = 1, set(), {}
+    while True:
+        result = await request(client, "GET", "https://api.minimax.io/v2/query/video_generation",
+            headers={"Authorization": f"Bearer {key}"}, params={"page_num": page, "page_size": 100})
+        items, count = result["items"], int(result["total"])
+        previous = len(seen)
+        for item in items:
+            if item["id"] in seen:
+                continue
+            seen.add(item["id"])
+            day = iso_day(item["created_at"])
+            if not str(first_day) <= day <= str(end):
+                continue
+            task_type = item.get("task_type") or "unassigned_task_type"
+            metrics = {"tasks": Decimal(1)}
+            if task_type in ("generation", "regeneration"):
+                metrics["generations"] = Decimal(item["status"] == "succeeded")
+            units = {"input_seconds": "input_video_seconds", "output_seconds": "output_video_seconds",
+                     "input_image_count": "input_images", "input_audio_seconds": "input_audio_seconds",
+                     "prompt_tokens": "input_tokens", "completion_tokens": "output_tokens", "total_tokens": "total_tokens"}
+            for name, unit in units.items():
+                value = decimal((item.get("usage") or {}).get(name))
+                if value is not None:
+                    metrics[unit] = value
+            identity = (day, item.get("model"), task_type)
+            target = grouped.setdefault(identity, {})
+            for unit, value in metrics.items():
+                target[unit] = target.get(unit, Decimal(0)) + value
+        if len(seen) >= count:
+            break
+        if len(seen) == previous:
+            raise ReportingError("MiniMax returned incomplete task pagination; previous data retained.")
+        page += 1
+    for (day, model, task_type), metrics in grouped.items():
+        batch.rows.append(row(day, model=model, service=task_type, metrics=metrics, scope=batch.scope))
+        batch.covered.setdefault(day, ["usage"])
+        if "generations" in metrics and "generations" not in batch.covered[day]:
+            batch.covered[day].append("generations")
+    return batch

@@ -31,7 +31,7 @@ CONDITION="expression=resource.name == 'projects/${PROJECT_ID}/databases/${DATAB
 
 # Attach only separately published reporting secrets. Missing integrations remain ×.
 SECRET_FLAGS=()
-for name in OPENAI_USAGE_API_KEY XAI_USAGE_API_KEY BYTEPLUS_BILLING_ACCESS_KEY_ID BYTEPLUS_BILLING_SECRET_ACCESS_KEY ELEVENLABS_USAGE_API_KEY GATEWAY_REPORTING_DATABASE_URL MAGICLENS_REPORTING_DATABASE_URL; do
+for name in OPENAI_USAGE_API_KEY XAI_USAGE_API_KEY BYTEPLUS_BILLING_ACCESS_KEY_ID BYTEPLUS_BILLING_SECRET_ACCESS_KEY ELEVENLABS_USAGE_API_KEY MINIMAX_USAGE_API_KEY GATEWAY_REPORTING_DATABASE_URL MAGICLENS_REPORTING_DATABASE_URL; do
   secret="provider-usage-dashboard-$(printf '%s' "$name" | tr '[:upper:]_' '[:lower:]-')"
   if "${GC[@]}" secrets describe "$secret" >/dev/null 2>&1; then
     "${GC[@]}" secrets add-iam-policy-binding "$secret" --member="serviceAccount:$SYNC_SA" --role=roles/secretmanager.secretAccessor >/dev/null
