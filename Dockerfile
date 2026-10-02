@@ -4,7 +4,14 @@ WORKDIR /app
 
 # The pinned LiteLLM image uses Wolfi (apk). ffprobe is optional at runtime
 # (adapters return {} when it is missing) but Veo media inspection uses it.
-RUN apk add --no-cache ffmpeg
+# Keep media dependencies on OpenSSL 3: newer Wolfi builds pull OpenSSL 4,
+# whose config files conflict with openssl 3.6.4 in the pinned base image.
+# Revisit these pins when updating the LiteLLM base image.
+RUN apk add --no-cache \
+    ffmpeg-8.1=8.1.2-r2 \
+    libsrt=1.5.7-r3 \
+    libssh=0.12.2-r2 \
+    'openssl-dev~3.6'
 
 COPY requirements.txt /app/requirements.txt
 RUN python -m ensurepip && python -m pip install --no-cache-dir -r /app/requirements.txt
