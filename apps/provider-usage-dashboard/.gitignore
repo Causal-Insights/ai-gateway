@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+.local/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Required display catalog; override the repository-wide JSON ignore.
+!dashboard/model_aliases.json
+
+# Numeric, secret-free evidence for estimated H3 spending.
+!docs/minimax-estimate-*.json

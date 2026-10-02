@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-HOSTS = {"openai": {"developers.openai.com", "platform.openai.com"},
+HOSTS = {"minimax": {"platform.minimax.io"}, "openai": {"developers.openai.com", "platform.openai.com"},
          "google": {"cloud.google.com", "docs.cloud.google.com", "ai.google.dev"},
          "xai": {"docs.x.ai", "console.x.ai"}, "byteplus": {"docs.byteplus.com", "console.byteplus.com"},
          "elevenlabs": {"elevenlabs.io", "join.elevenlabs.io"}}

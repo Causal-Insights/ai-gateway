@@ -1,0 +1,6 @@
+*
+!requirements.txt
+!dashboard/
+!dashboard/**
+**/__pycache__
+**/*.pyc

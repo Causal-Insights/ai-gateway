@@ -111,10 +111,10 @@ async def stop_local_scheduler() -> None:
     _local_reconciler = None
 
 
-def next_poll_time(attempt: int, *, now: Optional[datetime] = None) -> datetime:
+def next_poll_time(attempt: int, *, now: Optional[datetime] = None, minimum_delay: float = 0) -> datetime:
     base = POLL_DELAYS_SECONDS[min(max(0, attempt), len(POLL_DELAYS_SECONDS) - 1)]
     jittered = base * random.uniform(0.8, 1.2)
-    return (now or datetime.now(timezone.utc)) + timedelta(seconds=jittered)
+    return (now or datetime.now(timezone.utc)) + timedelta(seconds=max(minimum_delay, jittered))
 
 
 def _queue_config() -> Optional[dict[str, str]]:

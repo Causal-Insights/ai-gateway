@@ -32,6 +32,13 @@ def numbers(value):
 
 def extract(extractor, raw):
     raw = as_dict(raw)
+    if extractor == "minimax_h3":
+        # Provider-metered seconds and images; token equivalents are not extra charges.
+        output = decimal(raw.get("output_seconds"))
+        inputs = decimal(raw.get("input_seconds"))
+        images = decimal(raw.get("input_image_count"))
+        return {"output_seconds": str(output), "input_seconds": str(inputs),
+                "extra_input_images": str(max(images - 5, 0))}
     if extractor == "components":
         return numbers(raw) or {}
     if extractor == "omni":

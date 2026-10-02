@@ -208,3 +208,10 @@ is `skills/price-verification/`; run `python scripts/sync_price_verification.py`
 after changing it to refresh the personal skill.
 
 Model retirement and Magic Lens compatibility: [September 24 review](docs/magiclens-integration-2026-09-24.md).
+
+## MiniMax H3 hosted API
+
+`minimax-h3` and `MiniMax-H3` use the V2 durable video contract and the hosted
+MiniMax pay-as-you-go API. Text, first/last frames, and image/video/audio references
+produce one audiovisual MP4. Configure `MINIMAX_API_KEY`; no local model or fallback
+is involved. See [the H3 contract, limits, billing and reviewed live-test steps](docs/minimax-h3.md).

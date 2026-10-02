@@ -654,6 +654,29 @@ model_list:
         - music_length_ms
         - force_instrumental
 
+  # MiniMax H3: discovery only here; inference uses the direct V2 durable adapter.
+  - model_name: minimax-h3
+    litellm_params:
+      model: minimax/MiniMax-H3
+      api_key: os.environ/MINIMAX_API_KEY
+    model_info:
+      mode: video_generation
+      metadata:
+        generation_endpoint: /v1/generation-jobs
+        request_schema_version: 2
+        provider_route: minimax_h3_v2
+
+  - model_name: MiniMax-H3
+    litellm_params:
+      model: minimax/MiniMax-H3
+      api_key: os.environ/MINIMAX_API_KEY
+    model_info:
+      mode: video_generation
+      metadata:
+        generation_endpoint: /v1/generation-jobs
+        request_schema_version: 2
+        provider_route: minimax_h3_v2
+
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   database_url: os.environ/DATABASE_URL

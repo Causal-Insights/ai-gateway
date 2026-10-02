@@ -218,7 +218,7 @@ def _response(job: dict[str, Any], base_url: str) -> GenerationJobResponse:
             "content_url": f"{base_url.rstrip('/')}/v1/generation-jobs/{job['id']}/outputs/{index}"
         } for index, output in enumerate((job.get("request_metadata") or {}).get("outputs", []))],
         generation={key: value for key, value in (job.get("request_metadata") or {}).items()
-                    if key in {"draft", "duration_seconds", "actual_duration_seconds", "resolution", "has_input_video", "operation", "contract_revision", "profile_id", "audio_mode"}},
+                    if key in {"draft", "duration_seconds", "actual_duration_seconds", "resolution", "aspect_ratio", "has_input_video", "operation", "contract_revision", "profile_id", "audio_mode"}},
         usage=job.get("usage"),
         cost_usd=float(job["cost_contract"]["cost_usd"]) if (job.get("cost_contract") or {}).get("cost_usd") is not None else None,
         accounting_id=job.get("accounting_id"),
@@ -376,7 +376,7 @@ async def create_generation_job(
         callback_token_hash=callback_hash,
         request_schema_version=schema_version,
         provider_route=provider_route,
-        adapter_revision=f"{provider_route}@2026-09-24" if expanded else GROK15_ADAPTER_REVISION if schema_version == 2 and payload.model == "grok-video-1.5" else SEEDANCE20_ADAPTER_REVISION if schema_version == 2 and payload.model in SEEDANCE20_MODELS else ADAPTER_REVISIONS.get(provider_route, f"{provider_route}@2026-09-03"),
+        adapter_revision=ADAPTER_REVISIONS[provider_route] if provider == "minimax" else f"{provider_route}@2026-09-24" if expanded else GROK15_ADAPTER_REVISION if schema_version == 2 and payload.model == "grok-video-1.5" else SEEDANCE20_ADAPTER_REVISION if schema_version == 2 and payload.model in SEEDANCE20_MODELS else ADAPTER_REVISIONS.get(provider_route, f"{provider_route}@2026-09-03"),
     )
     if conflict:
         raise HTTPException(
@@ -419,7 +419,7 @@ async def create_generation_job(
         submitted = await adapter_for_job({"provider": provider, "provider_route": provider_route}).submit(
             payload, job_id=job_id, callback_url=callback_url, upload_bytes=uploads
         )
-        first_poll = next_poll_time(0)
+        first_poll = next_poll_time(0, minimum_delay=10 if provider == "minimax" else 0)
         job = await repository.mark_submitted(
             job_id,
             provider_request_id=submitted.provider_request_id,
@@ -643,6 +643,7 @@ async def poll_generation_job(job_id: str, request: Request) -> dict[str, Any]:
             await _record_spend({**job, "status": provider_status.status,
                                  "usage": provider_status.usage or job.get("usage"),
                                  "request_metadata": {**(job.get("request_metadata") or {}),
+                                                      **provider_status.result_metadata,
                                                       "served_model": provider_status.served_model}})
         job = await repository.apply_provider_status(job_id, provider_status)
     except ProviderAdapterError as exc:
@@ -658,7 +659,8 @@ async def poll_generation_job(job_id: str, request: Request) -> dict[str, Any]:
         elif deadline_reached:
             job = await repository.mark_expired(job_id)
         else:
-            when = next_poll_time(int(job.get("consecutive_poll_errors") or 0) + 1)
+            when = next_poll_time(int(job.get("consecutive_poll_errors") or 0) + 1,
+                                  minimum_delay=10 if job["provider"] == "minimax" else 0)
             job = await repository.record_poll_error(job_id, message=str(exc), next_poll_at=when)
             try:
                 await enqueue_poll(job_id, when)
@@ -670,7 +672,8 @@ async def poll_generation_job(job_id: str, request: Request) -> dict[str, Any]:
     if job["status"] in TERMINAL_STATUSES:
         await _record_spend(job)
         return {"accepted": True, "status": job["status"], "terminal": True}
-    when = next_poll_time(int(job.get("poll_attempts") or 0))
+    when = next_poll_time(int(job.get("poll_attempts") or 0),
+                          minimum_delay=10 if job["provider"] == "minimax" else 0)
     await _schedule(job_id, when)
     return {"accepted": True, "status": job["status"], "terminal": False}
 

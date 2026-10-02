@@ -29,6 +29,7 @@ COPY generation_job_models.py /app/generation_job_models.py
 COPY generation_job_repository.py /app/generation_job_repository.py
 COPY generation_job_adapters.py /app/generation_job_adapters.py
 COPY video_capabilities.py expanded_video_adapters.py capability_discovery.py /app/
+COPY minimax_video_contract.py minimax_video_adapter.py /app/
 COPY generation_job_scheduler.py /app/generation_job_scheduler.py
 COPY generation_job_routes.py /app/generation_job_routes.py
 COPY gateway_request_policy.py /app/gateway_request_policy.py

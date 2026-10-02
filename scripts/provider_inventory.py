@@ -65,7 +65,7 @@ def render(config, registry, document):
                 try:
                     route = code(route_for(alias, version))
                 except ProviderAdapterError as exc:
-                    if exc.code != "UNSUPPORTED_MODEL" or version == 1:
+                    if exc.code != "UNSUPPORTED_MODEL":
                         raise
                     route = "unavailable"
                 durable.append(f"V{version}: {route}")

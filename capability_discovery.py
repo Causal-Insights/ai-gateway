@@ -12,6 +12,7 @@ router = APIRouter(tags=['capabilities'])
 
 
 def video_contract(model):
+    from minimax_video_contract import MODELS as MINIMAX
     operations = []
     for profile in profiles(model):
         topology = profile.split('.', 1)[1]
@@ -26,9 +27,23 @@ def video_contract(model):
         operations.append({'id': profile, 'operation': profile.split('.')[0], 'media_roles': roles,
                            'settings': settings_for(model, profile), 'execution_modes': ['durable_job'],
                            'previous_job_required': topology in {'previous_job', 'from_draft'}})
-    return {'contract_revision': REVISION, 'endpoint': '/v1/generation-jobs', 'request_schema_version': 2,
-            'operations': operations, 'audio_mode': 'provider_managed' if model.startswith('gemini-omni') else 'selectable',
-            'limitations': [] if model.startswith('veo-') else ['One video output per durable job.']}
+    result = {'contract_revision': REVISION, 'endpoint': '/v1/generation-jobs', 'request_schema_version': 2,
+              'operations': operations, 'audio_mode': 'provider_managed' if model.startswith('gemini-omni') or model in MINIMAX else 'selectable',
+              'limitations': [] if model.startswith('veo-') else ['One video output per durable job.']}
+    if model in MINIMAX:
+        result['media_limits'] = {'reference_images': 9, 'reference_videos': 3, 'reference_audio': 3,
+            'total_references': 12, 'multipart_files': 10, 'prompt_characters': 7000,
+            'image_max_bytes': 30 * 1_000_000, 'video_max_bytes': 50 * 1_000_000,
+            'audio_max_bytes': 15 * 1_000_000, 'provider_body_max_bytes': 64 * 1_000_000,
+            'image_video_dimension_pixels': [256, 5760], 'image_video_aspect_ratio': [0.4, 2.5],
+            'video_fps': [23.976, 60], 'clip_duration_seconds': [2, 15],
+            'total_video_seconds': 15, 'total_audio_seconds': 15}
+        result['limitations'] += ['V2 durable jobs only; audio is embedded in the original MP4.',
+            'Frame inputs cannot mix with reference inputs; frame aspect ratio is inherited.',
+            'No standalone audio, preset voices, provider file IDs, Context-IR, regeneration, or dedicated edit/extend route.',
+            'MOV references require HTTPS; multipart video supports MP4 only.',
+            'Media must be readable by Gateway ffprobe; task retrieval is limited to seven days.']
+    return result
 
 
 AUDIO_MODELS = {'elevenlabs-v3-tts', 'elevenlabs-multilingual-v2', 'elevenlabs-sfx', 'elevenlabs-music', 'elevenlabs-music-2.5'}

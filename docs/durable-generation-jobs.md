@@ -201,3 +201,10 @@ evidence, without repricing history or adjusting customer charges. Repeated poll
 Existing owner hashes stay compatible while billing uses the canonical LiteLLM
 key hash. Unknown provider outcomes are never automatically resubmitted.
 See [cost accounting](cost-accounting.md) for pricing and historical-repair policy.
+
+## MiniMax H3 hosted API
+
+`minimax-h3` and `MiniMax-H3` use the V2 durable video contract and the hosted
+MiniMax pay-as-you-go API. Text, first/last frames, and image/video/audio references
+produce one audiovisual MP4. Configure `MINIMAX_API_KEY`; no local model or fallback
+is involved. See [the H3 contract, limits, billing and reviewed live-test steps](minimax-h3.md).

@@ -16,11 +16,15 @@ OMNI = {name: "gemini-omni-1.1-flash-preview" for name in (
 )}
 GROK = {"grok-video-1.5": "grok-imagine-video-1.5",
         "grok-imagine-video-1.5-2026-05-30": "grok-imagine-video-1.5-2026-05-30"}
-MODELS = {**SEEDANCE, **VEO, **OMNI, **GROK}
+from minimax_video_contract import MODELS as MINIMAX
+MODELS = {**SEEDANCE, **VEO, **OMNI, **GROK, **MINIMAX}
 
 
 def settings_for(model, profile):
     """Public settings describe the exact submitted contract, including omissions."""
+    if model in MINIMAX:
+        from minimax_video_contract import settings_for as minimax_settings
+        return minimax_settings(profile)
     base = {"outputCount": {"values": [1], "default": 1}}
     if model in SEEDANCE:
         resolutions = ["480p", "720p"]
@@ -70,6 +74,9 @@ def settings_for(model, profile):
 
 
 def profiles(model):
+    if model in MINIMAX:
+        from minimax_video_contract import PROFILES
+        return list(PROFILES)
     result = ["generate.text", "generate.first_frame", "generate.first_last_frames"]
     if model != "veo-3.1-lite":
         result.append("generate.references")
@@ -87,6 +94,8 @@ def profiles(model):
 
 
 def route(model):
+    if model in MINIMAX:
+        return "minimax_h3_v2"
     if model in SEEDANCE:
         return "byteplus_expanded_v2"
     if model in VEO:
@@ -101,6 +110,10 @@ def route(model):
 def validate(request):
     if request.contract_revision != REVISION or request.model not in MODELS:
         raise ValueError("Unknown video model or contract revision.")
+    if request.model in MINIMAX:
+        from minimax_video_contract import validate as validate_minimax
+        validate_minimax(request)
+        return
     if request.profile_id not in profiles(request.model) or request.operation != request.profile_id.split('.')[0]:
         raise ValueError("This model does not support the selected video operation.")
     media = request.media
